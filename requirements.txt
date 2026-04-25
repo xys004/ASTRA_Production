@@ -1,0 +1,11 @@
+# Core Symbolic & Math Solvers
+sympy>=1.14.0
+z3-solver>=4.12.0
+qutip>=5.0.0
+numpy>=1.26.0
+scipy>=1.13.0
+
+# LLM Providers SDKs
+openai>=1.52.0
+anthropic>=0.39.0
+google-genai>=0.2.0
