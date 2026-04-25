@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASTRA Web Studio</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <div class="glass-container">
+        <header>
+            <h1>ASTRA Web Studio</h1>
+            <p>Autonomous Theoretical Physics Orchestrator</p>
+        </header>
+        
+        <main>
+            <div class="left-panel">
+                <section class="upload-section">
+                    <h2>Knowledge Base (Intuition)</h2>
+                    <p>Upload a PDF paper or Text notes to feed into Phase 1.</p>
+                    <div class="dropzone" id="doc-dropzone">
+                        <span>Drag & Drop PDF/TXT here</span>
+                        <input type="file" id="doc-input" hidden>
+                    </div>
+                    <div class="controls">
+                        <textarea id="intuition-text" placeholder="Or type intuition manually here..."></textarea>
+                        <button class="btn-primary" onclick="startDiscovery()">Launch Epistemological Loop</button>
+                    </div>
+                </section>
+                
+                <section class="upload-section">
+                    <h2>OS Agent Assets</h2>
+                    <p>Upload UI snippets for the Personal Auto version.</p>
+                    <div class="dropzone" id="asset-dropzone">
+                        <span>Drag & Drop PNG here (e.g., gemini_input.png)</span>
+                        <input type="file" id="asset-input" hidden>
+                    </div>
+                </section>
+                
+                <section class="status-board">
+                    <h2>System Status</h2>
+                    <div id="status-indicator" class="status idle">IDLE</div>
+                    <div class="logs" id="logs-container">
+                        <!-- Logs injected here -->
+                    </div>
+                </section>
+            </div>
+            
+            <div class="right-panel">
+                <h2>Live Mathematics Dashboard</h2>
+                <div class="math-board" id="math-board">
+                    <div class="placeholder">Mathematical hypotheses will render here...</div>
+                </div>
+                <div id="approval-box" class="approval-box hidden">
+                    <h3>Theorem Mathematically Validated!</h3>
+                    <p>Do you approve adding this theorem to the Axiomatic Base?</p>
+                    <br>
+                    <button class="btn-success" onclick="approveTheorem()">Approve & Add</button>
+                    <button class="btn-danger" onclick="rejectTheorem()">Reject</button>
+                </div>
+                
+                <h3>Axiomatic Base</h3>
+                <div class="axioms-board" id="axioms-board">
+                    <!-- Axioms injected here -->
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script>
+        // Setup Drag and Drop
+        function setupDropzone(dropzoneId, inputId, endpoint) {
+            const dropzone = document.getElementById(dropzoneId);
+            const input = document.getElementById(inputId);
+            
+            dropzone.addEventListener('click', () => input.click());
+            
+            dropzone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropzone.style.borderColor = '#00ffcc';
+            });
+            
+            dropzone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                dropzone.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+            });
+            
+            dropzone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropzone.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                if (e.dataTransfer.files.length) {
+                    uploadFile(e.dataTransfer.files[0], endpoint, dropzone);
+                }
+            });
+            
+            input.addEventListener('change', () => {
+                if (input.files.length) {
+                    uploadFile(input.files[0], endpoint, dropzone);
+                }
+            });
+        }
+        
+        function uploadFile(file, endpoint, dropzone) {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            const originalText = dropzone.innerHTML;
+            dropzone.innerHTML = '<span>Uploading...</span>';
+            
+            fetch(endpoint, {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    dropzone.innerHTML = `<span style="color: #00ffcc;">${file.name} uploaded!</span>`;
+                } else {
+                    dropzone.innerHTML = `<span style="color: #ff3366;">Error: ${data.error}</span>`;
+                }
+                setTimeout(() => { dropzone.innerHTML = originalText; }, 3000);
+            });
+        }
+        
+        setupDropzone('doc-dropzone', 'doc-input', '/api/upload_doc');
+        setupDropzone('asset-dropzone', 'asset-input', '/api/upload_asset');
+        
+        function startDiscovery() {
+            const intuition = document.getElementById('intuition-text').value;
+            fetch('/api/start', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({intuition: intuition})
+            });
+        }
+        
+        function approveTheorem() {
+            fetch('/api/approve', {method: 'POST'});
+        }
+        
+        function rejectTheorem() {
+            fetch('/api/reject', {method: 'POST'});
+        }
+        
+        // Polling State
+        setInterval(() => {
+            fetch('/api/state')
+            .then(res => res.json())
+            .then(state => {
+                // Update Status
+                const statusEl = document.getElementById('status-indicator');
+                statusEl.className = 'status ' + state.status.toLowerCase();
+                statusEl.innerText = state.status;
+                
+                // Update Logs
+                const logsEl = document.getElementById('logs-container');
+                logsEl.innerHTML = state.logs.map(log => `<div>${log}</div>`).join('');
+                logsEl.scrollTop = logsEl.scrollHeight;
+                
+                // Update Math
+                const mathEl = document.getElementById('math-board');
+                if (state.current_conjecture) {
+                    // Only re-render if changed to avoid flicker
+                    if (mathEl.getAttribute('data-raw') !== state.current_conjecture) {
+                        mathEl.setAttribute('data-raw', state.current_conjecture);
+                        mathEl.innerText = state.current_conjecture;
+                        MathJax.typesetPromise([mathEl]).catch((err) => console.log(err));
+                    }
+                }
+                
+                // Update Axioms
+                const axEl = document.getElementById('axioms-board');
+                if (axEl.getAttribute('data-raw') !== state.axiomatic_base) {
+                    axEl.setAttribute('data-raw', state.axiomatic_base);
+                    axEl.innerText = state.axiomatic_base;
+                    MathJax.typesetPromise([axEl]).catch((err) => console.log(err));
+                }
+                
+                // Approval Box
+                const appBox = document.getElementById('approval-box');
+                if (state.status === 'WAITING_APPROVAL') {
+                    appBox.classList.remove('hidden');
+                } else {
+                    appBox.classList.add('hidden');
+                }
+            });
+        }, 1000);
+    </script>
+</body>
+</html>

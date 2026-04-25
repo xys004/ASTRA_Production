@@ -1,0 +1,193 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #090b10 0%, #1a1525 100%);
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 2rem;
+}
+
+.glass-container {
+    background: rgba(20, 20, 30, 0.4);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    width: 100%;
+    max-width: 1400px;
+    padding: 2rem;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+header h1 {
+    font-size: 2.5rem;
+    background: -webkit-linear-gradient(#00ffcc, #0088ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.5rem;
+}
+
+main {
+    display: flex;
+    gap: 2rem;
+    flex: 1;
+}
+
+.left-panel, .right-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.left-panel {
+    flex: 1;
+}
+
+.right-panel {
+    flex: 2;
+}
+
+.upload-section, .status-board, .math-board, .axioms-board, .approval-box {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+h2, h3 {
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #ffffff;
+}
+
+.dropzone {
+    border: 2px dashed rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 1rem;
+    background: rgba(255,255,255,0.02);
+}
+
+.dropzone:hover {
+    border-color: #00ffcc;
+    background: rgba(0, 255, 204, 0.05);
+}
+
+.controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+textarea {
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 1rem;
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    resize: vertical;
+    min-height: 80px;
+}
+
+textarea:focus {
+    outline: none;
+    border-color: #0088ff;
+}
+
+button {
+    padding: 0.8rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-primary {
+    background: linear-gradient(90deg, #0088ff, #00ffcc);
+    color: #000;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 255, 204, 0.4);
+}
+
+.btn-success { background: #00cc66; color: #fff; margin-right: 1rem;}
+.btn-danger { background: #ff3366; color: #fff; }
+
+.status {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+}
+
+.status.idle { background: rgba(255,255,255,0.1); color: #aaa; }
+.status.conjecturing { background: rgba(0, 136, 255, 0.2); color: #0088ff; }
+.status.translating { background: rgba(170, 0, 255, 0.2); color: #aa00ff; }
+.status.validating { background: rgba(255, 170, 0, 0.2); color: #ffaa00; }
+.status.analyzing { background: rgba(255, 0, 102, 0.2); color: #ff0066; }
+.status.waiting_approval { background: rgba(0, 204, 102, 0.2); color: #00cc66; }
+
+.logs {
+    margin-top: 1rem;
+    height: 150px;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 0.85rem;
+    color: #888;
+    background: rgba(0,0,0,0.5);
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+.logs div { margin-bottom: 0.3rem; }
+
+.math-board {
+    flex: 1;
+    min-height: 200px;
+    overflow-y: auto;
+    font-size: 1.1rem;
+    line-height: 1.6;
+}
+
+.axioms-board {
+    min-height: 100px;
+    font-size: 1rem;
+    color: #aaa;
+}
+
+.approval-box {
+    text-align: center;
+    background: rgba(0, 204, 102, 0.1);
+    border-color: #00cc66;
+}
+
+.hidden { display: none !important; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.4); }

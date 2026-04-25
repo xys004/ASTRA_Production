@@ -1,6 +1,7 @@
 import time
 import os
 import subprocess
+import webbrowser
 from dotenv import load_dotenv, set_key
 
 def clear_screen():
@@ -40,30 +41,19 @@ def setup_api_keys():
 def main():
     clear_screen()
     print("="*60)
-    print("   ASTRA PRODUCTION (Asynchronous API Orchestrator)")
+    print("   ASTRA WEB STUDIO (Local Server)")
     print("="*60)
-    print("\nThis environment will execute research using official LLM API credits.")
     
     setup_api_keys()
     
-    api_openai = os.environ.get("OPENAI_API_KEY")
-    api_anthropic = os.environ.get("ANTHROPIC_API_KEY")
-    api_gemini = os.environ.get("GEMINI_API_KEY")
+    print("\nStarting ASTRA Web Studio Server...\n")
+    print("Please wait, your browser will open automatically...")
     
-    print("\n[API KEYS STATUS]")
-    print(f"OpenAI: {'Configured' if api_openai else 'Not detected'}")
-    print(f"Anthropic: {'Configured' if api_anthropic else 'Not detected'}")
-    print(f"Gemini: {'Configured' if api_gemini else 'Not detected'}")
+    time.sleep(2)
+    webbrowser.open("http://127.0.0.1:5050")
     
-    if not any([api_openai, api_anthropic, api_gemini]):
-        print("\nWARNING: No API keys configured. The system will operate in SIMULATED MODE.")
-    
-    resp = input("\nStart the Company Asynchronous Orchestrator? (y/n): ")
-    if resp.lower() == 'y':
-        print("\nStarting ASTRA Production...\n")
-        subprocess.run(["python", "main.py"])
-    else:
-        print("Operation cancelled.")
+    # Run the Flask app
+    subprocess.run(["python", "web/app.py"])
 
 if __name__ == "__main__":
     main()
