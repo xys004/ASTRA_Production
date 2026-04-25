@@ -25,18 +25,17 @@ Before running ASTRA, you must set the appropriate environment variable in your 
 
 ## 3. User Manual: How to Operate ASTRA
 
-### Installation
-Run the automated setup script to build the virtual environment and install the solvers and SDKs:
-```powershell
-.\install.ps1
-```
+### Installation (Plug & Play)
+ASTRA is designed to be easily deployable for non-programmers:
+1. Double-click the `install.ps1` file. This script will automatically:
+   - Verify your Python installation.
+   - Build a local virtual environment.
+   - Install all required solvers and SDKs.
+   - **Create a Desktop Shortcut** for you.
 
 ### Execution
-Activate the virtual environment and run the main orchestrator:
-```powershell
-.\venv\Scripts\Activate.ps1
-python main.py
-```
+Simply double-click the **"ASTRA Production Wizard"** shortcut on your Desktop.
+If it is your first time running the system, the interactive wizard will ask you to paste your LLM API Keys (Gemini, Claude, or OpenAI) and will securely save them in a local `.env` file for future runs.
 
 ### The Intuition Workflow
 ASTRA is designed to be accessible to non-physicists. When you run `main.py`, the terminal will pause and prompt you:

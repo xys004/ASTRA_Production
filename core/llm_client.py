@@ -1,6 +1,9 @@
 import os
 import asyncio
 import logging
+from dotenv import load_dotenv
+
+load_dotenv(".env")
 
 logger = logging.getLogger("ASTRA_CORE.llm")
 
