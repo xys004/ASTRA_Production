@@ -3,7 +3,17 @@ Write-Host "=========================================" -ForegroundColor Cyan
 Write-Host "    ASTRA Production Setup Script        " -ForegroundColor Cyan
 Write-Host "=========================================" -ForegroundColor Cyan
 
-Write-Host "`n[1/4] Verifying Python Installation..." -ForegroundColor Yellow
+Write-Host "`n[1/5] Verifying LaTeX Installation (Optional)..." -ForegroundColor Yellow
+$latexExists = Get-Command pdflatex -ErrorAction SilentlyContinue
+if (-not $latexExists) {
+    Write-Host "NOTE: LaTeX (pdflatex) is not installed." -ForegroundColor Yellow
+    Write-Host "ASTRA will use MathJax in the Web Browser for visualization."
+    Write-Host "If you want ASTRA to automatically compile PDF reports of theorems, install MiKTeX from https://miktex.org/download"
+} else {
+    Write-Host "LaTeX detected! ASTRA will automatically compile PDF reports for validated theorems." -ForegroundColor Green
+}
+
+Write-Host "`n[2/5] Verifying Python Installation..." -ForegroundColor Yellow
 $pythonExists = Get-Command python -ErrorAction SilentlyContinue
 if (-not $pythonExists) {
     Write-Host "ERROR: Python is not installed or not in your system PATH." -ForegroundColor Red
@@ -14,14 +24,14 @@ if (-not $pythonExists) {
 }
 Write-Host "Python detected!" -ForegroundColor Green
 
-Write-Host "`n[2/4] Creating Python Virtual Environment (venv)..." -ForegroundColor Yellow
+Write-Host "`n[3/5] Creating Python Virtual Environment (venv)..." -ForegroundColor Yellow
 python -m venv venv
 
-Write-Host "`n[3/4] Installing Math Solvers and LLM SDKs..." -ForegroundColor Yellow
+Write-Host "`n[4/5] Installing Math Solvers, LLM SDKs, and Web Studio..." -ForegroundColor Yellow
 .\venv\Scripts\python.exe -m pip install --upgrade pip
 .\venv\Scripts\python.exe -m pip install -r requirements.txt
 
-Write-Host "`n[4/4] Creating Desktop Shortcut..." -ForegroundColor Yellow
+Write-Host "`n[5/5] Creating Desktop Shortcut..." -ForegroundColor Yellow
 $WshShell = New-Object -comObject WScript.Shell
 $DesktopPath = [Environment]::GetFolderPath("Desktop")
 $Shortcut = $WshShell.CreateShortcut("$DesktopPath\ASTRA Production Wizard.lnk")

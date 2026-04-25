@@ -83,6 +83,17 @@ async def astra_orchestrator_loop():
                 if state.approve_theorem_requested:
                     state.add_log("Theorem APPROVED by user. Adding to Axiomatic Base.")
                     state.axiomatic_base += f"\n[ESTABLISHED THEOREM]: {conjecture}"
+                    
+                    # LaTeX Auto-Generation
+                    import shutil
+                    if shutil.which("pdflatex"):
+                        state.add_log("LaTeX detected. Generating formal PDF report...")
+                        try:
+                            from core.pdf_generator import generate_pdf_report
+                            pdf_path = generate_pdf_report(conjecture)
+                            state.add_log(f"PDF Report successfully compiled at {pdf_path}")
+                        except Exception as e:
+                            state.add_log(f"Failed to generate PDF: {e}")
                 else:
                     state.add_log("Theorem REJECTED by user. Discarding.")
                     
