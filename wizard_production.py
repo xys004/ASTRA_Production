@@ -38,6 +38,8 @@ def setup_api_keys():
             set_key(env_file, "OPENAI_API_KEY", openai)
             os.environ["OPENAI_API_KEY"] = openai
 
+import sys
+
 def main():
     clear_screen()
     print("="*60)
@@ -52,8 +54,8 @@ def main():
     time.sleep(2)
     webbrowser.open("http://127.0.0.1:5050")
     
-    # Run the Flask app
-    subprocess.run(["python", "web/app.py"])
+    # Run the Flask app using the same python interpreter (venv)
+    subprocess.run([sys.executable, "web/app.py"])
 
 if __name__ == "__main__":
     main()
