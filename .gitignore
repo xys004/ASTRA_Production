@@ -1,11 +1,19 @@
 # Environments
 venv/
 env/
+.astra-wsl-venv/
 .env
 
 # Execution Workspace
 workspace/*.py
+workspace/uploads/
+workspace/assets/
+workspace/reports/
 !workspace/.keep
+
+# Release artifacts
+dist/
+*.zip
 
 # Python cache
 __pycache__/

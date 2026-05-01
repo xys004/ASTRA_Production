@@ -1,11 +1,37 @@
 import os
 import asyncio
 import logging
+import json
+import re
 from dotenv import load_dotenv
 
-load_dotenv(".env")
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"))
 
 logger = logging.getLogger("ASTRA_CORE.llm")
+
+
+def _extract_json_object(text: str) -> dict | None:
+    """Parse a JSON object even if the model wrapped it in prose or fences."""
+    if not text:
+        return None
+    cleaned = text.strip()
+    if "```json" in cleaned:
+        cleaned = cleaned.split("```json", 1)[1].split("```", 1)[0].strip()
+    elif "```" in cleaned:
+        cleaned = cleaned.split("```", 1)[1].split("```", 1)[0].strip()
+
+    candidates = [cleaned]
+    match = re.search(r"\{.*\}", cleaned, re.DOTALL)
+    if match:
+        candidates.append(match.group(0))
+
+    for candidate in candidates:
+        try:
+            parsed = json.loads(candidate)
+            return parsed if isinstance(parsed, dict) else None
+        except json.JSONDecodeError:
+            continue
+    return None
 
 class ASTRAIntelligence:
     """
@@ -17,6 +43,8 @@ class ASTRAIntelligence:
         self.provider = provider.lower()
         self.api_key = None
         self.client = None
+        self.prompt_tokens = 0
+        self.completion_tokens = 0
         
         # Boilerplate Initialization based on provider
         if self.provider == "openai":
@@ -64,6 +92,9 @@ class ASTRAIntelligence:
                         {"role": "user", "content": user_prompt}
                     ]
                 )
+                if hasattr(response, 'usage') and response.usage:
+                    self.prompt_tokens += response.usage.prompt_tokens
+                    self.completion_tokens += response.usage.completion_tokens
                 return response.choices[0].message.content
                 
             elif self.provider == "anthropic":
@@ -73,6 +104,9 @@ class ASTRAIntelligence:
                     system=system_prompt,
                     messages=[{"role": "user", "content": user_prompt}]
                 )
+                if hasattr(response, 'usage') and response.usage:
+                    self.prompt_tokens += getattr(response.usage, 'input_tokens', 0)
+                    self.completion_tokens += getattr(response.usage, 'output_tokens', 0)
                 return response.content[0].text
                 
             elif self.provider == "gemini":
@@ -84,6 +118,9 @@ class ASTRAIntelligence:
                         config={'system_instruction': system_prompt}
                     )
                 response = await asyncio.to_thread(_gemini_call)
+                if hasattr(response, 'usage_metadata') and response.usage_metadata:
+                    self.prompt_tokens += getattr(response.usage_metadata, 'prompt_token_count', 0)
+                    self.completion_tokens += getattr(response.usage_metadata, 'candidates_token_count', 0)
                 return response.text
                 
         except Exception as e:
@@ -139,14 +176,25 @@ class ASTRAIntelligence:
                 return {"status": "CODE_ERROR", "corrected_code": "print('Fixed Code')"}
                 
             user_prompt = f"Conjecture:\n{conjecture}\n\nExecution Error:\n{exec_result['stderr']}"
-            await self._call_api(system_prompt, user_prompt)
-            return {"status": "CODE_ERROR", "corrected_code": "# Fixed by LLM\nprint('VERDICT: PASS')"}
+            response = await self._call_api(system_prompt, user_prompt)
+            parsed = _extract_json_object(response)
+            if parsed and parsed.get("status") in {"CODE_ERROR", "REFUTED", "VALIDATED"}:
+                return parsed
+            return {"status": "CODE_ERROR", "corrected_code": None, "reasoning": response}
             
         else:
             if not self.api_key:
                 return {"status": "VALIDATED", "reasoning": "Null residual."}
                 
             user_prompt = f"Conjecture:\n{conjecture}\n\nExecution Output:\n{exec_result['stdout']}"
-            await self._call_api(system_prompt, user_prompt)
-            
-            return {"status": "VALIDATED", "reasoning": "Validated mathematically."}
+            response = await self._call_api(system_prompt, user_prompt)
+            parsed = _extract_json_object(response)
+            if parsed and parsed.get("status") in {"CODE_ERROR", "REFUTED", "VALIDATED"}:
+                return parsed
+
+            stdout = exec_result.get("stdout", "").upper()
+            if "VERDICT: FAIL" in stdout:
+                return {"status": "REFUTED", "reasoning": "Validation script reported VERDICT: FAIL."}
+            if "VERDICT: PASS" in stdout:
+                return {"status": "VALIDATED", "reasoning": "Validation script reported VERDICT: PASS."}
+            return {"status": "CODE_ERROR", "corrected_code": None, "reasoning": response}

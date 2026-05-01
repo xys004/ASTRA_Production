@@ -1,0 +1,19 @@
+{
+  "id": "logic_am_gm_two_variables",
+  "domain": "logic_inequalities",
+  "difficulty": "baseline",
+  "claim": "For all positive real x and y, x + y >= 2 sqrt(x y).",
+  "expected": "VALIDATED",
+  "preferred_engines": ["sympy", "z3"],
+  "success_criteria": [
+    "Transforms the inequality into an equivalent nonnegative square or performs a valid symbolic proof.",
+    "States positivity assumptions.",
+    "Optionally attempts counterexample search and finds none within encoded assumptions."
+  ],
+  "failure_modes": [
+    "Uses random sampling as proof.",
+    "Ignores positivity assumptions.",
+    "Uses Z3 nonlinear real arithmetic without checking solver limitations."
+  ],
+  "prompt": "Check whether the claim 'for all positive real x and y, x + y >= 2 sqrt(x y)' can be refuted or symbolically validated under the stated assumptions."
+}

@@ -1,0 +1,19 @@
+{
+  "id": "ode_harmonic_oscillator_solution",
+  "domain": "differential_equations",
+  "difficulty": "baseline",
+  "claim": "y(t)=cos(omega t) solves y'' + omega^2 y = 0 with y(0)=1 and y'(0)=0.",
+  "expected": "VALIDATED",
+  "preferred_engines": ["sympy", "scipy"],
+  "success_criteria": [
+    "Computes the differential equation residual symbolically.",
+    "Checks both boundary/initial conditions.",
+    "Reports PASS only if residual and conditions vanish."
+  ],
+  "failure_modes": [
+    "Checks only the differential equation but not initial conditions.",
+    "Uses numeric sampling without tolerance.",
+    "Treats omega=0 ambiguously without stating assumptions."
+  ],
+  "prompt": "Given y'' + omega^2 y = 0 with y(0)=1 and y'(0)=0, validate that y=cos(omega t) satisfies the equation and boundary conditions."
+}

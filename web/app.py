@@ -1,6 +1,6 @@
 import os
 import threading
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
 import fitz  # PyMuPDF
 
@@ -15,9 +15,11 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max
 
 # Setup folders
 UPLOADS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "workspace", "uploads")
-ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "ASTRA_Personal_Auto", "assets")
+ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "workspace", "assets")
+REPORTS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "workspace", "reports")
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 os.makedirs(ASSETS_DIR, exist_ok=True)
+os.makedirs(REPORTS_DIR, exist_ok=True)
 
 # Start background ASTRA loop
 threading.Thread(target=start_background_loop, daemon=True).start()
@@ -39,6 +41,12 @@ def start_loop():
     state.start_loop_requested = True
     return jsonify({"success": True})
 
+@app.route('/api/stop', methods=['POST'])
+def stop_loop():
+    state.stop_requested = True
+    state.add_log("Stop requested by user.")
+    return jsonify({"success": True})
+
 @app.route('/api/approve', methods=['POST'])
 def approve():
     state.approve_theorem_requested = True
@@ -48,6 +56,14 @@ def approve():
 def reject():
     state.reject_theorem_requested = True
     return jsonify({"success": True})
+
+@app.route('/api/reports')
+def reports():
+    return jsonify({"reports": state.reports})
+
+@app.route('/reports/<path:filename>')
+def report_file(filename):
+    return send_from_directory(REPORTS_DIR, filename, as_attachment=False)
 
 @app.route('/api/upload_doc', methods=['POST'])
 def upload_doc():
@@ -65,9 +81,9 @@ def upload_doc():
     extracted_text = f"Attached document: {filename}\n\n"
     if filename.lower().endswith('.pdf'):
         try:
-            doc = fitz.open(filepath)
-            for page in doc:
-                extracted_text += page.get_text() + "\n"
+            with fitz.open(filepath) as doc:
+                for page in doc:
+                    extracted_text += page.get_text() + "\n"
         except Exception as e:
             return jsonify({"error": f"Failed to parse PDF: {str(e)}"}), 500
     else:

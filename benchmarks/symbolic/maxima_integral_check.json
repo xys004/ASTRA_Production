@@ -1,0 +1,19 @@
+{
+  "id": "symbolic_maxima_integral_check",
+  "domain": "symbolic_cas",
+  "difficulty": "baseline",
+  "claim": "The derivative of sin(x)^2/2 + x/2 equals sin(x)^2.",
+  "expected": "REFUTED",
+  "preferred_engines": ["maxima", "sympy"],
+  "success_criteria": [
+    "Differentiates the proposed antiderivative.",
+    "Compares the derivative against sin(x)^2.",
+    "Finds the residual is not identically zero and reports REFUTED."
+  ],
+  "failure_modes": [
+    "Assumes any plausible antiderivative is correct.",
+    "Forgets the chain rule for sin(x)^2/2.",
+    "Uses numeric sampling only."
+  ],
+  "prompt": "Check whether d/dx of sin(x)^2/2 + x/2 equals sin(x)^2. Prefer Maxima or SymPy and report whether the proposed identity is validated or refuted."
+}

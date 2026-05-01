@@ -1,0 +1,19 @@
+{
+  "id": "ode_logistic_equilibrium_stability",
+  "domain": "differential_equations",
+  "difficulty": "baseline",
+  "claim": "For x' = r x (1 - x/K), the equilibrium x=K is locally stable when r > 0 and K > 0.",
+  "expected": "VALIDATED",
+  "preferred_engines": ["sympy", "scipy"],
+  "success_criteria": [
+    "Identifies equilibria x=0 and x=K.",
+    "Computes derivative of the RHS with respect to x.",
+    "Shows f'(K) = -r < 0 under r > 0."
+  ],
+  "failure_modes": [
+    "Ignores the sign assumptions on r and K.",
+    "Confuses global and local stability.",
+    "Uses only a plot or simulation."
+  ],
+  "prompt": "For the logistic equation x' = r x (1 - x/K), test whether the equilibrium x=K is locally stable under r>0 and K>0. Produce symbolic evidence."
+}

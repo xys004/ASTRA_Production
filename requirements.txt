@@ -4,12 +4,22 @@ z3-solver>=4.12.0
 qutip>=5.0.0
 numpy>=1.26.0
 scipy>=1.13.0
+mpmath>=1.3.0
+
+# GR, fluids, numerical validation, and diagnostics
+einsteinpy>=0.4.0
+fluids>=1.0.0
+pint>=0.23
+numba>=0.59.0
+matplotlib>=3.8.0
+networkx>=3.2.0
 
 # LLM Providers SDKs
 openai>=1.52.0
 anthropic>=0.39.0
 google-genai>=0.2.0
 python-dotenv>=1.0.0
+PyYAML>=6.0.0
 
 # Web Studio
 flask>=3.0.0

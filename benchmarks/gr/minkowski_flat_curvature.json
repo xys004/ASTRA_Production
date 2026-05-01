@@ -1,0 +1,19 @@
+{
+  "id": "gr_minkowski_flat_curvature",
+  "domain": "general_relativity",
+  "difficulty": "baseline",
+  "claim": "The Minkowski metric in Cartesian coordinates has zero Christoffel symbols and zero curvature.",
+  "expected": "VALIDATED",
+  "preferred_engines": ["sympy", "einsteinpy"],
+  "success_criteria": [
+    "Defines the Minkowski metric with signature (-,+,+,+) or equivalent stated convention.",
+    "Computes Christoffel symbols or curvature tensors.",
+    "Shows all tested connection/curvature components vanish."
+  ],
+  "failure_modes": [
+    "Assumes flatness without computing any tensor component.",
+    "Uses inconsistent metric signature without stating it.",
+    "Only checks one arbitrary component."
+  ],
+  "prompt": "Validate that the Minkowski metric in Cartesian coordinates has vanishing Christoffel symbols and zero curvature. Show the computed residual or tensor components used for the verdict."
+}

@@ -37,5 +37,8 @@ def generate_pdf_report(conjecture: str, workspace_dir: str = "workspace/reports
         
     # Compile
     subprocess.run(["pdflatex", "-interaction=nonstopmode", f"{filename_base}.tex"], cwd=workspace_dir, capture_output=True)
-    
-    return os.path.join(workspace_dir, f"{filename_base}.pdf")
+
+    pdf_path = os.path.join(workspace_dir, f"{filename_base}.pdf")
+    if not os.path.exists(pdf_path):
+        raise RuntimeError(f"pdflatex ran but did not produce {pdf_path}")
+    return pdf_path

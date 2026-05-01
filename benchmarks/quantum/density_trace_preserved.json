@@ -1,0 +1,19 @@
+{
+  "id": "quantum_density_trace_preserved",
+  "domain": "quantum",
+  "difficulty": "baseline",
+  "claim": "Unitary evolution rho -> U rho U^dagger preserves trace.",
+  "expected": "VALIDATED",
+  "preferred_engines": ["sympy", "qutip"],
+  "success_criteria": [
+    "Uses cyclicity of trace symbolically or verifies with representative unitary matrices.",
+    "Computes trace(U rho U^dagger) - trace(rho).",
+    "States the assumption that U is unitary."
+  ],
+  "failure_modes": [
+    "Assumes U is unitary without using U^dagger U = I.",
+    "Checks only a diagonal rho.",
+    "Uses a nonunitary matrix as U."
+  ],
+  "prompt": "Validate that unitary evolution rho -> U rho U^dagger preserves trace. Provide symbolic or matrix evidence and state assumptions."
+}

@@ -1,0 +1,19 @@
+{
+  "id": "gr_schwarzschild_ricci_scalar",
+  "domain": "general_relativity",
+  "difficulty": "baseline",
+  "claim": "The Schwarzschild vacuum metric has Ricci scalar R = 0 outside r = 2M.",
+  "expected": "VALIDATED",
+  "preferred_engines": ["einsteinpy", "sympy", "sage"],
+  "success_criteria": [
+    "Defines the Schwarzschild metric or an equivalent static spherically symmetric metric with f(r)=1-2M/r.",
+    "Computes Ricci scalar, Ricci tensor contraction, or an equivalent curvature residual.",
+    "Shows the residual simplifies to zero under r > 2M and M > 0 assumptions."
+  ],
+  "failure_modes": [
+    "Only states the known result without computing a curvature residual.",
+    "Confuses Ricci scalar with Kretschmann scalar.",
+    "Evaluates at a single numeric point and treats that as a symbolic proof."
+  ],
+  "prompt": "Test whether a static spherically symmetric Schwarzschild metric with f(r)=1-2M/r has vanishing Ricci scalar outside r=2M. Produce a symbolic residual that can validate or refute the claim."
+}

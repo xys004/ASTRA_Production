@@ -3,46 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ASTRA Web Studio</title>
+    <title>ASTRUM Production</title>
     <link rel="stylesheet" href="/static/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
 </head>
 <body>
     <div class="glass-container">
         <header>
-            <h1>ASTRA Web Studio</h1>
-            <p>Autonomous Theoretical Physics Orchestrator</p>
+            <h1>ASTRUM Production</h1>
+            <p>Autonomous Symbolic Theorem Reasoning for Unified Mathematics</p>
         </header>
         
         <main>
             <div class="left-panel">
                 <section class="upload-section">
-                    <h2>Knowledge Base (Intuition)</h2>
-                    <p>Upload a PDF paper or Text notes to feed into Phase 1.</p>
+                    <h2>Knowledge Base</h2>
+                    <p>Upload a PDF/TXT note or enter a testable scientific intuition.</p>
                     <div class="dropzone" id="doc-dropzone">
                         <span>Drag & Drop PDF/TXT here</span>
                         <input type="file" id="doc-input" hidden>
                     </div>
                     <div class="controls">
-                        <textarea id="intuition-text" placeholder="Or type intuition manually here..."></textarea>
-                        <button class="btn-primary" onclick="startDiscovery()">Launch Epistemological Loop</button>
+                        <textarea id="intuition-text" placeholder="Type a falsifiable intuition, equation, metric, identity, or model claim..."></textarea>
+                        <div class="button-row">
+                            <button class="btn-primary" onclick="startDiscovery()">Launch Cycle</button>
+                            <button class="btn-danger" onclick="stopDiscovery()">Stop</button>
+                        </div>
                     </div>
                 </section>
                 
-                <section class="upload-section">
-                    <h2>OS Agent Assets</h2>
-                    <p>Upload UI snippets for the Personal Auto version.</p>
-                    <div class="dropzone" id="asset-dropzone">
-                        <span>Drag & Drop PNG here (e.g., gemini_input.png)</span>
-                        <input type="file" id="asset-input" hidden>
+                <section class="help-section">
+                    <div class="section-title-row">
+                        <h2>Help</h2>
+                        <button class="btn-secondary" onclick="toggleHelp()">Toggle</button>
+                    </div>
+                    <div id="help-content">
+                        <div class="help-block">
+                            <h3>Provider Layout</h3>
+                            <p>Recommended: Gemini for conjectures, Claude for formal translation, OpenAI for analysis. One API can also run all phases.</p>
+                        </div>
+                        <div class="help-block">
+                            <h3>Validation Engines</h3>
+                            <p>Python stack: SymPy, Z3, SciPy, EinsteinPy, fluids, Pint, QuTiP. External CAS: SageMath, Maxima, Cadabra.</p>
+                        </div>
+                        <div class="help-block">
+                            <h3>Examples</h3>
+                            <button class="example-btn" onclick="loadExample('gr')">GR curvature</button>
+                            <button class="example-btn" onclick="loadExample('ode')">ODE residual</button>
+                            <button class="example-btn" onclick="loadExample('fluid')">Fluid law</button>
+                            <button class="example-btn" onclick="loadExample('logic')">Inequality</button>
+                            <button class="example-btn" onclick="loadExample('tensor')">Tensor identity</button>
+                        </div>
                     </div>
                 </section>
                 
                 <section class="status-board">
                     <h2>System Status</h2>
-                    <div id="status-indicator" class="status idle">IDLE</div>
+                    <div class="status-line">
+                        <div id="status-indicator" class="status idle">IDLE</div>
+                        <div id="cycle-counter" class="cycle-counter">Cycle 0</div>
+                    </div>
+                    <div class="phase-label" id="phase-label">Idle</div>
+                    <div class="progress-track">
+                        <div class="progress-bar" id="progress-bar"></div>
+                    </div>
                     <div class="logs" id="logs-container">
                         <!-- Logs injected here -->
                     </div>
@@ -53,6 +82,12 @@
                 <h2>Live Mathematics Dashboard</h2>
                 <div class="math-board" id="math-board">
                     <div class="placeholder">Mathematical hypotheses will render here...</div>
+                </div>
+                <h3>Last Validation Code</h3>
+                <pre class="code-board" id="code-board-container"><code id="code-board" class="language-python">Generated validation code will appear here...</code></pre>
+                <h3>Cycle Reports</h3>
+                <div class="reports-board" id="reports-board">
+                    Reports will appear after each completed or stopped cycle.
                 </div>
                 <div id="approval-box" class="approval-box hidden">
                     <h3>Theorem Mathematically Validated!</h3>
@@ -126,7 +161,21 @@
         }
         
         setupDropzone('doc-dropzone', 'doc-input', '/api/upload_doc');
-        setupDropzone('asset-dropzone', 'asset-input', '/api/upload_asset');
+        const examples = {
+            gr: `Test whether a static spherically symmetric metric with f(r)=1-2M/r has vanishing Ricci scalar outside r=2M, and produce a symbolic residual that can refute the claim.`,
+            ode: `Given y'' + omega^2 y = 0 with y(0)=1 and y'(0)=0, validate that the proposed solution y=cos(omega t) satisfies the equation and boundary conditions.`,
+            fluid: `For incompressible laminar pipe flow, test whether pressure drop is proportional to viscosity, length, and mean velocity, and inversely proportional to radius squared under the Hagen-Poiseuille assumptions.`,
+            logic: `Check whether the claim "for all positive real x and y, x + y >= 2 sqrt(x y)" can be refuted by bounded numerical sampling or symbolic inequality reasoning.`,
+            tensor: `Test an abstract tensor identity involving antisymmetric F_ab and the Bianchi-like condition dF=0. Prefer an indexed symbolic engine if available.`
+        };
+
+        function loadExample(name) {
+            document.getElementById('intuition-text').value = examples[name] || '';
+        }
+
+        function toggleHelp() {
+            document.getElementById('help-content').classList.toggle('hidden');
+        }
         
         function startDiscovery() {
             const intuition = document.getElementById('intuition-text').value;
@@ -136,6 +185,10 @@
                 body: JSON.stringify({intuition: intuition})
             });
         }
+
+        function stopDiscovery() {
+            fetch('/api/stop', {method: 'POST'});
+        }
         
         function approveTheorem() {
             fetch('/api/approve', {method: 'POST'});
@@ -144,21 +197,53 @@
         function rejectTheorem() {
             fetch('/api/reject', {method: 'POST'});
         }
+
+        function progressForStatus(status) {
+            const map = {
+                IDLE: 0,
+                CONJECTURING: 25,
+                TRANSLATING: 45,
+                VALIDATING: 65,
+                ANALYZING: 85,
+                WAITING_APPROVAL: 95
+            };
+            return map[status] || 0;
+        }
+
+        function reportUrl(path) {
+            if (!path) return '';
+            const parts = path.replace(/\\/g, '/').split('/');
+            return '/reports/' + encodeURIComponent(parts[parts.length - 1]);
+        }
         
         // Polling State
         setInterval(() => {
             fetch('/api/state')
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) throw new Error("Network response was not ok");
+                return res.json();
+            })
             .then(state => {
+                // Restore progress bar color in case it was offline
+                document.getElementById('progress-bar').style.background = '';
+                
                 // Update Status
                 const statusEl = document.getElementById('status-indicator');
                 statusEl.className = 'status ' + state.status.toLowerCase();
                 statusEl.innerText = state.status;
+                document.getElementById('cycle-counter').innerText = `Cycle ${state.current_cycle || state.cycle_count || 0}`;
+                document.getElementById('phase-label').innerText = state.current_phase || 'Idle';
+                document.getElementById('progress-bar').style.width = `${progressForStatus(state.status)}%`;
                 
                 // Update Logs
                 const logsEl = document.getElementById('logs-container');
+                const isScrolledToBottom = logsEl.scrollHeight - logsEl.clientHeight <= logsEl.scrollTop + 10;
+                
                 logsEl.innerHTML = state.logs.map(log => `<div>${log}</div>`).join('');
-                logsEl.scrollTop = logsEl.scrollHeight;
+                
+                if (isScrolledToBottom) {
+                    logsEl.scrollTop = logsEl.scrollHeight;
+                }
                 
                 // Update Math
                 const mathEl = document.getElementById('math-board');
@@ -169,6 +254,29 @@
                         mathEl.innerText = state.current_conjecture;
                         MathJax.typesetPromise([mathEl]).catch((err) => console.log(err));
                     }
+                }
+
+                const codeEl = document.getElementById('code-board');
+                if (state.last_python_code && codeEl.getAttribute('data-raw') !== state.last_python_code) {
+                    codeEl.setAttribute('data-raw', state.last_python_code);
+                    codeEl.textContent = state.last_python_code;
+                    if (window.Prism) {
+                        Prism.highlightElement(codeEl);
+                    }
+                }
+
+                const reportsEl = document.getElementById('reports-board');
+                if (state.reports && state.reports.length) {
+                    reportsEl.innerHTML = state.reports.map(report => {
+                        const htmlLink = report.html ? `<a href="${reportUrl(report.html)}" target="_blank">HTML</a>` : '';
+                        const mdLink = report.md ? `<a href="${reportUrl(report.md)}" target="_blank">Markdown</a>` : '';
+                        const pdfLink = report.pdf ? `<a href="${reportUrl(report.pdf)}" target="_blank">PDF</a>` : '';
+                        return `<div class="report-item">
+                            <strong>Cycle ${report.cycle}</strong>
+                            <span>${report.status || ''}</span>
+                            <span>${[htmlLink, mdLink, pdfLink].filter(Boolean).join(' · ')}</span>
+                        </div>`;
+                    }).join('');
                 }
                 
                 // Update Axioms
@@ -186,6 +294,14 @@
                 } else {
                     appBox.classList.add('hidden');
                 }
+            })
+            .catch(err => {
+                const statusEl = document.getElementById('status-indicator');
+                statusEl.className = 'status offline';
+                statusEl.innerText = 'OFFLINE';
+                document.getElementById('phase-label').innerText = 'Server disconnected or restarting...';
+                document.getElementById('progress-bar').style.width = '100%';
+                document.getElementById('progress-bar').style.background = '#ff3366';
             });
         }, 1000);
     </script>

@@ -1,0 +1,19 @@
+{
+  "id": "symbolic_polynomial_factorization_sage",
+  "domain": "symbolic_cas",
+  "difficulty": "baseline",
+  "claim": "x^4 - 1 factors as (x - 1)(x + 1)(x^2 + 1) over the rationals.",
+  "expected": "VALIDATED",
+  "preferred_engines": ["sage", "sympy"],
+  "success_criteria": [
+    "Factors x^4 - 1 over QQ or an explicitly stated field.",
+    "Compares product expansion to the original polynomial.",
+    "Reports the field/domain used."
+  ],
+  "failure_modes": [
+    "Factors over the reals/complexes without stating field.",
+    "Only prints a factorization without checking expansion.",
+    "Drops the x^2+1 factor."
+  ],
+  "prompt": "Validate over the rationals that x^4 - 1 factors as (x - 1)(x + 1)(x^2 + 1). Prefer SageMath if available."
+}

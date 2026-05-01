@@ -1,0 +1,19 @@
+{
+  "id": "fluids_reynolds_dimensionless",
+  "domain": "fluid_mechanics",
+  "difficulty": "baseline",
+  "claim": "The Reynolds number Re = rho v L / mu is dimensionless.",
+  "expected": "VALIDATED",
+  "preferred_engines": ["pint", "sympy"],
+  "success_criteria": [
+    "Assigns physical dimensions to density, velocity, length, and dynamic viscosity.",
+    "Computes the combined units of rho v L / mu.",
+    "Shows the result is dimensionless."
+  ],
+  "failure_modes": [
+    "Uses kinematic viscosity while still using the dynamic viscosity formula.",
+    "Only states the definition without dimensional verification.",
+    "Mixes incompatible unit systems."
+  ],
+  "prompt": "Verify dimensionally that Reynolds number Re = rho v L / mu is dimensionless when rho is density, v velocity, L length, and mu dynamic viscosity."
+}

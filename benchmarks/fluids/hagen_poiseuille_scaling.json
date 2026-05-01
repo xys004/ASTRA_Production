@@ -1,0 +1,19 @@
+{
+  "id": "fluids_hagen_poiseuille_scaling",
+  "domain": "fluid_mechanics",
+  "difficulty": "baseline",
+  "claim": "For laminar incompressible pipe flow, pressure drop scales as viscosity times length times mean velocity divided by radius squared.",
+  "expected": "VALIDATED",
+  "preferred_engines": ["sympy", "fluids", "pint"],
+  "success_criteria": [
+    "Uses or derives Delta P = 8 mu L V / r^2 or an equivalent Hagen-Poiseuille relation.",
+    "Performs dimensional consistency or symbolic proportionality check.",
+    "States laminar incompressible assumptions."
+  ],
+  "failure_modes": [
+    "Uses turbulent Darcy-Weisbach formula without reconciling assumptions.",
+    "Forgets radius versus diameter conversion.",
+    "Reports proportionality without checking dimensions."
+  ],
+  "prompt": "For incompressible laminar pipe flow, test whether pressure drop is proportional to viscosity, length, and mean velocity, and inversely proportional to radius squared under Hagen-Poiseuille assumptions."
+}

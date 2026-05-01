@@ -1,0 +1,19 @@
+{
+  "id": "logic_false_square_claim",
+  "domain": "logic_inequalities",
+  "difficulty": "baseline",
+  "claim": "For all real x, x^2 + 1 < 1.",
+  "expected": "REFUTED",
+  "preferred_engines": ["sympy", "z3"],
+  "success_criteria": [
+    "Finds a counterexample, such as x=0.",
+    "Reports REFUTED rather than trying to prove the false claim.",
+    "Explains that x^2 >= 0 implies x^2 + 1 >= 1."
+  ],
+  "failure_modes": [
+    "Returns VALIDATED because the expression is simple.",
+    "Uses an invalid strict inequality transformation.",
+    "Fails to distinguish < from <=."
+  ],
+  "prompt": "Refute or validate the claim: for all real x, x^2 + 1 < 1. Provide explicit symbolic reasoning or a counterexample."
+}

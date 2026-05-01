@@ -1,0 +1,19 @@
+{
+  "id": "quantum_pauli_commutator",
+  "domain": "quantum",
+  "difficulty": "baseline",
+  "claim": "The Pauli matrices satisfy [sigma_x, sigma_y] = 2 i sigma_z.",
+  "expected": "VALIDATED",
+  "preferred_engines": ["sympy", "qutip"],
+  "success_criteria": [
+    "Defines Pauli matrices explicitly or via QuTiP.",
+    "Computes the commutator sigma_x sigma_y - sigma_y sigma_x.",
+    "Shows the residual against 2 i sigma_z is zero."
+  ],
+  "failure_modes": [
+    "Uses anticommutator instead of commutator.",
+    "Gets the sign convention wrong without explaining it.",
+    "Checks only matrix shape."
+  ],
+  "prompt": "Validate the Pauli commutator identity [sigma_x, sigma_y] = 2 i sigma_z by computing the matrix residual."
+}
