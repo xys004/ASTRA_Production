@@ -36,6 +36,36 @@ PROVIDERS = {
         "package": "openai",
         "label": "OpenAI",
     },
+    "deepseek": {
+        "env": "DEEPSEEK_API_KEY",
+        "package": "openai",
+        "label": "DeepSeek",
+    },
+    "xai": {
+        "env": "XAI_API_KEY",
+        "package": "openai",
+        "label": "xAI Grok",
+    },
+    "qwen": {
+        "env": "DASHSCOPE_API_KEY",
+        "package": "openai",
+        "label": "Qwen (Alibaba)",
+    },
+    "mistral": {
+        "env": "MISTRAL_API_KEY",
+        "package": "openai",
+        "label": "Mistral AI",
+    },
+    "codestral": {
+        "env": "MISTRAL_API_KEY",
+        "package": "openai",
+        "label": "Codestral (Mistral)",
+    },
+    "groq": {
+        "env": "GROQ_API_KEY",
+        "package": "openai",
+        "label": "Groq",
+    },
 }
 
 PHASES = {
