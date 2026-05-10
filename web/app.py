@@ -7,6 +7,7 @@ from werkzeug.utils import secure_filename
 # Allow imports from project root
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from core.state import state
+from core.research_session import ResearchSession
 from main import start_background_loop
 
 app = Flask(__name__)
@@ -128,6 +129,107 @@ def upload_doc():
     state.current_intuition = extracted_text
     state.add_log(f"Document '{filename}' uploaded and parsed successfully.")
     return jsonify({"success": True, "message": "Document loaded into ASTRA context."})
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Research-loop endpoints
+# ═══════════════════════════════════════════════════════════════════
+
+@app.route('/api/session/start', methods=['POST'])
+def session_start():
+    """Start a new depth-first research session with a macro question."""
+    data = request.json or {}
+    macro_question = (data.get('macro_question') or '').strip()
+    if not macro_question:
+        return jsonify({"error": "macro_question is required"}), 400
+
+    if state.status not in ("IDLE",):
+        return jsonify({"error": f"ASTRA is currently {state.status}. Stop it before starting a research session."}), 409
+
+    heartbeat = int(data.get('heartbeat_interval', 5))
+    providers  = data.get('providers', {})
+    if providers:
+        if 'conjecture' in providers:
+            os.environ['ASTRA_CONJECTURE_PROVIDER'] = providers['conjecture']
+        if 'translator' in providers:
+            os.environ['ASTRA_TRANSLATOR_PROVIDER'] = providers['translator']
+        if 'analyst' in providers:
+            os.environ['ASTRA_ANALYST_PROVIDER'] = providers['analyst']
+        if 'navigator' in providers:
+            os.environ['ASTRA_NAVIGATOR_PROVIDER'] = providers['navigator']
+
+    session = ResearchSession(macro_question=macro_question, heartbeat_interval=heartbeat)
+    state.research_session = session
+    state.start_research_requested = True
+    state.add_log(f"Research session '{session.session_id}' started.")
+    return jsonify({"success": True, "session_id": session.session_id})
+
+
+@app.route('/api/session/state')
+def session_state():
+    """Return the current research session state (thread, branches, milestones)."""
+    if state.research_session is None:
+        return jsonify({"session": None})
+    return jsonify({
+        "session": state.research_session.to_dict(),
+        "navigator_proposal": state.navigator_proposal,
+        "astra_status": state.status,
+    })
+
+
+@app.route('/api/session/continue', methods=['POST'])
+def session_continue():
+    """At a milestone: accept the navigator's proposed next direction and continue."""
+    if state.status != "WAITING_DIRECTION":
+        return jsonify({"error": "Not waiting for direction"}), 409
+    state.continue_research_requested = True
+    state.add_log("Human confirmed: continuing with navigator's direction.")
+    return jsonify({"success": True})
+
+
+@app.route('/api/session/redirect', methods=['POST'])
+def session_redirect():
+    """At a milestone: override with a human-provided direction."""
+    data = request.json or {}
+    direction = (data.get('direction') or '').strip()
+    if not direction:
+        return jsonify({"error": "direction is required"}), 400
+    if state.status != "WAITING_DIRECTION":
+        return jsonify({"error": "Not waiting for direction"}), 409
+    state.redirect_direction          = direction
+    state.redirect_research_requested = True
+    state.add_log(f"Human redirected: {direction[:120]}")
+    return jsonify({"success": True})
+
+
+@app.route('/api/session/switch_branch', methods=['POST'])
+def session_switch_branch():
+    """At a milestone: activate a saved branch from the registry."""
+    data = request.json or {}
+    branch_id = (data.get('branch_id') or '').strip()
+    if not branch_id:
+        return jsonify({"error": "branch_id is required"}), 400
+    if state.status != "WAITING_DIRECTION":
+        return jsonify({"error": "Not waiting for direction"}), 409
+    state.switch_branch_id = branch_id
+    state.add_log(f"Human selected branch: {branch_id}")
+    return jsonify({"success": True})
+
+
+@app.route('/api/session/stop', methods=['POST'])
+def session_stop():
+    """Stop the active research session."""
+    state.stop_requested = True
+    state.add_log("Research session stop requested by user.")
+    return jsonify({"success": True})
+
+
+@app.route('/api/session/branches')
+def session_branches():
+    """List all pending branches in the registry."""
+    if state.research_session is None:
+        return jsonify({"branches": []})
+    return jsonify({"branches": state.research_session.pending_branches()})
 
 
 @app.route('/api/upload_asset', methods=['POST'])

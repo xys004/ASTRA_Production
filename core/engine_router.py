@@ -8,7 +8,7 @@ import sys
 import uuid
 
 
-ENGINE_MARKER = re.compile(r"^\s*#\s*ASTRA_ENGINE:\s*(python|sage|maxima|cadabra)\s*$", re.I | re.M)
+ENGINE_MARKER = re.compile(r"^\s*#\s*ASTRA_ENGINE:\s*(python|sympy|sage|maxima|cadabra)\s*$", re.I | re.M)
 
 
 def _is_windows() -> bool:
@@ -52,7 +52,8 @@ def available_cas() -> dict[str, str | None]:
 def detect_engine(code: str) -> str:
     marker = ENGINE_MARKER.search(code)
     if marker:
-        return marker.group(1).lower()
+        engine = marker.group(1).lower()
+        return "python" if engine == "sympy" else engine
 
     if re.search(r"^\s*(from\s+sage|import\s+sage)", code, re.M):
         return "sage"

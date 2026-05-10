@@ -34,3 +34,12 @@ __pycache__/
 # Service account keys
 *-key.json
 *-sa-key.json
+
+# Personal working copies (local variants with personal config)
+*-Nelson.*
+-Nelson.*
+
+# Runtime session & benchmark data (personal run history)
+workspace/sessions/
+workspace/benchmark_runs/
+workspace/research_runs/

@@ -27,10 +27,23 @@ class GlobalState:
         self.logs = []
         self._log_lock = threading.Lock()
 
-        self.start_loop_requested    = False
-        self.stop_requested          = False
+        # ── Single-cycle mode flags ──────────────────────────────────────
+        self.start_loop_requested      = False
+        self.stop_requested            = False
         self.approve_theorem_requested = False
         self.reject_theorem_requested  = False
+
+        # ── Research-loop mode flags & state ─────────────────────────────
+        self.start_research_requested    = False   # trigger research loop
+        self.continue_research_requested = False   # milestone: keep navigator's direction
+        self.redirect_research_requested = False   # milestone: use human's direction
+        self.redirect_direction          = ""      # human-provided direction on redirect
+        self.switch_branch_id            = ""      # branch id to activate on switch
+
+        # Current session object (ResearchSession | None) — not persisted in state.json
+        self.research_session = None
+        # Latest navigator output, exposed to the UI while waiting at a milestone
+        self.navigator_proposal: dict = {}
 
     def add_log(self, message: str) -> None:
         ts = datetime.now().strftime("%H:%M:%S")
@@ -62,19 +75,25 @@ class GlobalState:
             print(f"[WARN] Failed to load saved state: {exc}")
 
     def get_state_dict(self) -> dict:
+        session_dict = (
+            self.research_session.to_dict() if self.research_session is not None else None
+        )
         return {
-            "status":               self.status,
-            "current_phase":        self.current_phase,
-            "cycle_count":          self.cycle_count,
-            "current_cycle":        self.current_cycle,
-            "axiomatic_base":       self.axiomatic_base,
-            "current_conjecture":   self.current_conjecture,
-            "last_python_code":     self.last_python_code,
+            "status":                self.status,
+            "current_phase":         self.current_phase,
+            "cycle_count":           self.cycle_count,
+            "current_cycle":         self.current_cycle,
+            "axiomatic_base":        self.axiomatic_base,
+            "current_conjecture":    self.current_conjecture,
+            "last_python_code":      self.last_python_code,
             "last_execution_result": self.last_execution_result,
-            "last_analysis":        self.last_analysis,
-            "last_report":          self.last_report,
-            "reports":              self.reports,
-            "logs":                 self.logs,
+            "last_analysis":         self.last_analysis,
+            "last_report":           self.last_report,
+            "reports":               self.reports,
+            "logs":                  self.logs,
+            # Research-loop extras
+            "research_session":      session_dict,
+            "navigator_proposal":    self.navigator_proposal,
         }
 
 
