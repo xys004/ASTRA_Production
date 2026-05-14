@@ -19,5 +19,5 @@ start /b cmd /c "ping 127.0.0.1 -n 4 > nul && start http://127.0.0.1:5050"
 python web\app.py
 
 echo.
-echo  ASTRA se ha detenido. Presiona cualquier tecla para cerrar.
+echo  ASTRA has stopped. Press any key to close.
 pause > nul

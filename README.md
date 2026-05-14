@@ -1,101 +1,123 @@
-# ASTRUM Production
+# ASTRA Production
 
-**Autonomous Symbolic Theorem Reasoning for Unified Mathematics**
+**Autonomous Symbolic Theorem Reasoning Architecture**
 
-ASTRUM Production is a multi-agent research orchestrator for turning scientific intuition into mathematically testable hypotheses. It uses LLM providers for reasoning phases and symbolic/numerical engines for validation.
+ASTRA is a multi-agent epistemological research engine that turns scientific intuition into mathematically validated or refuted theorems. It connects LLM reasoning agents to real symbolic/numerical computation engines and presents results through a browser-based research interface.
 
 ## What It Does
 
-1. **Conjecture Engine** formalizes an intuition, note, or paper excerpt into a falsifiable mathematical hypothesis.
-2. **Formal Translator** converts the hypothesis into a validation script.
-3. **Validation Oracle** executes the script with Python, SageMath, Maxima, or Cadabra.
-4. **Refutation Analyst** classifies the result as `VALIDATED`, `REFUTED`, or `CODE_ERROR`.
-5. **Human Approval** decides whether a validated result becomes part of the axiomatic base.
+1. **Conjecture Engine** — formalizes an intuition, note, or paper excerpt into a falsifiable mathematical hypothesis.
+2. **Formal Translator** — converts the hypothesis into a runnable validation script (Python, SageMath, Maxima, or Cadabra).
+3. **Validation Oracle** — executes the script and captures stdout/stderr.
+4. **Refutation Analyst** — classifies the result as `VALIDATED`, `REFUTED`, `CODE_ERROR`, or `API_ERROR`.
+5. **Human Approval** — decides whether a validated theorem joins the Axiomatic Base.
+6. **Research Navigator** — in Research Loop mode, proposes the next depth-first direction and manages parallel branches.
 
-ASTRUM is designed for theoretical physics, GR, quantum systems, fluids, symbolic calculus, differential equations, and mathematical model checking.
+ASTRA is designed for theoretical physics, GR, quantum systems, fluid mechanics, symbolic calculus, differential equations, and mathematical model checking.
 
-## Clean Windows Installation
+---
 
-Use this path for company or institution deployments. It does not require Anaconda or preinstalled Python packages.
+## Windows 11 Installation (Recommended)
 
-1. Download or clone the project.
-2. Right-click `install_windows_wsl.ps1`.
-3. Choose **Run with PowerShell**.
-4. If Windows asks to install WSL/Ubuntu or reboot, accept it, reboot, then run the installer again.
-5. Launch **ASTRUM Production Wizard (WSL)** from the Desktop.
+No Anaconda or preinstalled packages required — just Python 3.9+ and PowerShell.
 
-The installer prepares:
+### Step 1 — Download
 
-- WSL Ubuntu.
-- Python 3 and `.astra-wsl-venv`.
-- Python packages from `requirements.txt`.
-- SageMath and Maxima through Ubuntu packages.
-- Cadabra when available in the Ubuntu repository.
-- A Windows Desktop shortcut that launches ASTRUM through WSL.
+Download or clone this repository:
 
-## API Configuration
-
-Copy `.env.example` to `.env` and fill in at least one provider key. ASTRA runs in simulated mode if no keys are present.
-
-```env
-GEMINI_API_KEY=your_gemini_key
-ANTHROPIC_API_KEY=your_anthropic_key
-OPENAI_API_KEY=your_openai_key
+```powershell
+git clone https://github.com/xys004/ASTRA_Production.git
+cd ASTRA_Production
 ```
 
-**Google Vertex AI** is supported as a keyless alternative using Application Default Credentials (ADC). No API key is needed — authenticate once with the Google Cloud CLI:
+Or download the ZIP from GitHub and extract it anywhere.
 
-```bash
-gcloud auth application-default login
-```
+### Step 2 — Run the installer
 
-Then set your GCP project in `.env`:
+Right-click `install.ps1` → **Run with PowerShell**.
 
-```env
-VERTEX_PROJECT=your_gcp_project_id
-VERTEX_LOCATION=us-central1
-ASTRA_PROVIDER=vertexai
-```
+The installer will:
+- Check for Python 3.9+
+- Create a local virtual environment (`venv/`)
+- Install all Python packages from `requirements.txt`
+- Create a desktop shortcut **ASTRA Production** that launches the web interface and opens your browser automatically
 
-ASTRUM can use one provider for all phases or different providers per phase:
+> If PowerShell blocks execution, run this first:
+> `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned`
 
-```env
-ASTRA_CONJECTURE_PROVIDER=gemini
-ASTRA_TRANSLATOR_PROVIDER=anthropic
-ASTRA_ANALYST_PROVIDER=openai
-```
+### Step 3 — Configure API keys
 
-Recommended layouts:
+Launch ASTRA from the desktop shortcut. The browser opens at `http://127.0.0.1:5050`.
 
-- **One-key users:** use the same provider for all phases.
-- **Two-provider users:** use Gemini or Claude for conjecture, and OpenAI or Claude for translation/analysis.
-- **Three-provider users:** use Gemini for conjecture, Claude for formal translation, and OpenAI for refutation analysis.
+Click **Settings ⚙** in the top-right corner to enter your API keys — no need to edit files manually.
 
-The wizard validates only the providers selected for the run.
+ASTRA works with **any one of these providers**:
+
+| Provider | Where to get a key |
+|---|---|
+| Gemini Flash | [aistudio.google.com](https://aistudio.google.com) (free tier available) |
+| Anthropic Claude | [console.anthropic.com](https://console.anthropic.com) |
+| OpenAI GPT-4o | [platform.openai.com](https://platform.openai.com) |
+| DeepSeek R1 | [platform.deepseek.com](https://platform.deepseek.com) |
+| xAI Grok | [console.x.ai](https://console.x.ai) |
+| Qwen2.5-Math | [dashscope.aliyun.com](https://dashscope.aliyun.com) |
+| Mistral / Codestral | [console.mistral.ai](https://console.mistral.ai) |
+| Groq (Llama 3.3) | [console.groq.com](https://console.groq.com) (free tier available) |
+
+Alternatively, copy `.env.example` to `.env` and fill in your keys directly.
+
+**Google Vertex AI** (keyless alternative): authenticate once with `gcloud auth application-default login`, then set `VERTEX_PROJECT` in Settings or `.env`.
+
+---
+
+## Using ASTRA
+
+### Single Cycle mode
+
+Enter a falsifiable scientific claim in the **Intuition Input** box (or upload a PDF/TXT), select providers, and click **Launch Cycle**. ASTRA runs all five phases and returns a report.
+
+### Research Loop mode
+
+Switch to **Research Loop** in the sidebar. Enter a **macro research question** — the overarching question to investigate across many cycles. ASTRA runs depth-first, with the Navigator choosing each next hypothesis based on the previous result.
+
+- **Heartbeat** — number of cycles between human-review pauses (a pause, not a stop).
+- **Autonomous Mode** — ASTRA auto-continues at every milestone and stops only when the Navigator declares the macro question resolved.
+- **Max runtime** — optional time limit in minutes (empty = unlimited).
+- At milestones you can: continue with the Navigator's direction, redirect with your own, or activate a saved parallel branch.
+
+### Investigation management
+
+- **New** (topbar) — saves the current investigation and resets ASTRA for a fresh start.
+- **History** — browse, reload, or delete past investigations.
+
+---
 
 ## Validation Engines
 
-Python packages:
+Python (always available):
 
-- `sympy`: symbolic algebra, calculus, identities, residuals.
-- `z3-solver`: satisfiability, inequalities, counterexample search.
-- `scipy`, `numpy`, `mpmath`: ODEs, numerical validation, optimization, high precision checks.
-- `einsteinpy`: GR metrics, Christoffel symbols, curvature tensors, geodesics.
-- `fluids`, `pint`: fluid mechanics and dimensional consistency.
-- `qutip`: quantum systems, density matrices, open-system dynamics.
-- `numba`, `matplotlib`, `networkx`: performance and diagnostics.
+| Package | Used for |
+|---|---|
+| `sympy` | Symbolic algebra, calculus, identities, residuals |
+| `z3-solver` | Satisfiability, inequalities, counterexample search |
+| `scipy`, `numpy`, `mpmath` | ODEs, numerical checks, high-precision computation |
+| `einsteinpy` | GR metrics, Christoffel symbols, curvature, geodesics |
+| `fluids`, `pint` | Fluid mechanics and dimensional consistency |
+| `qutip` | Quantum systems, density matrices |
 
-External CAS engines:
+External CAS (optional, via WSL on Windows):
 
-- `# ASTRA_ENGINE: sage`
-- `# ASTRA_ENGINE: maxima`
-- `# ASTRA_ENGINE: cadabra`
+```python
+# ASTRA_ENGINE: sage      # SageMath
+# ASTRA_ENGINE: maxima    # Maxima CAS
+# ASTRA_ENGINE: cadabra   # Cadabra (tensor algebra)
+```
 
-If an optional CAS is missing, the oracle returns a clear failure instead of treating the result as validated.
+If an optional CAS is missing, the oracle returns a clear failure instead of misclassifying as validated.
+
+---
 
 ## Example Inputs
-
-Paste one of these into the intuition box.
 
 ### General Relativity
 
@@ -103,15 +125,11 @@ Paste one of these into the intuition box.
 Test whether a static spherically symmetric metric with f(r)=1-2M/r has vanishing Ricci scalar outside r=2M, and produce a symbolic residual that can refute the claim.
 ```
 
-Expected behavior: the translator should prefer `sympy`, `einsteinpy`, or `sage` and compute curvature-related residuals.
-
 ### Differential Equations
 
 ```text
 Given y'' + omega^2 y = 0 with y(0)=1 and y'(0)=0, validate that the proposed solution y=cos(omega t) satisfies the equation and boundary conditions.
 ```
-
-Expected behavior: the translator should use `sympy` for symbolic residuals or `scipy` for a numerical check.
 
 ### Fluid Mechanics
 
@@ -119,89 +137,47 @@ Expected behavior: the translator should use `sympy` for symbolic residuals or `
 For incompressible laminar pipe flow, test whether pressure drop is proportional to viscosity, length, and mean velocity, and inversely proportional to radius squared under the Hagen-Poiseuille assumptions.
 ```
 
-Expected behavior: the translator should use symbolic dimensional checks, `fluids`, and `pint` where useful.
-
 ### Logic / Counterexample Search
 
 ```text
 Check whether the claim "for all positive real x and y, x + y >= 2 sqrt(x y)" can be refuted by bounded numerical sampling or symbolic inequality reasoning.
 ```
 
-Expected behavior: the translator may use `sympy`, `z3`, or numerical sampling with explicit tolerances.
-
-### Tensor / QFT Style
-
-```text
-Test an abstract tensor identity involving antisymmetric F_ab and the Bianchi-like condition dF=0. Prefer an indexed symbolic engine if available.
-```
-
-Expected behavior: the translator should prefer Cadabra when available, otherwise return a clear missing-engine failure or use a reduced symbolic test.
+---
 
 ## Benchmark Suite
 
-ASTRUM includes a small golden benchmark suite for calibrating provider layouts, prompts, and validation engines before attempting novel research.
+ASTRA includes a golden benchmark suite for calibrating providers and engines.
 
-```txt
+```
 benchmarks/
-  gr/
-  ode/
-  fluids/
-  logic/
-  quantum/
-  symbolic/
+  gr/        ode/       fluids/
+  logic/     quantum/   symbolic/
 ```
 
-List all benchmark cases:
+List all cases:
 
 ```powershell
 python scripts\list_benchmarks.py
 ```
 
-Print a benchmark as a prompt:
+Run the suite:
 
 ```powershell
-python scripts\list_benchmarks.py --prompt gr_schwarzschild_ricci_scalar
+python scripts\run_benchmarks.py
 ```
 
-Initial suite:
-
-- GR: Schwarzschild Ricci scalar, Minkowski flat curvature.
-- ODE: harmonic oscillator solution, logistic equilibrium stability.
-- Fluids: Hagen-Poiseuille scaling, Reynolds dimensionless check.
-- Logic: AM-GM inequality, false square claim.
-- Quantum: Pauli commutator, trace preservation under unitary evolution.
-- Symbolic CAS: polynomial factorization, false antiderivative check.
-
-Recommended use:
-
-1. Run the same benchmark with one-provider and three-provider layouts.
-2. Compare `VALIDATED`, `REFUTED`, `CODE_ERROR`, and false-positive rates.
-3. Inspect generated reports in `workspace/reports/`.
-4. Add new domain-specific benchmarks before using ASTRUM on unknown research problems.
+---
 
 ## Reading Results
 
-The UI displays:
+Cycle reports are saved to `workspace/reports/` as HTML and Markdown. The web interface links to each report. When a Research Loop session ends, the reports folder opens automatically.
 
-- Current system status.
-- Phase logs.
-- Current conjecture.
-- Last generated validation code.
-- Axiomatic base.
-- Approval controls when a theorem is validated.
+Status values:
 
-Validation is conservative. A result should only be approved when the evidence is mathematically meaningful and the script did not merely pass trivially.
-
-## Packaging A Release
-
-Create a compact source ZIP:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\package_release.ps1 -Version v0.1.0
-```
-
-The ZIP excludes virtual environments, workspace outputs, `.env`, git metadata, caches, and local artifacts. Publish that ZIP through GitHub Releases or distribute it internally.
-
-## Legacy Local Windows Install
-
-`install.ps1` and `setup.bat` are retained for local experiments. They are not recommended for clean institutional distribution because SageMath, Maxima, and Cadabra are not normal Windows `pip install` dependencies.
+| Status | Meaning |
+|---|---|
+| `VALIDATED` | Hypothesis confirmed by the oracle — awaits human approval |
+| `REFUTED` | Hypothesis disproved — reasoning added to Axiomatic Base |
+| `CODE_ERROR` | Validation script failed after retries |
+| `API_ERROR` | Provider quota or network error — cycle skipped, retried |
