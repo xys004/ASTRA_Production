@@ -29,6 +29,7 @@ class GlobalState:
         self._log_lock = threading.Lock()
 
         self.autonomous_mode = False
+        self.max_runtime_minutes = 0   # 0 = unlimited
 
         # ── Single-cycle mode flags ──────────────────────────────────────
         self.start_loop_requested      = False

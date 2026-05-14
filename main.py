@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import time
 from typing import Optional
 
 from core.llm_client import ASTRAIntelligence
@@ -342,11 +343,21 @@ async def _run_research_loop() -> None:
 
     # First direction = macro question itself
     current_direction = session.macro_question
+    _session_start = time.time()
 
     while session.status == "ACTIVE":
         if state.stop_requested:
             state.add_log("Stop requested. Ending research loop.")
             break
+
+        if state.max_runtime_minutes > 0:
+            elapsed_min = (time.time() - _session_start) / 60
+            if elapsed_min >= state.max_runtime_minutes:
+                state.add_log(
+                    f"Maximum runtime of {state.max_runtime_minutes} min reached "
+                    f"({elapsed_min:.1f} min elapsed). Ending session."
+                )
+                break
 
         # ── Execute one cycle ────────────────────────────────────────────
         result = await _execute_one_cycle(current_direction)

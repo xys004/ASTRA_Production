@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ASTRUM Production</title>
+    <title>ASTRA Production</title>
     <link rel="stylesheet" href="/static/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
@@ -194,6 +194,8 @@
         display: flex;
         flex-direction: column;
         gap: 5px;
+        max-height: 300px;
+        overflow-y: auto;
     }
     .branch-item {
         border: 1px solid var(--border, #2a2a3a);
@@ -637,7 +639,7 @@
     <!-- ── Topbar ─────────────────────────────────────────────────────── -->
     <header class="topbar">
         <div class="brand">
-            <span class="brand-name">ASTRUM</span>
+            <span class="brand-name">ASTRA</span>
             <span class="brand-sep">/</span>
             <span id="brand-mode-label" class="brand-sub">Production</span>
         </div>
@@ -863,6 +865,12 @@
                             <input type="checkbox" id="autonomous-mode">
                             <label for="autonomous-mode" class="auto-label">Autonomous Mode</label>
                             <span class="auto-hint" title="When ON, ASTRA auto-continues at every milestone without pausing. Stops only when the Navigator declares the macro question resolved.">— skips human pauses, stops when macro is resolved</span>
+                        </div>
+
+                        <div class="session-config-row">
+                            <label class="provider-label">Max runtime</label>
+                            <input type="number" id="max-runtime" value="" min="1" max="480" placeholder="∞">
+                            <span class="unit-label" title="Maximum session duration in minutes. Leave empty to run until macro is resolved or you stop manually.">min (empty = unlimited)</span>
                         </div>
                     </div>
 
@@ -1516,14 +1524,19 @@ async function startResearch() {
         analyst:    document.getElementById('r-analyst-provider').value,
         navigator:  document.getElementById('r-navigator-provider').value,
     };
-    const heartbeat   = parseInt(document.getElementById('heartbeat-interval').value) || 5;
-    const autonomous  = document.getElementById('autonomous-mode').checked;
+    const heartbeat      = parseInt(document.getElementById('heartbeat-interval').value) || 5;
+    const autonomous     = document.getElementById('autonomous-mode').checked;
+    const maxRuntimeRaw  = document.getElementById('max-runtime').value.trim();
+    const maxRuntime     = maxRuntimeRaw ? (parseInt(maxRuntimeRaw) || 0) : 0;
 
     setResearchButtons(true);
     const res = await fetch('/api/session/start', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({macro_question: q, heartbeat_interval: heartbeat, providers, autonomous_mode: autonomous})
+        body: JSON.stringify({
+            macro_question: q, heartbeat_interval: heartbeat,
+            providers, autonomous_mode: autonomous, max_runtime_minutes: maxRuntime
+        })
     });
     if (res.ok) {
         toast('Research session launched', 'success');
@@ -1700,7 +1713,8 @@ function updateResearchThread(session) {
     if (!thread.length) {
         threadEl.innerHTML = '<div class="thread-empty">Research thread will populate as cycles complete.</div>';
     } else {
-        threadEl.innerHTML = thread.map(item => {
+        // Newest first so the most recent cycle is always visible without scrolling
+        threadEl.innerHTML = [...thread].reverse().map(item => {
             const s = (item.status || '').toUpperCase();
             const badgeCls = s === 'VALIDATED' ? 'validated'
                            : s === 'REFUTED'   ? 'refuted'
@@ -1721,7 +1735,6 @@ function updateResearchThread(session) {
                 ${navDir}
             </div>`;
         }).join('');
-        threadEl.scrollTop = threadEl.scrollHeight;
     }
 
     updateBranchRegistry(session.branch_registry || []);

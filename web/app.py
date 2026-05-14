@@ -164,6 +164,7 @@ def session_start():
 
     autonomous = bool(data.get('autonomous_mode', False))
     state.autonomous_mode = autonomous
+    state.max_runtime_minutes = max(0, int(data.get('max_runtime_minutes', 0) or 0))
     if autonomous:
         state.add_log("Autonomous mode ON: milestones will be auto-continued. Stops only when macro question is resolved.")
 

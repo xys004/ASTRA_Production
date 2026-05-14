@@ -97,8 +97,7 @@ def _fix_json_backslashes(text: str) -> str:
 def _extract_next_direction_from_prose(response: str, macro_question: str) -> str:
     """
     Best-effort extraction of a next research direction from a prose or
-    partially-formatted Navigator response.  Returns the macro_question as
-    last resort so the loop never halts with a vacuous direction.
+    partially-formatted Navigator response.
     """
     # Look for the value after "next_direction": possibly truncated JSON
     match = re.search(r'"next_direction"\s*:\s*"([^"]{20,})', response)
@@ -106,11 +105,12 @@ def _extract_next_direction_from_prose(response: str, macro_question: str) -> st
         return match.group(1)[:400]
     # Look for sentences starting with investigative verbs
     for prefix in ("Investigate", "Examine", "Compute", "Determine", "Verify",
-                   "Calculate", "Explore", "Formulate", "Consider", "Derive"):
+                   "Calculate", "Explore", "Formulate", "Consider", "Derive", "Now"):
         match = re.search(rf'{prefix}[^.!?]{{20,}}[.!?]', response)
         if match:
             return match.group(0)[:400]
-    return macro_question
+    # Last resort: return a short excerpt of the macro question, not the full text
+    return macro_question[:300] + ("…" if len(macro_question) > 300 else "")
 
 
 class ASTRAIntelligence:
@@ -277,12 +277,15 @@ class ASTRAIntelligence:
 
         from agents.navigator import RESEARCH_NAVIGATOR_PROMPT
 
+        # Truncate macro_question for the navigator — it may be a full PDF (15k+ chars)
+        mac_q_short = macro_question[:600] + ("…[truncated]" if len(macro_question) > 600 else "")
+
         user_prompt = (
-            f"macro_question: {macro_question}\n\n"
+            f"macro_question: {mac_q_short}\n\n"
             f"axiomatic_base:\n{axiomatic_base}\n\n"
-            f"last_conjecture:\n{last_conjecture}\n\n"
+            f"last_conjecture:\n{last_conjecture[:800]}\n\n"
             f"last_status: {last_status}\n"
-            f"last_reasoning: {last_reasoning}\n\n"
+            f"last_reasoning: {last_reasoning[:400]}\n\n"
             f"thread_summary:\n{thread_summary}\n\n"
             f"cycles_since_milestone: {cycles_since_milestone}"
         )
@@ -297,6 +300,7 @@ class ASTRAIntelligence:
                 "milestone": False,
                 "milestone_reason": "",
                 "progress_assessment": "Simulated.",
+                "macro_resolved": False,
             }
 
         # Pre-process: escape lone backslashes that break JSON parsing
@@ -310,6 +314,7 @@ class ASTRAIntelligence:
             parsed.setdefault("milestone", False)
             parsed.setdefault("milestone_reason", "")
             parsed.setdefault("progress_assessment", "")
+            parsed.setdefault("macro_resolved", False)
             return parsed
 
         # Fallback: try to extract next_direction from raw text so the loop
@@ -323,6 +328,7 @@ class ASTRAIntelligence:
             "milestone": True,
             "milestone_reason": "Navigator JSON could not be fully parsed — human review recommended.",
             "progress_assessment": "Navigator output partially parsed.",
+            "macro_resolved": False,
         }
 
     async def analyze_results(self, conjecture: str, exec_result: dict) -> dict:
@@ -338,6 +344,8 @@ class ASTRAIntelligence:
 
             user_prompt = f"Conjecture:\n{conjecture}\n\nExecution Error:\n{exec_result['stderr']}"
             response = await self._call_api(system_prompt, user_prompt)
+            if isinstance(response, str) and response.startswith("API_ERROR:"):
+                return {"status": "API_ERROR", "reasoning": response}
             parsed = _extract_json_object(response)
             if parsed and parsed.get("status") in {"CODE_ERROR", "REFUTED", "VALIDATED"}:
                 return parsed
@@ -349,6 +357,8 @@ class ASTRAIntelligence:
 
             user_prompt = f"Conjecture:\n{conjecture}\n\nExecution Output:\n{exec_result['stdout']}"
             response = await self._call_api(system_prompt, user_prompt)
+            if isinstance(response, str) and response.startswith("API_ERROR:"):
+                return {"status": "API_ERROR", "reasoning": response}
             parsed = _extract_json_object(response)
             if parsed and parsed.get("status") in {"CODE_ERROR", "REFUTED", "VALIDATED"}:
                 return parsed

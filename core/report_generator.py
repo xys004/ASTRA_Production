@@ -30,8 +30,8 @@ def _write_pdf_stub(markdown_path: Path, pdf_path: Path) -> bool:
 \usepackage{geometry}
 \usepackage{hyperref}
 \geometry{margin=2cm}
-\title{ASTRUM Cycle Report}
-\author{ASTRUM Production}
+\title{ASTRA Cycle Report}
+\author{ASTRA Production}
 \date{\today}
 \begin{document}
 \maketitle
@@ -75,7 +75,7 @@ def generate_cycle_report(
         "Review the evidence, refine the hypothesis, or launch another cycle with a narrower intuition."
     )
 
-    md = f"""# ASTRUM Cycle {cycle} Report
+    md = f"""# ASTRA Cycle {cycle} Report
 
 Generated: {datetime.now().isoformat(timespec="seconds")}
 
@@ -175,7 +175,7 @@ The cycle ended with analyst status `{analysis.get("status", "UNKNOWN")}`. Human
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ASTRUM Cycle {cycle} Report</title>
+  <title>ASTRA Cycle {cycle} Report</title>
   <style>
     body {{ font-family: Inter, Arial, sans-serif; margin: 2rem auto; max-width: 900px; color: #17202a; line-height: 1.6; }}
     h1 {{ color: #0b3b5a; border-bottom: 2px solid #0b3b5a; padding-bottom: .4rem; }}
