@@ -43,3 +43,4 @@ __pycache__/
 workspace/sessions/
 workspace/benchmark_runs/
 workspace/research_runs/
+workspace/investigations/
