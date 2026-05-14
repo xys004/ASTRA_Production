@@ -124,6 +124,10 @@ def _idle() -> None:
     state.current_phase = "Idle"
 
 
+def _is_api_error(text: str) -> bool:
+    return isinstance(text, str) and text.startswith("API_ERROR:")
+
+
 # ═══════════════════════════════════════════════════════════════════
 # Core execution engine (shared by single-cycle and research modes)
 # ═══════════════════════════════════════════════════════════════════
@@ -136,6 +140,7 @@ async def _execute_one_cycle(intuition: str) -> dict:
     Does NOT call _idle() — the caller manages lifecycle.
     """
     state.cycle_count += 1
+    state.investigation_cycle_count += 1
     state.current_cycle = state.cycle_count
     state.current_phase = "1/5 Intake"
     state.add_log("--- STARTING NEW EPISTEMOLOGICAL LOOP ITERATION ---")
@@ -155,6 +160,14 @@ async def _execute_one_cycle(intuition: str) -> dict:
     conjecture = await phase_2_generate_conjecture(state.axiomatic_base, intuition)
     state.current_conjecture = conjecture
 
+    if _is_api_error(conjecture):
+        state.add_log(f"[API_ERROR] Phase 2 API error — aborting cycle: {conjecture[:160]}")
+        final_status   = "API_ERROR"
+        final_analysis = {"status": "API_ERROR", "reasoning": conjecture}
+        _write_cycle_report(final_status, intuition, final_analysis)
+        state.save_state()
+        return {"conjecture": conjecture, "status": final_status, "analysis": final_analysis}
+
     # ── Phases 3–5 with retry loop ───────────────────────────────────────
     python_code   = None
     code_retries  = 0
@@ -170,6 +183,12 @@ async def _execute_one_cycle(intuition: str) -> dict:
         if python_code is None:
             python_code = await phase_3_formal_translation(conjecture)
             state.last_python_code = python_code
+            if _is_api_error(python_code):
+                state.add_log(f"[API_ERROR] Phase 3 API error — aborting cycle: {python_code[:160]}")
+                final_status   = "API_ERROR"
+                final_analysis = {"status": "API_ERROR", "reasoning": python_code}
+                code_resolved  = True
+                continue
 
         if _stop_requested():
             final_status   = "STOPPED"
@@ -219,6 +238,12 @@ async def _execute_one_cycle(intuition: str) -> dict:
                     previous_error=exec_result.get("stderr", "Unknown execution error"),
                 )
             state.last_python_code = python_code
+            if _is_api_error(python_code):
+                state.add_log(f"[API_ERROR] Phase 3 (correction) API error — aborting: {python_code[:160]}")
+                final_status   = "API_ERROR"
+                final_analysis = {"status": "API_ERROR", "reasoning": python_code}
+                code_resolved  = True
+                continue
 
         elif status == "REFUTED":
             state.add_log("Hypothesis refuted. Feeding back to the axiomatic base...")
@@ -329,11 +354,16 @@ async def _run_research_loop() -> None:
         if result["status"] in ("STOPPED", "INCOMPLETE"):
             break
 
+        if result["status"] == "API_ERROR":
+            state.add_log("[API_ERROR] Cycle aborted due to API error. Retrying same direction after pause.")
+            await asyncio.sleep(5)
+            continue
+
         # ── Navigator phase ──────────────────────────────────────────────
         if state.stop_requested:
             break
 
-        analysis  = result["analysis"]
+        analysis   = result["analysis"]
         nav_status = result["status"]
         # Normalise status for the navigator (strip _APPROVED / _REJECTED suffix)
         if nav_status.startswith("VALIDATED"):
@@ -367,71 +397,77 @@ async def _run_research_loop() -> None:
                 f"Navigator: {len(nav['parallel_branches'])} branch(es) saved to registry."
             )
 
+        # ── Macro resolved check ─────────────────────────────────────────
+        if nav.get("macro_resolved", False):
+            state.add_log("Navigator: Macro question declared resolved. Ending session.")
+            session.status = "COMPLETED"
+            break
+
         # ── Milestone check ──────────────────────────────────────────────
-        is_milestone  = nav.get("milestone", False)
-        is_heartbeat  = session.cycles_since_milestone >= session.heartbeat_interval
+        is_milestone = nav.get("milestone", False)
+        is_heartbeat = session.cycles_since_milestone >= session.heartbeat_interval
 
         if is_milestone or is_heartbeat:
             reason = nav.get("milestone_reason") or (
-                f"Heartbeat: {session.heartbeat_interval} cycles without human review."
+                f"Heartbeat: {session.heartbeat_interval} cycles without review pause."
             )
             session.record_milestone(state.current_cycle, reason)
             session.cycles_since_milestone = 0
-            session.status = "PAUSED_MILESTONE"
             session.save(session_dir)
-
-            state.status       = "WAITING_DIRECTION"
-            state.current_phase = "Research Milestone — Awaiting Direction"
             state.add_log(f"MILESTONE REACHED: {reason}")
-            state.add_log(
-                "Proposed next direction: "
-                + nav.get("next_direction", "")[:200]
-            )
-            state.add_log(
-                "Pending branches in registry: "
-                + str(len(session.pending_branches()))
-            )
+            state.add_log("Proposed next direction: " + nav.get("next_direction", "")[:200])
+            state.add_log("Pending branches in registry: " + str(len(session.pending_branches())))
 
-            # Wait for human decision
-            while True:
-                if state.stop_requested:
-                    break
-                if (
-                    state.continue_research_requested
-                    or state.redirect_research_requested
-                    or state.switch_branch_id
-                ):
-                    break
-                await asyncio.sleep(1)
-
-            if state.stop_requested:
-                break
-
-            if state.switch_branch_id:
-                branch = session.activate_branch(state.switch_branch_id)
-                if branch:
-                    current_direction = branch["direction"]
-                    state.add_log(f"Switched to branch '{state.switch_branch_id}'.")
-                else:
-                    state.add_log(
-                        f"Branch '{state.switch_branch_id}' not found or already active. "
-                        "Continuing with navigator suggestion."
-                    )
-                    current_direction = nav.get("next_direction", session.macro_question)
-                state.switch_branch_id = ""
-
-            elif state.redirect_research_requested:
-                current_direction = state.redirect_direction or session.macro_question
-                state.add_log(f"Human redirected research: {current_direction[:120]}")
-                state.redirect_research_requested = False
-                state.redirect_direction          = ""
+            if state.autonomous_mode:
+                # Auto-continue without pausing for human input
+                current_direction = nav.get("next_direction", session.macro_question)
+                state.add_log(f"[AUTONOMOUS] Auto-continuing past milestone to: {current_direction[:160]}")
 
             else:
-                current_direction = nav.get("next_direction", session.macro_question)
-                state.add_log("Continuing with navigator's suggested direction.")
-                state.continue_research_requested = False
+                # Human review pause
+                session.status      = "PAUSED_MILESTONE"
+                state.status        = "WAITING_DIRECTION"
+                state.current_phase = "Research Milestone — Awaiting Direction"
 
-            session.status = "ACTIVE"
+                while True:
+                    if state.stop_requested:
+                        break
+                    if (
+                        state.continue_research_requested
+                        or state.redirect_research_requested
+                        or state.switch_branch_id
+                    ):
+                        break
+                    await asyncio.sleep(1)
+
+                if state.stop_requested:
+                    break
+
+                if state.switch_branch_id:
+                    branch = session.activate_branch(state.switch_branch_id)
+                    if branch:
+                        current_direction = branch["direction"]
+                        state.add_log(f"Switched to branch '{state.switch_branch_id}'.")
+                    else:
+                        state.add_log(
+                            f"Branch '{state.switch_branch_id}' not found or already active. "
+                            "Continuing with navigator suggestion."
+                        )
+                        current_direction = nav.get("next_direction", session.macro_question)
+                    state.switch_branch_id = ""
+
+                elif state.redirect_research_requested:
+                    current_direction = state.redirect_direction or session.macro_question
+                    state.add_log(f"Human redirected research: {current_direction[:120]}")
+                    state.redirect_research_requested = False
+                    state.redirect_direction          = ""
+
+                else:
+                    current_direction = nav.get("next_direction", session.macro_question)
+                    state.add_log("Continuing with navigator's suggested direction.")
+                    state.continue_research_requested = False
+
+                session.status = "ACTIVE"
 
         else:
             # No milestone — advance autonomously

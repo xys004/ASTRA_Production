@@ -25,7 +25,8 @@ Your output MUST be a valid JSON object with exactly these fields:
   ],
   "milestone": <true or false>,
   "milestone_reason": "<if milestone=true, why this result warrants a pause for human review; empty string otherwise>",
-  "progress_assessment": "<honest one-sentence assessment of how this result advances or constrains the macro question>"
+  "progress_assessment": "<honest one-sentence assessment of how this result advances or constrains the macro question>",
+  "macro_resolved": <true or false>
 }
 
 RULES OF OPERATION:
@@ -55,10 +56,14 @@ RULES OF OPERATION:
      macro question" is better than forced optimism.
    - One sentence only.
 
-6. TONE: Dense, academic. No filler. The next_direction and branch directions must read like research
+6. macro_resolved = true ONLY when the cumulative thread of validated and refuted results together constitute
+   a definitive answer — positive, negative, or with bounded scope — to the macro question. This is a high
+   bar: a single validated theorem rarely resolves it. Set false whenever further inquiry is productive.
+
+7. TONE: Dense, academic. No filler. The next_direction and branch directions must read like research
    proposals a theoretical physicist would act on immediately.
 
-7. JSON FORMATTING RULE — CRITICAL:
+8. JSON FORMATTING RULE — CRITICAL:
    Your entire output must be a single valid JSON object. Do NOT use LaTeX backslash notation
    (e.g. \\mu, \\nu, \\nabla) inside JSON string values — JSON parsers reject unescaped backslashes.
    Instead, spell out mathematical quantities in plain English or use standard ASCII notation:

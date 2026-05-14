@@ -9,8 +9,9 @@ class GlobalState:
         self.state_file = os.path.join(
             os.path.dirname(os.path.dirname(__file__)), "workspace", "state.json"
         )
-        self.axiomatic_base = "Axioms: 4D Spacetime, signature (-,+,+,+)."
+        self.axiomatic_base = ""
         self.cycle_count = 0
+        self.investigation_cycle_count = 0
         self.reports = []
 
         self.load_state()
@@ -26,6 +27,8 @@ class GlobalState:
         self.last_report = {}
         self.logs = []
         self._log_lock = threading.Lock()
+
+        self.autonomous_mode = False
 
         # ── Single-cycle mode flags ──────────────────────────────────────
         self.start_loop_requested      = False
@@ -55,9 +58,10 @@ class GlobalState:
     def save_state(self) -> None:
         os.makedirs(os.path.dirname(self.state_file), exist_ok=True)
         data = {
-            "axiomatic_base": self.axiomatic_base,
-            "cycle_count":    self.cycle_count,
-            "reports":        self.reports,
+            "axiomatic_base":          self.axiomatic_base,
+            "cycle_count":             self.cycle_count,
+            "investigation_cycle_count": self.investigation_cycle_count,
+            "reports":                 self.reports,
         }
         with open(self.state_file, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
@@ -68,9 +72,10 @@ class GlobalState:
         try:
             with open(self.state_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            self.axiomatic_base = data.get("axiomatic_base", self.axiomatic_base)
-            self.cycle_count    = data.get("cycle_count",    self.cycle_count)
-            self.reports        = data.get("reports",        self.reports)
+            self.axiomatic_base            = data.get("axiomatic_base",            self.axiomatic_base)
+            self.cycle_count               = data.get("cycle_count",               self.cycle_count)
+            self.investigation_cycle_count = data.get("investigation_cycle_count", self.investigation_cycle_count)
+            self.reports                   = data.get("reports",                   self.reports)
         except Exception as exc:
             print(f"[WARN] Failed to load saved state: {exc}")
 
@@ -79,10 +84,11 @@ class GlobalState:
             self.research_session.to_dict() if self.research_session is not None else None
         )
         return {
-            "status":                self.status,
-            "current_phase":         self.current_phase,
-            "cycle_count":           self.cycle_count,
-            "current_cycle":         self.current_cycle,
+            "status":                    self.status,
+            "current_phase":             self.current_phase,
+            "cycle_count":               self.cycle_count,
+            "investigation_cycle_count": self.investigation_cycle_count,
+            "current_cycle":             self.current_cycle,
             "axiomatic_base":        self.axiomatic_base,
             "current_conjecture":    self.current_conjecture,
             "last_python_code":      self.last_python_code,

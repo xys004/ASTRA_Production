@@ -1,6 +1,8 @@
 import os
+import json
 import threading
 import sys
+from datetime import datetime
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
 
@@ -13,12 +15,14 @@ from main import start_background_loop
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB
 
-UPLOADS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "workspace", "uploads")
-ASSETS_DIR  = os.path.join(os.path.dirname(os.path.dirname(__file__)), "workspace", "assets")
-REPORTS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "workspace", "reports")
-os.makedirs(UPLOADS_DIR, exist_ok=True)
-os.makedirs(ASSETS_DIR,  exist_ok=True)
-os.makedirs(REPORTS_DIR, exist_ok=True)
+UPLOADS_DIR       = os.path.join(os.path.dirname(os.path.dirname(__file__)), "workspace", "uploads")
+ASSETS_DIR        = os.path.join(os.path.dirname(os.path.dirname(__file__)), "workspace", "assets")
+REPORTS_DIR       = os.path.join(os.path.dirname(os.path.dirname(__file__)), "workspace", "reports")
+INVESTIGATIONS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "workspace", "investigations")
+os.makedirs(UPLOADS_DIR,        exist_ok=True)
+os.makedirs(ASSETS_DIR,         exist_ok=True)
+os.makedirs(REPORTS_DIR,        exist_ok=True)
+os.makedirs(INVESTIGATIONS_DIR, exist_ok=True)
 
 # Start background ASTRA loop — errors are caught and logged rather than crashing the thread
 def _safe_background_loop():
@@ -128,7 +132,7 @@ def upload_doc():
 
     state.current_intuition = extracted_text
     state.add_log(f"Document '{filename}' uploaded and parsed successfully.")
-    return jsonify({"success": True, "message": "Document loaded into ASTRA context."})
+    return jsonify({"success": True, "message": "Document loaded into ASTRA context.", "text": extracted_text})
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -157,6 +161,11 @@ def session_start():
             os.environ['ASTRA_ANALYST_PROVIDER'] = providers['analyst']
         if 'navigator' in providers:
             os.environ['ASTRA_NAVIGATOR_PROVIDER'] = providers['navigator']
+
+    autonomous = bool(data.get('autonomous_mode', False))
+    state.autonomous_mode = autonomous
+    if autonomous:
+        state.add_log("Autonomous mode ON: milestones will be auto-continued. Stops only when macro question is resolved.")
 
     session = ResearchSession(macro_question=macro_question, heartbeat_interval=heartbeat)
     state.research_session = session
@@ -230,6 +239,180 @@ def session_branches():
     if state.research_session is None:
         return jsonify({"branches": []})
     return jsonify({"branches": state.research_session.pending_branches()})
+
+
+@app.route('/api/session/set_autonomous', methods=['POST'])
+def session_set_autonomous():
+    """Toggle autonomous mode on an active session."""
+    data    = request.json or {}
+    enabled = bool(data.get('enabled', False))
+    state.autonomous_mode = enabled
+    state.add_log(f"Autonomous mode {'enabled' if enabled else 'disabled'}.")
+    return jsonify({"success": True, "autonomous_mode": enabled})
+
+
+@app.route('/api/open_reports', methods=['POST'])
+def open_reports():
+    """Open the reports folder in the system file explorer (local desktop only)."""
+    try:
+        import subprocess
+        subprocess.Popen(f'explorer "{REPORTS_DIR}"')
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+    return jsonify({"success": True})
+
+
+_DEFAULT_AXIOMATIC_BASE = ""
+
+
+def _save_investigation(name: str) -> str:
+    os.makedirs(INVESTIGATIONS_DIR, exist_ok=True)
+    inv_id  = datetime.now().strftime("%Y%m%d_%H%M%S")
+    payload = {
+        "id":           inv_id,
+        "name":         name or f"Investigation {inv_id}",
+        "saved_at":     datetime.now().isoformat(),
+        "cycle_count":  state.cycle_count,
+        "axiomatic_base": state.axiomatic_base,
+        "reports":      state.reports,
+    }
+    path = os.path.join(INVESTIGATIONS_DIR, f"investigation_{inv_id}.json")
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump(payload, fh, indent=2, ensure_ascii=False)
+    return inv_id
+
+
+@app.route('/api/investigation/new', methods=['POST'])
+def investigation_new():
+    data = request.json or {}
+    name = data.get('name', '').strip()
+    if state.cycle_count > 0:
+        _save_investigation(name)
+    state.axiomatic_base             = _DEFAULT_AXIOMATIC_BASE
+    state.cycle_count                = 0
+    state.investigation_cycle_count  = 0
+    state.current_cycle              = 0
+    state.reports             = []
+    state.current_conjecture  = ""
+    state.last_python_code    = ""
+    state.last_execution_result = {}
+    state.last_analysis       = {}
+    state.last_report         = {}
+    with state._log_lock:
+        state.logs.clear()
+    state.save_state()
+    state.add_log("New investigation started.")
+    return jsonify({"success": True})
+
+
+@app.route('/api/investigation/list')
+def investigation_list():
+    results = []
+    for fname in sorted(os.listdir(INVESTIGATIONS_DIR), reverse=True):
+        if not fname.endswith('.json'):
+            continue
+        try:
+            with open(os.path.join(INVESTIGATIONS_DIR, fname), encoding="utf-8") as fh:
+                d = json.load(fh)
+            results.append({
+                "id":            d.get("id", fname),
+                "name":          d.get("name", "Untitled"),
+                "saved_at":      d.get("saved_at", ""),
+                "cycle_count":   d.get("cycle_count", 0),
+                "theorems":      d.get("axiomatic_base", "").count("[ESTABLISHED THEOREM]"),
+            })
+        except Exception:
+            pass
+    return jsonify({"investigations": results})
+
+
+@app.route('/api/investigation/load', methods=['POST'])
+def investigation_load():
+    data   = request.json or {}
+    inv_id = data.get('id', '')
+    path   = os.path.join(INVESTIGATIONS_DIR, f"investigation_{inv_id}.json")
+    if not os.path.exists(path):
+        return jsonify({"error": "Not found"}), 404
+    with open(path, encoding="utf-8") as fh:
+        inv = json.load(fh)
+    state.axiomatic_base        = inv.get("axiomatic_base", _DEFAULT_AXIOMATIC_BASE)
+    state.cycle_count           = inv.get("cycle_count", 0)
+    state.current_cycle         = state.cycle_count
+    state.reports               = inv.get("reports", [])
+    state.current_conjecture    = ""
+    state.last_python_code      = ""
+    state.last_execution_result = {}
+    state.last_analysis         = {}
+    state.last_report           = {}
+    with state._log_lock:
+        state.logs.clear()
+    state.save_state()
+    state.add_log(f"Loaded: \"{inv.get('name')}\" — {state.cycle_count} cycles, {inv.get('axiomatic_base','').count('[ESTABLISHED THEOREM]')} theorems.")
+    return jsonify({"success": True, "name": inv.get("name")})
+
+
+@app.route('/api/investigation/delete', methods=['POST'])
+def investigation_delete():
+    data   = request.json or {}
+    inv_id = data.get('id', '')
+    path   = os.path.join(INVESTIGATIONS_DIR, f"investigation_{inv_id}.json")
+    if os.path.exists(path):
+        os.remove(path)
+    return jsonify({"success": True})
+
+
+PROVIDER_ENV_KEYS = {
+    "GEMINI_API_KEY":     "Gemini Flash",
+    "ANTHROPIC_API_KEY":  "Anthropic Claude",
+    "OPENAI_API_KEY":     "OpenAI GPT-4o",
+    "DEEPSEEK_API_KEY":   "DeepSeek R1",
+    "XAI_API_KEY":        "xAI Grok 3",
+    "DASHSCOPE_API_KEY":  "Qwen2.5-Math",
+    "MISTRAL_API_KEY":    "Mistral / Codestral",
+    "GROQ_API_KEY":       "Groq (Llama 3.3)",
+}
+
+
+@app.route('/api/config')
+def get_config():
+    from core.preflight import load_project_env
+    load_project_env()
+
+    def _mask(val):
+        if not val:
+            return ""
+        return f"{val[:6]}...{val[-4:]}" if len(val) > 10 else "set"
+
+    result = {}
+    for env_key in PROVIDER_ENV_KEYS:
+        val = os.environ.get(env_key, "")
+        result[env_key] = {"set": bool(val), "masked": _mask(val)}
+    for key in ("VERTEX_PROJECT", "VERTEX_LOCATION"):
+        val = os.environ.get(key, "")
+        result[key] = {"set": bool(val), "masked": val}
+    return jsonify(result)
+
+
+@app.route('/api/config/save', methods=['POST'])
+def save_config():
+    from core.preflight import load_project_env, _set_env_key
+    data = request.json or {}
+    saved = []
+    for key, value in data.items():
+        if isinstance(value, str) and value.strip():
+            _set_env_key(key, value.strip())
+            saved.append(key)
+    if saved:
+        load_project_env()
+        state.add_log(f"API configuration updated: {', '.join(saved)}")
+    return jsonify({"success": True, "saved": saved})
+
+
+@app.route('/api/clear_logs', methods=['POST'])
+def clear_logs():
+    with state._log_lock:
+        state.logs.clear()
+    return jsonify({"success": True})
 
 
 @app.route('/api/upload_asset', methods=['POST'])

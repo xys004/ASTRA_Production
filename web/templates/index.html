@@ -147,9 +147,10 @@
         letter-spacing: 0.05em;
         text-transform: uppercase;
     }
-    .thread-badge.validated { background: #0d2e0d; color: #4ade80; border: 1px solid #1a5c1a; }
-    .thread-badge.refuted   { background: #2e1e00; color: #fbbf24; border: 1px solid #5a3a00; }
-    .thread-badge.error     { background: #2e0d0d; color: #f87171; border: 1px solid #5c1a1a; }
+    .thread-badge.validated  { background: #0d2e0d; color: #4ade80; border: 1px solid #1a5c1a; }
+    .thread-badge.refuted    { background: #2e1e00; color: #fbbf24; border: 1px solid #5a3a00; }
+    .thread-badge.error      { background: #2e0d0d; color: #f87171; border: 1px solid #5c1a1a; }
+    .thread-badge.api-error  { background: #1a0d2e; color: #c084fc; border: 1px solid #5a2080; }
     .thread-ts {
         font-size: 9px;
         color: var(--text-muted, #555);
@@ -360,6 +361,274 @@
     @media (max-width: 1100px) {
         #research-canvas-top { grid-template-columns: 1fr; }
     }
+
+    /* ── Investigation modals ────────────────────────────────────────── */
+    .inv-modal-card {
+        max-width: 480px;
+        width: 95vw;
+    }
+    .inv-name-input {
+        width: 100%;
+        box-sizing: border-box;
+        margin: 14px 0 6px;
+        padding: 8px 10px;
+        background: var(--surface, #12121f);
+        border: 1px solid var(--border, #2a2a3a);
+        border-radius: 5px;
+        color: var(--text, #e0e0f0);
+        font-size: 13px;
+    }
+    .inv-name-input:focus { outline: none; border-color: var(--accent, #6d6aff); }
+    .inv-note {
+        font-size: 10px;
+        color: var(--text-muted, #666);
+        margin-bottom: 18px;
+        line-height: 1.5;
+    }
+    /* History modal */
+    .history-modal-card {
+        max-width: 600px;
+        width: 95vw;
+        max-height: 80vh;
+        display: flex;
+        flex-direction: column;
+    }
+    .history-list {
+        flex: 1;
+        overflow-y: auto;
+        margin: 14px 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .history-empty {
+        text-align: center;
+        padding: 32px 0;
+        font-size: 12px;
+        color: var(--text-muted, #555);
+        font-style: italic;
+    }
+    .history-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border: 1px solid var(--border, #2a2a3a);
+        border-radius: 6px;
+        background: var(--surface, #0c0c18);
+        transition: border-color 0.15s;
+    }
+    .history-item:hover { border-color: var(--accent, #6d6aff); }
+    .history-item-body { flex: 1; min-width: 0; }
+    .history-item-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text, #e0e0f0);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .history-item-meta {
+        font-size: 10px;
+        color: var(--text-muted, #666);
+        margin-top: 2px;
+        font-family: 'JetBrains Mono', monospace;
+    }
+    .history-item-badges {
+        display: flex;
+        gap: 5px;
+        margin-top: 4px;
+    }
+    .history-badge {
+        font-size: 9px;
+        font-weight: 700;
+        padding: 1px 5px;
+        border-radius: 3px;
+        letter-spacing: 0.03em;
+    }
+    .history-badge.cycles   { background:#1a1a3a; color:#a0a0ff; border:1px solid #2a2a5a; }
+    .history-badge.theorems { background:#0d2e0d; color:#4ade80; border:1px solid #1a5c1a; }
+    .history-actions { display: flex; gap: 5px; flex-shrink: 0; }
+    .btn-load {
+        padding: 4px 10px;
+        font-size: 10px;
+        font-weight: 700;
+        border-radius: 4px;
+        border: 1px solid var(--accent, #6d6aff);
+        background: transparent;
+        color: var(--accent, #6d6aff);
+        cursor: pointer;
+        transition: background 0.15s, color 0.15s;
+    }
+    .btn-load:hover { background: var(--accent, #6d6aff); color: #fff; }
+    .btn-del {
+        padding: 4px 7px;
+        font-size: 10px;
+        border-radius: 4px;
+        border: 1px solid var(--border, #2a2a3a);
+        background: transparent;
+        color: var(--text-muted, #777);
+        cursor: pointer;
+        transition: color 0.15s, border-color 0.15s;
+    }
+    .btn-del:hover { color: var(--red, #f87171); border-color: var(--red, #f87171); }
+    .topbar-btn-accent {
+        background: rgba(109,106,255,0.12);
+        border: 1px solid rgba(109,106,255,0.35);
+        color: var(--accent, #6d6aff);
+    }
+    .topbar-btn-accent:hover { background: rgba(109,106,255,0.25); }
+
+    /* ── Settings modal ───────────────────────────────────────────────── */
+    .settings-modal-card {
+        max-width: 500px;
+        width: 95vw;
+        max-height: 86vh;
+        overflow-y: auto;
+    }
+    .settings-section { margin-bottom: 22px; }
+    .settings-section-title {
+        font-size: 10px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: var(--text-muted, #777);
+        margin-bottom: 12px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--border, #2a2a3a);
+    }
+    .api-key-row { margin-bottom: 11px; }
+    .api-key-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text, #e0e0f0);
+        margin-bottom: 4px;
+    }
+    .api-key-envname {
+        font-size: 9px;
+        font-family: 'JetBrains Mono', monospace;
+        color: var(--text-muted, #666);
+    }
+    .api-key-status {
+        font-size: 8px;
+        font-weight: 800;
+        padding: 1px 5px;
+        border-radius: 3px;
+        letter-spacing: 0.04em;
+        margin-left: auto;
+    }
+    .api-key-status.set   { background:#0d2e0d; color:#4ade80; border:1px solid #1a5c1a; }
+    .api-key-status.unset { background:#2a1a00; color:#fbbf24; border:1px solid #5a3a00; }
+    .api-key-input-row { display: flex; gap: 5px; }
+    .api-key-input {
+        flex: 1;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        background: var(--surface, #12121f);
+        border: 1px solid var(--border, #2a2a3a);
+        border-radius: 4px;
+        padding: 5px 8px;
+        color: var(--text, #e0e0f0);
+    }
+    .api-key-input:focus { outline: none; border-color: var(--accent, #6d6aff); }
+    .btn-eye {
+        background: transparent;
+        border: 1px solid var(--border, #2a2a3a);
+        border-radius: 4px;
+        padding: 4px 7px;
+        color: var(--text-muted, #777);
+        cursor: pointer;
+        font-size: 11px;
+        line-height: 1;
+    }
+    .btn-eye:hover { color: var(--text, #e0e0f0); }
+    .settings-vertex-row {
+        display: flex;
+        gap: 7px;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    .settings-vertex-row label {
+        font-size: 10px;
+        color: var(--text-muted, #777);
+        white-space: nowrap;
+        flex: 0 0 100px;
+    }
+    .settings-vertex-row input {
+        flex: 1;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        background: var(--surface, #12121f);
+        border: 1px solid var(--border, #2a2a3a);
+        border-radius: 4px;
+        padding: 5px 8px;
+        color: var(--text, #e0e0f0);
+    }
+    .settings-save-row {
+        display: flex;
+        gap: 8px;
+        margin-top: 18px;
+    }
+    .settings-note {
+        font-size: 10px;
+        color: var(--text-muted, #666);
+        margin-top: 4px;
+        line-height: 1.5;
+    }
+    .btn-clear-logs {
+        margin-left: auto;
+        background: transparent;
+        border: 1px solid var(--border, #2a2a3a);
+        border-radius: 4px;
+        padding: 2px 8px;
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--text-muted, #777);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        transition: color 0.15s, border-color 0.15s;
+    }
+    .btn-clear-logs:hover { color: var(--red, #f87171); border-color: var(--red, #f87171); }
+
+    /* ── Scrollbars ──────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #3a3a5a; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #5a5a8a; }
+
+    /* ── Autonomous mode toggle ──────────────────────────────────────── */
+    .autonomous-row {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 4px 0;
+        margin-top: 2px;
+    }
+    .autonomous-row input[type="checkbox"] {
+        width: 15px;
+        height: 15px;
+        accent-color: var(--accent, #6d6aff);
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+    .autonomous-row .auto-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text, #e0e0f0);
+        cursor: pointer;
+    }
+    .autonomous-row .auto-hint {
+        font-size: 9px;
+        color: var(--text-muted, #666);
+        line-height: 1.4;
+    }
     </style>
 </head>
 <body>
@@ -376,7 +645,26 @@
             <div class="status-cluster">
                 <div id="status-pill" class="status-pill idle">IDLE</div>
                 <span id="cycle-label" class="cycle-label">Cycle 0</span>
+                <span id="inv-cycle-label" class="cycle-label" style="color:var(--text-muted,#777);font-size:10px;" title="Cycles in current investigation">/ Inv. 0</span>
             </div>
+            <button class="topbar-btn topbar-btn-accent" onclick="openNewInvestigation()" title="Save current and start fresh">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                    <path d="M8 2a.5.5 0 01.5.5v5h5a.5.5 0 010 1h-5v5a.5.5 0 01-1 0v-5h-5a.5.5 0 010-1h5v-5A.5.5 0 018 2z"/>
+                </svg>
+                New
+            </button>
+            <button class="topbar-btn" onclick="openHistory()" title="Browse previous investigations">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                    <path d="M8.515 1.019A7 7 0 008 1V0a8 8 0 11-5.657 2.343l.707.707A7 7 0 108.515 1.019zM8 2a6 6 0 100 12A6 6 0 008 2zM7 5a1 1 0 112 0v3.5l2.146 2.146a.5.5 0 01-.707.708L8 9.207V5z"/>
+                </svg>
+                History
+            </button>
+            <button class="topbar-btn" id="settings-toggle" onclick="toggleSettings()">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                    <path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 01-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 01.872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 012.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 012.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 01.872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 01-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 01-2.105-.872l-.1-.34zM8 10.93a2.929 2.929 0 110-5.86 2.929 2.929 0 010 5.858z"/>
+                </svg>
+                Settings
+            </button>
             <button class="topbar-btn" id="help-toggle" onclick="toggleHelp()">
                 <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                     <path d="M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM0 8a8 8 0 1116 0A8 8 0 010 8zm6.5-1.5a1.5 1.5 0 113 0v.5a.75.75 0 01-.75.75H8a.75.75 0 010-1.5h.25V6.5a1.5 1.5 0 01-1.75-1.5zM8 12a1 1 0 110-2 1 1 0 010 2z"/>
@@ -493,6 +781,14 @@
                         <textarea id="macro-question" class="macro-textarea"
                             placeholder="State the overarching scientific question guiding the session.&#10;&#10;Example: Determine whether the Alcubierre warp metric requires strictly negative energy density everywhere within the bubble, or whether geometric modifications can localise or reduce the exotic matter requirements."></textarea>
 
+                        <div class="dropzone" id="research-doc-dropzone" style="margin-top:6px;">
+                            <input type="file" id="research-doc-input" accept=".pdf,.txt" hidden>
+                            <svg class="dz-icon" width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                <path d="M7.25 10.25V3.75a.75.75 0 011.5 0v6.5l2-2a.75.75 0 111.06 1.06l-3.28 3.28a.75.75 0 01-1.06 0L4.19 9.31a.75.75 0 111.06-1.06l2 2z"/>
+                            </svg>
+                            <span class="dz-label">Drop PDF / TXT to use as research question</span>
+                        </div>
+
                         <div class="provider-config" style="margin-top:10px;">
                             <h3 class="provider-config-title">AI Providers</h3>
                             <div class="provider-row">
@@ -560,7 +856,13 @@
                         <div class="session-config-row" style="margin-top:8px;">
                             <label class="provider-label">Heartbeat</label>
                             <input type="number" id="heartbeat-interval" value="5" min="1" max="20">
-                            <span class="unit-label">cycles/checkpoint</span>
+                            <span class="unit-label" title="Number of cycles between mandatory human-review pauses. Not a stop — a pause interval.">cycles/pause</span>
+                        </div>
+
+                        <div class="autonomous-row">
+                            <input type="checkbox" id="autonomous-mode">
+                            <label for="autonomous-mode" class="auto-label">Autonomous Mode</label>
+                            <span class="auto-hint" title="When ON, ASTRA auto-continues at every milestone without pausing. Stops only when the Navigator declares the macro question resolved.">— skips human pauses, stops when macro is resolved</span>
                         </div>
                     </div>
 
@@ -579,6 +881,13 @@
                 <div class="panel-hd">
                     <h2>System Log</h2>
                     <span id="phase-chip" class="phase-chip">Idle</span>
+                    <button class="btn-clear-logs" onclick="clearLogs()" title="Clear log">
+                        <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                            <path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z"/>
+                            <path fill-rule="evenodd" d="M14.5 3a1 1 0 01-1 1H13v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4h-.5a1 1 0 01-1-1V2a1 1 0 011-1H6a1 1 0 011-1h2a1 1 0 011 1h3.5a1 1 0 011 1v1zM4.118 4L4 4.059V13a1 1 0 001 1h6a1 1 0 001-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                        </svg>
+                        Clear
+                    </button>
                 </div>
                 <div class="panel-body">
                     <div class="progress-track">
@@ -706,22 +1015,40 @@
                 <h3>Quick Start — Research Loop</h3>
                 <ol class="quickstart-steps">
                     <li><strong>Switch</strong> to Research Loop mode using the toggle at the top of the sidebar.</li>
-                    <li><strong>Enter a macro question</strong> — the overarching scientific question guiding the session.</li>
+                    <li><strong>Enter a macro question</strong> — the overarching scientific question guiding the session. You can also upload a PDF or TXT as the question.</li>
+                    <li><strong>Set Heartbeat</strong> — how many cycles run between human-review pauses (not a stop, just a pause).</li>
+                    <li><strong>Autonomous Mode</strong> — enable to skip all human pauses. ASTRA will run continuously and only stop when the Navigator declares the macro question resolved.</li>
                     <li><strong>Launch Session</strong> — ASTRA autonomously generates hypotheses, validates them, and navigates to the next direction.</li>
-                    <li>At <strong>milestones</strong>, ASTRA pauses. Review the Navigator Proposal and choose to continue, redirect, or activate a parallel branch.</li>
-                    <li>The <strong>Research Thread</strong> shows the full scientific history. The <strong>Branch Registry</strong> holds parallel directions to explore later.</li>
+                    <li>At <strong>milestones</strong> (manual mode only), review the Navigator Proposal: continue, redirect with a custom direction, or activate a parallel branch from the registry.</li>
+                    <li>When the session ends, the reports folder opens automatically.</li>
                 </ol>
             </div>
 
             <div class="help-section">
+                <h3>Investigation Management</h3>
+                <p class="help-text"><strong>New</strong> — saves the current investigation and resets ASTRA for a fresh start. The Axiomatic Base and all reports are cleared.</p>
+                <p class="help-text"><strong>History</strong> — browse, load, or delete past investigations. Each is saved with its cycle count and validated theorems.</p>
+                <p class="help-text">The <strong>Inv. N</strong> counter in the status bar shows how many cycles have run in the current investigation (resets on New).</p>
+            </div>
+
+            <div class="help-section">
                 <h3>Provider Guide</h3>
-                <p class="help-text">Each phase uses a different LLM. At least one API key is required.</p>
+                <p class="help-text">Each phase uses a different LLM. At least one API key is required. Configure keys in <strong>Settings ⚙</strong>.</p>
                 <table class="provider-table">
                     <tr><td>Conjecture</td><td>Formalizes intuition into hypothesis</td><td class="rec">Gemini</td></tr>
                     <tr><td>Translator</td><td>Writes validation code</td><td class="rec">Claude</td></tr>
                     <tr><td>Analyst</td><td>Interprets execution results</td><td class="rec">OpenAI</td></tr>
                     <tr><td>Navigator</td><td>Directs next research direction</td><td class="rec">Gemini</td></tr>
                 </table>
+            </div>
+
+            <div class="help-section">
+                <h3>Status Badges</h3>
+                <p class="help-text">Thread cards show cycle results with colored badges:</p>
+                <p class="help-text"><strong style="color:#4ade80;">VALIDATED</strong> — hypothesis confirmed mathematically.<br>
+                <strong style="color:#fbbf24;">REFUTED</strong> — hypothesis disproved; reasoning added to Axiomatic Base.<br>
+                <strong style="color:#f87171;">CODE_ERROR</strong> — validation script failed after retries.<br>
+                <strong style="color:#c084fc;">API_ERROR</strong> — provider API quota/error; cycle skipped, will retry.</p>
             </div>
 
             <div class="help-section">
@@ -755,7 +1082,11 @@
                 <h3>Troubleshooting</h3>
                 <details class="faq-item">
                     <summary>Cycle stuck on IDLE after clicking Launch</summary>
-                    <p>Ensure at least one API key is configured in <code>.env</code>. If running in simulated mode (no keys), the cycle completes with placeholder data.</p>
+                    <p>Ensure at least one API key is configured in Settings ⚙. Keys are saved to your local <code>.env</code> file.</p>
+                </details>
+                <details class="faq-item">
+                    <summary>API_ERROR badge appears on every cycle</summary>
+                    <p>Your API quota is exhausted or the provider is down. ASTRA detects this cleanly and retries the same direction. Wait a few minutes or switch provider in Settings.</p>
                 </details>
                 <details class="faq-item">
                     <summary>CODE_ERROR repeating on every retry</summary>
@@ -763,11 +1094,15 @@
                 </details>
                 <details class="faq-item">
                     <summary>Server shows OFFLINE</summary>
-                    <p>The Flask server has stopped. Relaunch the wizard from the terminal or desktop shortcut.</p>
+                    <p>The Flask server has stopped. Relaunch from the terminal or the desktop shortcut (launch_astra.bat).</p>
+                </details>
+                <details class="faq-item">
+                    <summary>Heartbeat vs. Autonomous Mode</summary>
+                    <p><strong>Heartbeat N</strong> means ASTRA pauses every N cycles for human review — it is not a stop. In <strong>Autonomous Mode</strong>, these pauses are skipped entirely; ASTRA runs until the macro question is resolved.</p>
                 </details>
                 <details class="faq-item">
                     <summary>Research Loop paused at WAITING_DIRECTION</summary>
-                    <p>A milestone was reached. The Navigator Proposal modal will appear automatically. Choose to continue, redirect with a custom direction, or activate a saved branch.</p>
+                    <p>A milestone was reached. The Navigator Proposal modal will appear automatically. Choose to continue, redirect with a custom direction, or activate a saved branch. Enable Autonomous Mode before launching to skip these pauses.</p>
                 </details>
                 <details class="faq-item">
                     <summary>External CAS not found (SageMath / Maxima)</summary>
@@ -846,6 +1181,165 @@
 </div>
 
 
+<!-- ── New Investigation modal ────────────────────────────────────────── -->
+<div id="new-inv-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-card inv-modal-card">
+        <h2 class="modal-title">New Investigation</h2>
+        <p class="modal-desc">The current investigation will be saved automatically before resetting.</p>
+        <input type="text" id="new-inv-name" class="inv-name-input"
+            placeholder="Investigation name (optional)…" maxlength="120"
+            onkeydown="if(event.key==='Enter') confirmNewInvestigation()">
+        <p class="inv-note">Leave blank to auto-name with the current timestamp. All cycle reports, hypotheses, and theorems will be archived and retrievable from History.</p>
+        <div class="modal-actions">
+            <button class="btn-approve" onclick="confirmNewInvestigation()">Save &amp; Start Fresh</button>
+            <button class="btn-reject-ghost" onclick="closeModal('new-inv-modal')">Cancel</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ── History modal ──────────────────────────────────────────────────── -->
+<div id="history-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-card history-modal-card">
+        <h2 class="modal-title">Previous Investigations</h2>
+        <div id="history-list" class="history-list">
+            <div class="history-empty">Loading…</div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-reject-ghost" onclick="closeModal('history-modal')">Close</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ── Settings modal ─────────────────────────────────────────────────── -->
+<div id="settings-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <div class="modal-card settings-modal-card">
+        <h2 class="modal-title" id="settings-title" style="margin-bottom:18px;">Settings</h2>
+
+        <!-- API Keys -->
+        <div class="settings-section">
+            <div class="settings-section-title">API Keys</div>
+
+            <div class="api-key-row">
+                <div class="api-key-label">
+                    Gemini Flash
+                    <span class="api-key-envname">GEMINI_API_KEY</span>
+                    <span id="status-GEMINI_API_KEY" class="api-key-status unset">Not set</span>
+                </div>
+                <div class="api-key-input-row">
+                    <input type="password" id="input-GEMINI_API_KEY" class="api-key-input" placeholder="Enter new key to update…">
+                    <button class="btn-eye" onclick="toggleKeyVisibility('GEMINI_API_KEY')">👁</button>
+                </div>
+            </div>
+
+            <div class="api-key-row">
+                <div class="api-key-label">
+                    Anthropic Claude
+                    <span class="api-key-envname">ANTHROPIC_API_KEY</span>
+                    <span id="status-ANTHROPIC_API_KEY" class="api-key-status unset">Not set</span>
+                </div>
+                <div class="api-key-input-row">
+                    <input type="password" id="input-ANTHROPIC_API_KEY" class="api-key-input" placeholder="Enter new key to update…">
+                    <button class="btn-eye" onclick="toggleKeyVisibility('ANTHROPIC_API_KEY')">👁</button>
+                </div>
+            </div>
+
+            <div class="api-key-row">
+                <div class="api-key-label">
+                    OpenAI GPT-4o
+                    <span class="api-key-envname">OPENAI_API_KEY</span>
+                    <span id="status-OPENAI_API_KEY" class="api-key-status unset">Not set</span>
+                </div>
+                <div class="api-key-input-row">
+                    <input type="password" id="input-OPENAI_API_KEY" class="api-key-input" placeholder="Enter new key to update…">
+                    <button class="btn-eye" onclick="toggleKeyVisibility('OPENAI_API_KEY')">👁</button>
+                </div>
+            </div>
+
+            <div class="api-key-row">
+                <div class="api-key-label">
+                    DeepSeek R1
+                    <span class="api-key-envname">DEEPSEEK_API_KEY</span>
+                    <span id="status-DEEPSEEK_API_KEY" class="api-key-status unset">Not set</span>
+                </div>
+                <div class="api-key-input-row">
+                    <input type="password" id="input-DEEPSEEK_API_KEY" class="api-key-input" placeholder="Enter new key to update…">
+                    <button class="btn-eye" onclick="toggleKeyVisibility('DEEPSEEK_API_KEY')">👁</button>
+                </div>
+            </div>
+
+            <div class="api-key-row">
+                <div class="api-key-label">
+                    xAI Grok 3
+                    <span class="api-key-envname">XAI_API_KEY</span>
+                    <span id="status-XAI_API_KEY" class="api-key-status unset">Not set</span>
+                </div>
+                <div class="api-key-input-row">
+                    <input type="password" id="input-XAI_API_KEY" class="api-key-input" placeholder="Enter new key to update…">
+                    <button class="btn-eye" onclick="toggleKeyVisibility('XAI_API_KEY')">👁</button>
+                </div>
+            </div>
+
+            <div class="api-key-row">
+                <div class="api-key-label">
+                    Qwen2.5-Math (Alibaba)
+                    <span class="api-key-envname">DASHSCOPE_API_KEY</span>
+                    <span id="status-DASHSCOPE_API_KEY" class="api-key-status unset">Not set</span>
+                </div>
+                <div class="api-key-input-row">
+                    <input type="password" id="input-DASHSCOPE_API_KEY" class="api-key-input" placeholder="Enter new key to update…">
+                    <button class="btn-eye" onclick="toggleKeyVisibility('DASHSCOPE_API_KEY')">👁</button>
+                </div>
+            </div>
+
+            <div class="api-key-row">
+                <div class="api-key-label">
+                    Mistral / Codestral
+                    <span class="api-key-envname">MISTRAL_API_KEY</span>
+                    <span id="status-MISTRAL_API_KEY" class="api-key-status unset">Not set</span>
+                </div>
+                <div class="api-key-input-row">
+                    <input type="password" id="input-MISTRAL_API_KEY" class="api-key-input" placeholder="Enter new key to update…">
+                    <button class="btn-eye" onclick="toggleKeyVisibility('MISTRAL_API_KEY')">👁</button>
+                </div>
+            </div>
+
+            <div class="api-key-row">
+                <div class="api-key-label">
+                    Groq (Llama 3.3)
+                    <span class="api-key-envname">GROQ_API_KEY</span>
+                    <span id="status-GROQ_API_KEY" class="api-key-status unset">Not set</span>
+                </div>
+                <div class="api-key-input-row">
+                    <input type="password" id="input-GROQ_API_KEY" class="api-key-input" placeholder="Enter new key to update…">
+                    <button class="btn-eye" onclick="toggleKeyVisibility('GROQ_API_KEY')">👁</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vertex AI (ADC) -->
+        <div class="settings-section">
+            <div class="settings-section-title">Vertex AI (Application Default Credentials)</div>
+            <div class="settings-vertex-row">
+                <label>GCP Project ID</label>
+                <input type="text" id="input-VERTEX_PROJECT" placeholder="your-gcp-project-id">
+            </div>
+            <div class="settings-vertex-row">
+                <label>Location</label>
+                <input type="text" id="input-VERTEX_LOCATION" placeholder="us-central1">
+            </div>
+        </div>
+
+        <div class="settings-save-row">
+            <button class="btn-approve" style="flex:1;" onclick="saveConfig()">Save API Keys</button>
+            <button class="btn-reject-ghost" onclick="toggleSettings()">Cancel</button>
+        </div>
+        <p class="settings-note">Keys are saved to your local <code>.env</code> file and never leave your machine. Leave a field blank to keep the existing value. Changes take effect on the next ASTRA restart.</p>
+    </div>
+</div>
+
+
 <!-- ── Toast container ────────────────────────────────────────────────── -->
 <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="false"></div>
 
@@ -861,6 +1355,7 @@ const PHASE_PROGRESS = {
     NAVIGATING: 95,
     WAITING_APPROVAL: 100,
     WAITING_DIRECTION: 100,
+    API_ERROR: 0,
 };
 
 const EXAMPLES = {
@@ -967,9 +1462,11 @@ function reportUrl(path) {
 }
 
 // ── Single-cycle API ──────────────────────────────────────────────────────
+let documentLoaded = false;   // set to true after a successful doc upload
+
 async function startDiscovery() {
     const intuition = document.getElementById('intuition-text').value.trim();
-    if (!intuition) {
+    if (!intuition && !documentLoaded) {
         toast('Please enter an intuition or upload a document first.', 'warn');
         document.getElementById('intuition-text').focus();
         return;
@@ -979,6 +1476,7 @@ async function startDiscovery() {
         translator: document.getElementById('translator-provider').value,
         analyst:    document.getElementById('analyst-provider').value
     };
+    documentLoaded = false;
     await fetch('/api/start', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -1018,13 +1516,14 @@ async function startResearch() {
         analyst:    document.getElementById('r-analyst-provider').value,
         navigator:  document.getElementById('r-navigator-provider').value,
     };
-    const heartbeat = parseInt(document.getElementById('heartbeat-interval').value) || 5;
+    const heartbeat   = parseInt(document.getElementById('heartbeat-interval').value) || 5;
+    const autonomous  = document.getElementById('autonomous-mode').checked;
 
     setResearchButtons(true);
     const res = await fetch('/api/session/start', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({macro_question: q, heartbeat_interval: heartbeat, providers})
+        body: JSON.stringify({macro_question: q, heartbeat_interval: heartbeat, providers, autonomous_mode: autonomous})
     });
     if (res.ok) {
         toast('Research session launched', 'success');
@@ -1081,11 +1580,12 @@ function setResearchButtons(running) {
 }
 
 // ── UI updaters ───────────────────────────────────────────────────────────
-function updateStatusBar(status, phase, cycle) {
+function updateStatusBar(status, phase, cycle, invCycle) {
     const pill = document.getElementById('status-pill');
     pill.className = 'status-pill ' + status.toLowerCase().replace(/_/g,'-');
     pill.textContent = status.replace(/_/g,' ');
     document.getElementById('cycle-label').textContent = 'Cycle ' + (cycle || 0);
+    document.getElementById('inv-cycle-label').textContent = '/ Inv. ' + (invCycle || 0);
     document.getElementById('phase-chip').textContent  = phase || 'Idle';
     document.getElementById('progress-fill').style.width = (PHASE_PROGRESS[status] || 0) + '%';
 }
@@ -1148,12 +1648,16 @@ function updateReports(reports) {
 }
 
 function updateAxioms(axioms) {
-    if (!axioms) return;
     const el = document.getElementById('axioms-board');
-    if (el.getAttribute('data-raw') === axioms) return;
-    el.setAttribute('data-raw', axioms);
-    el.textContent = axioms;
-    if (window.MathJax) MathJax.typesetPromise([el]).catch(() => {});
+    const raw = axioms || '';
+    if (el.getAttribute('data-raw') === raw) return;
+    el.setAttribute('data-raw', raw);
+    if (!raw) {
+        el.innerHTML = '<span class="placeholder-text">Axiomatic Base is empty. Validated theorems will appear here.</span>';
+    } else {
+        el.textContent = raw;
+        if (window.MathJax) MathJax.typesetPromise([el]).catch(() => {});
+    }
 }
 
 function handleApprovalModal(status, conjecture) {
@@ -1200,6 +1704,7 @@ function updateResearchThread(session) {
             const s = (item.status || '').toUpperCase();
             const badgeCls = s === 'VALIDATED' ? 'validated'
                            : s === 'REFUTED'   ? 'refuted'
+                           : s === 'API_ERROR' ? 'api-error'
                            :                     'error';
             const conj = escHtml(truncate(item.conjecture || '', 180));
             const navDir = item.nav_direction
@@ -1320,20 +1825,24 @@ function handleStatusTransition(from, to) {
         toast('Research thread resumed', 'success');
 }
 
-// ── Dropzone ──────────────────────────────────────────────────────────────
-(function setupDropzone() {
-    const dz    = document.getElementById('doc-dropzone');
-    const input = document.getElementById('doc-input');
+// ── Dropzone helpers ──────────────────────────────────────────────────────
+function _setupDropzone(dzId, inputId, onFile) {
+    const dz    = document.getElementById(dzId);
+    const input = document.getElementById(inputId);
+    if (!dz || !input) return;
     dz.addEventListener('click', () => input.click());
     dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dz-active'); });
     dz.addEventListener('dragleave', () => dz.classList.remove('dz-active'));
     dz.addEventListener('drop', e => {
         e.preventDefault();
         dz.classList.remove('dz-active');
-        if (e.dataTransfer.files.length) uploadDoc(e.dataTransfer.files[0]);
+        if (e.dataTransfer.files.length) onFile(e.dataTransfer.files[0]);
     });
-    input.addEventListener('change', () => { if (input.files.length) uploadDoc(input.files[0]); });
-})();
+    input.addEventListener('change', () => { if (input.files.length) onFile(input.files[0]); });
+}
+
+// Single-cycle dropzone
+_setupDropzone('doc-dropzone', 'doc-input', uploadDoc);
 
 function uploadDoc(file) {
     const dz   = document.getElementById('doc-dropzone');
@@ -1347,6 +1856,31 @@ function uploadDoc(file) {
             if (d.success) {
                 dz.innerHTML = `<span class="dz-label dz-success">${escHtml(file.name)} loaded</span>`;
                 toast(file.name + ' loaded into context', 'success');
+                documentLoaded = true;
+            } else {
+                toast('Upload failed: ' + d.error, 'error');
+                dz.innerHTML = orig;
+            }
+        })
+        .catch(() => { toast('Upload failed', 'error'); dz.innerHTML = orig; });
+}
+
+// Research-loop dropzone — text is injected into the macro-question textarea
+_setupDropzone('research-doc-dropzone', 'research-doc-input', uploadResearchDoc);
+
+function uploadResearchDoc(file) {
+    const dz   = document.getElementById('research-doc-dropzone');
+    const orig = dz.innerHTML;
+    dz.innerHTML = '<span class="dz-label">Uploading…</span>';
+    const fd = new FormData();
+    fd.append('file', file);
+    fetch('/api/upload_doc', {method: 'POST', body: fd})
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                document.getElementById('macro-question').value = d.text || '';
+                dz.innerHTML = `<span class="dz-label dz-success">${escHtml(file.name)} loaded</span>`;
+                toast(file.name + ' loaded as research question', 'success');
             } else {
                 toast('Upload failed: ' + d.error, 'error');
                 dz.innerHTML = orig;
@@ -1356,8 +1890,215 @@ function uploadDoc(file) {
 }
 
 document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && helpOpen) toggleHelp();
+    if (e.key === 'Escape') {
+        if (helpOpen) toggleHelp();
+        if (settingsOpen) toggleSettings();
+        closeModal('new-inv-modal');
+        closeModal('history-modal');
+    }
 });
+
+// ── Investigation management ──────────────────────────────────────────────
+function closeModal(id) {
+    document.getElementById(id).classList.add('hidden');
+}
+
+function openNewInvestigation() {
+    document.getElementById('new-inv-name').value = '';
+    document.getElementById('new-inv-modal').classList.remove('hidden');
+    setTimeout(() => document.getElementById('new-inv-name').focus(), 50);
+}
+
+function confirmNewInvestigation() {
+    const name = document.getElementById('new-inv-name').value.trim();
+    closeModal('new-inv-modal');
+    documentLoaded = false;
+    fetch('/api/investigation/new', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name}),
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            document.getElementById('logs-stream').innerHTML = '';
+            toast('New investigation started', 'success');
+        } else {
+            toast('Failed to start new investigation', 'error');
+        }
+    })
+    .catch(() => toast('Failed to start new investigation', 'error'));
+}
+
+function openHistory() {
+    document.getElementById('history-modal').classList.remove('hidden');
+    loadHistory();
+}
+
+function loadHistory() {
+    const list = document.getElementById('history-list');
+    list.innerHTML = '<div class="history-empty">Loading…</div>';
+    fetch('/api/investigation/list')
+        .then(r => r.json())
+        .then(d => {
+            if (!d.investigations || d.investigations.length === 0) {
+                list.innerHTML = '<div class="history-empty">No saved investigations yet.</div>';
+                return;
+            }
+            list.innerHTML = d.investigations.map(inv => {
+                const date = inv.saved_at ? inv.saved_at.replace('T', ' ').slice(0, 16) : '';
+                return `
+                <div class="history-item">
+                    <div class="history-item-body">
+                        <div class="history-item-name">${escHtml(inv.name)}</div>
+                        <div class="history-item-meta">${escHtml(date)}</div>
+                        <div class="history-item-badges">
+                            <span class="history-badge cycles">${inv.cycle_count} cycles</span>
+                            ${inv.theorems > 0 ? `<span class="history-badge theorems">${inv.theorems} theorem${inv.theorems !== 1 ? 's' : ''}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="history-actions">
+                        <button class="btn-load" onclick="loadInvestigation('${escHtml(inv.id)}', '${escHtml(inv.name).replace(/'/g,"\\'")}')">Load</button>
+                        <button class="btn-del" onclick="deleteInvestigation('${escHtml(inv.id)}')" title="Delete">✕</button>
+                    </div>
+                </div>`;
+            }).join('');
+        })
+        .catch(() => { list.innerHTML = '<div class="history-empty">Failed to load history.</div>'; });
+}
+
+function loadInvestigation(id, name) {
+    if (!confirm(`Load "${name}"? The current state will be replaced.`)) return;
+    fetch('/api/investigation/load', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({id}),
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            closeModal('history-modal');
+            document.getElementById('logs-stream').innerHTML = '';
+            toast(`Loaded: ${d.name}`, 'success');
+        } else {
+            toast('Failed to load investigation', 'error');
+        }
+    })
+    .catch(() => toast('Failed to load investigation', 'error'));
+}
+
+function deleteInvestigation(id) {
+    if (!confirm('Delete this investigation? This cannot be undone.')) return;
+    fetch('/api/investigation/delete', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({id}),
+    })
+    .then(r => r.json())
+    .then(d => { if (d.success) loadHistory(); })
+    .catch(() => toast('Failed to delete', 'error'));
+}
+
+// ── Settings ──────────────────────────────────────────────────────────────
+let settingsOpen = false;
+
+const SETTINGS_PROVIDERS = [
+    'GEMINI_API_KEY','ANTHROPIC_API_KEY','OPENAI_API_KEY',
+    'DEEPSEEK_API_KEY','XAI_API_KEY','DASHSCOPE_API_KEY',
+    'MISTRAL_API_KEY','GROQ_API_KEY',
+];
+
+function toggleSettings() {
+    settingsOpen = !settingsOpen;
+    document.getElementById('settings-modal').classList.toggle('hidden', !settingsOpen);
+    document.getElementById('settings-toggle').classList.toggle('active', settingsOpen);
+    if (settingsOpen) loadConfig();
+}
+
+function loadConfig() {
+    fetch('/api/config')
+        .then(r => r.json())
+        .then(cfg => {
+            SETTINGS_PROVIDERS.forEach(env => {
+                const info = cfg[env] || {};
+                const statusEl = document.getElementById(`status-${env}`);
+                const inputEl  = document.getElementById(`input-${env}`);
+                if (statusEl) {
+                    statusEl.textContent = info.set ? 'Configured' : 'Not set';
+                    statusEl.className = `api-key-status ${info.set ? 'set' : 'unset'}`;
+                }
+                if (inputEl) {
+                    inputEl.placeholder = info.set ? info.masked + ' (leave blank to keep)' : 'Enter new key to update…';
+                    inputEl.value = '';
+                }
+            });
+            const vp = cfg['VERTEX_PROJECT'] || {};
+            const vpEl = document.getElementById('input-VERTEX_PROJECT');
+            if (vpEl) vpEl.value = vp.masked || '';
+            const vl = cfg['VERTEX_LOCATION'] || {};
+            const vlEl = document.getElementById('input-VERTEX_LOCATION');
+            if (vlEl) vlEl.value = vl.masked || '';
+        })
+        .catch(() => toast('Could not load configuration', 'error'));
+}
+
+function saveConfig() {
+    const allKeys = [...SETTINGS_PROVIDERS, 'VERTEX_PROJECT', 'VERTEX_LOCATION'];
+    const data = {};
+    allKeys.forEach(env => {
+        const el = document.getElementById(`input-${env}`);
+        if (el && el.value.trim()) data[env] = el.value.trim();
+    });
+    if (Object.keys(data).length === 0) {
+        toast('No changes to save', 'info');
+        return;
+    }
+    fetch('/api/config/save', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data),
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            toast(`Saved: ${d.saved.join(', ')}`, 'success');
+            loadConfig();
+        } else {
+            toast('Save failed', 'error');
+        }
+    })
+    .catch(() => toast('Save failed', 'error'));
+}
+
+function toggleKeyVisibility(env) {
+    const el = document.getElementById(`input-${env}`);
+    if (el) el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+// ── Clear Logs ────────────────────────────────────────────────────────────
+function clearLogs() {
+    fetch('/api/clear_logs', {method: 'POST'})
+        .then(() => {
+            document.getElementById('logs-stream').innerHTML = '';
+            toast('Logs cleared', 'success');
+        })
+        .catch(() => toast('Failed to clear logs', 'error'));
+}
+
+// ── Open Reports Folder ───────────────────────────────────────────────────
+function openReportsFolder() {
+    fetch('/api/open_reports', {method: 'POST'}).catch(() => {});
+}
+
+// ── Autonomous Mode (live toggle during session) ──────────────────────────
+async function setAutonomousMode(enabled) {
+    await fetch('/api/session/set_autonomous', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({enabled})
+    });
+    toast(enabled ? 'Autonomous mode enabled' : 'Autonomous mode disabled', 'info');
+}
 
 // ── Polling loop ──────────────────────────────────────────────────────────
 setInterval(async () => {
@@ -1389,7 +2130,7 @@ setInterval(async () => {
         prevStatus = s.status;
     }
 
-    updateStatusBar(s.status, s.current_phase, s.current_cycle || s.cycle_count);
+    updateStatusBar(s.status, s.current_phase, s.current_cycle || s.cycle_count, s.investigation_cycle_count || 0);
     updateButtonState(s.status);
     updateLogs(s.logs);
     updateMath(s.current_conjecture);
@@ -1405,11 +2146,13 @@ setInterval(async () => {
         const running = s.status !== 'IDLE' && s.status !== 'OFFLINE';
         setResearchButtons(running);
     } else if (activeSessionId) {
-        // Session ended — reset sidebar
+        // Session ended — reset sidebar and open reports
         activeSessionId = null;
         document.getElementById('session-start-form').style.display = '';
         document.getElementById('session-info-bar').classList.add('hidden');
         setResearchButtons(false);
+        toast('Research session complete — opening reports folder…', 'success', 6000);
+        openReportsFolder();
     }
 
 }, 1000);
