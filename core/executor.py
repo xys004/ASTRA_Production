@@ -13,6 +13,12 @@ async def execute_python_code(code: str, workspace_dir: str = "workspace", timeo
     Saves the Python code in the workspace and executes it asynchronously in an isolated subprocess.
     Captures standard output, error, and respects a timeout to prevent infinite loops in solvers.
     """
+    timeout = int(os.environ.get("ASTRA_ORACLE_TIMEOUT", timeout))
+
+    if os.environ.get("ASTRA_ORACLE_MODE", "local").strip().lower() == "remote":
+        from core.remote_executor import execute_remote_code
+        return await execute_remote_code(code, timeout=timeout)
+
     workspace_dir = os.path.abspath(workspace_dir)
     os.makedirs(workspace_dir, exist_ok=True)
     engine = detect_engine(code)
