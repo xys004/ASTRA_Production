@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import tempfile
 from dataclasses import dataclass
@@ -45,8 +46,10 @@ class CliResult:
 
 def _ps_claude(promptfile: str, model: str | None, _out: str, _ws: str) -> str:
     m = f" --model {model}" if model else ""
-    return (f'$p = Get-Content -Raw -LiteralPath "{promptfile}"; '
-            f'claude -p $p --output-format json{m}')
+    # Prompt por STDIN (pipe), NO como argumento: los prompts de ASTRA superan el
+    # limite de ~32KB de la linea de comandos de Windows y claude devolvia vacio.
+    return (f'Get-Content -Raw -LiteralPath "{promptfile}" | '
+            f'claude -p --output-format json{m}')
 
 
 def _ps_codex(promptfile: str, model: str | None, out: str, ws: str) -> str:
@@ -60,7 +63,22 @@ _BUILDERS = {"claude": _ps_claude, "codex": _ps_codex}
 
 
 def _parse_claude(stdout: str, _outfile: str) -> tuple[str, float]:
-    data = json.loads(stdout.strip().splitlines()[-1])
+    s = (stdout or "").strip()
+    if not s:
+        raise RuntimeError("claude devolvio salida vacia (posible tope de cuota o auth)")
+    # Robusto: prueba la ultima linea, luego todo el texto, luego el 1er objeto {...}
+    data = None
+    for cand in (s.splitlines()[-1], s):
+        try:
+            data = json.loads(cand)
+            break
+        except Exception:
+            data = None
+    if data is None:
+        m = re.search(r"\{.*\}", s, re.DOTALL)
+        if not m:
+            raise RuntimeError(f"claude: JSON no parseable: {s[:200]}")
+        data = json.loads(m.group(0))
     if data.get("is_error"):
         raise RuntimeError(data.get("result", "claude is_error=true"))
     return data.get("result", ""), float(data.get("total_cost_usd", 0.0) or 0.0)
