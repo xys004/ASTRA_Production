@@ -358,6 +358,20 @@ class ASTRAIntelligence:
         from agents.analyst import REFUTATION_ANALYST_PROMPT
         system_prompt = REFUTATION_ANALYST_PROMPT
 
+        # --- Guardas DETERMINISTAS: mandan sobre el juicio del LLM ---
+        # Antes, una corrida CAIDA se auto-"validaba" (falso VALIDATED de Schwarzschild
+        # cuando el sympy local estaba roto). La verdad primaria es el veredicto explicito
+        # del script + el exit code, NO la opinion del analista.
+        _exit = exec_result.get("exit_code", 0)
+        _stdout_up = (exec_result.get("stdout") or "").upper()
+        _has_stderr = bool((exec_result.get("stderr") or "").strip())
+        if "VERDICT: FAIL" in _stdout_up:
+            return {"status": "REFUTED",
+                    "reasoning": "El script de validacion reporto VERDICT: FAIL."}
+        if "VERDICT: PASS" in _stdout_up and _exit == 0 and not _has_stderr:
+            return {"status": "VALIDATED",
+                    "reasoning": "El script reporto VERDICT: PASS con ejecucion limpia (exit 0, sin stderr)."}
+
         if exec_result.get("exit_code", 0) != 0 or exec_result.get("stderr"):
             if not self.api_key:
                 return {"status": "CODE_ERROR", "corrected_code": "print('Fixed Code')"}
@@ -367,9 +381,12 @@ class ASTRAIntelligence:
             if isinstance(response, str) and response.startswith("API_ERROR:"):
                 return {"status": "API_ERROR", "reasoning": response}
             parsed = _extract_json_object(response)
-            if parsed and parsed.get("status") in {"CODE_ERROR", "REFUTED", "VALIDATED"}:
+            # ENDURECIDO: una ejecucion caida NO puede ser VALIDATED (nada se verifico).
+            if parsed and parsed.get("status") in {"CODE_ERROR", "REFUTED"}:
                 return parsed
-            return {"status": "CODE_ERROR", "corrected_code": None, "reasoning": response}
+            return {"status": "CODE_ERROR",
+                    "corrected_code": (parsed or {}).get("corrected_code"),
+                    "reasoning": (parsed or {}).get("reasoning") or response}
 
         else:
             if not self.api_key:
