@@ -755,6 +755,14 @@
                                 <option value="groq">Groq (Llama 3.3)</option>
                             </select>
                         </div>
+                        <div class="provider-row">
+                            <label class="provider-label">Oráculo</label>
+                            <select id="oracle-mode" class="provider-select">
+                                <option value="remote" selected>ASTRUM (GPU remoto)</option>
+                                <option value="local">Local solamente</option>
+                                <option value="auto">Auto (deciden los modelos)</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="action-row">
@@ -865,6 +873,14 @@
                                     <option value="mistral">Mistral Large</option>
                                     <option value="codestral">Codestral</option>
                                     <option value="groq">Groq (Llama 3.3)</option>
+                                </select>
+                            </div>
+                            <div class="provider-row">
+                                <label class="provider-label">Oráculo</label>
+                                <select id="r-oracle-mode" class="provider-select">
+                                    <option value="remote" selected>ASTRUM (GPU remoto)</option>
+                                    <option value="local">Local solamente</option>
+                                    <option value="auto">Auto (deciden los modelos)</option>
                                 </select>
                             </div>
                         </div>
@@ -1498,11 +1514,12 @@ async function startDiscovery() {
         translator: document.getElementById('translator-provider').value,
         analyst:    document.getElementById('analyst-provider').value
     };
+    const oracle_mode = document.getElementById('oracle-mode').value;
     documentLoaded = false;
     await fetch('/api/start', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({intuition, providers})
+        body: JSON.stringify({intuition, providers, oracle_mode})
     });
     toast('Cycle started', 'success');
 }
@@ -1538,6 +1555,7 @@ async function startResearch() {
         analyst:    document.getElementById('r-analyst-provider').value,
         navigator:  document.getElementById('r-navigator-provider').value,
     };
+    const oracle_mode    = document.getElementById('r-oracle-mode').value;
     const heartbeat      = parseInt(document.getElementById('heartbeat-interval').value) || 5;
     const autonomous     = document.getElementById('autonomous-mode').checked;
     const maxRuntimeRaw  = document.getElementById('max-runtime').value.trim();
@@ -1549,7 +1567,7 @@ async function startResearch() {
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
             macro_question: q, heartbeat_interval: heartbeat,
-            providers, autonomous_mode: autonomous, max_runtime_minutes: maxRuntime
+            providers, autonomous_mode: autonomous, max_runtime_minutes: maxRuntime, oracle_mode
         })
     });
     if (res.ok) {

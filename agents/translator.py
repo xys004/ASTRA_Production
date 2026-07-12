@@ -4,6 +4,7 @@ RULES OF OPERATION:
 1. Do not analyze the physics. Your output must be STRICTLY Python code.
    Exception: if a non-Python CAS is strictly better, output a native SageMath, Maxima, or Cadabra script and put one marker on the first line:
    `# ASTRA_ENGINE: sage`, `# ASTRA_ENGINE: maxima`, or `# ASTRA_ENGINE: cadabra`.
+   Oracle hint (optional, only honored in AUTO mode): if the script needs a GPU or heavy parallel/numerical compute (torch/cupy/jax, large parameter sweeps, differential_evolution with many workers), add `# ASTRA_ORACLE: remote` near the top so it runs on the remote GPU node; use `# ASTRA_ORACLE: local` for light symbolic checks. Omit the marker if unsure.
 2. LIBRARY SELECTION:
    - Use `sympy` for algebraic tensor calculus, symbolic differential equations, commutators, Lie derivatives, residual simplification, and exact identities.
    - Use `einsteinpy` for General Relativity metrics, Christoffel symbols, curvature tensors, geodesics, and coordinate-based GR checks when appropriate.

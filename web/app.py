@@ -66,6 +66,10 @@ def start_loop():
         if 'analyst' in providers:
             os.environ['ASTRA_ANALYST_PROVIDER'] = providers['analyst']
 
+    oracle_mode = (data.get('oracle_mode') or '').strip().lower()
+    if oracle_mode in ('local', 'remote', 'auto'):
+        os.environ['ASTRA_ORACLE_MODE'] = oracle_mode
+
     state.start_loop_requested = True
     return jsonify({"success": True})
 
@@ -161,6 +165,10 @@ def session_start():
             os.environ['ASTRA_ANALYST_PROVIDER'] = providers['analyst']
         if 'navigator' in providers:
             os.environ['ASTRA_NAVIGATOR_PROVIDER'] = providers['navigator']
+
+    oracle_mode = (data.get('oracle_mode') or '').strip().lower()
+    if oracle_mode in ('local', 'remote', 'auto'):
+        os.environ['ASTRA_ORACLE_MODE'] = oracle_mode
 
     autonomous = bool(data.get('autonomous_mode', False))
     state.autonomous_mode = autonomous

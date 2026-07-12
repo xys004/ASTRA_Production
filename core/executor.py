@@ -1,5 +1,6 @@
 import asyncio
 import os
+import re
 import subprocess
 import sys
 import uuid
@@ -8,6 +9,20 @@ from core.engine_router import detect_engine, execute_external_cas
 
 logger = logging.getLogger("ASTRA_CORE.executor")
 
+
+def _decide_oracle(code: str) -> str:
+    """Modo AUTO ('que decidan los modelos'): honra un marcador explicito
+    '# ASTRA_ORACLE: remote|local' que el traductor puede poner; si no hay,
+    heuristica -> GPU/computo pesado va a ASTRUM, simbolico ligero va local."""
+    m = re.search(r"#\s*ASTRA_ORACLE\s*:\s*(remote|local)", code, re.IGNORECASE)
+    if m:
+        return m.group(1).lower()
+    c = code.lower()
+    heavy = ("import torch", "import cupy", "import jax", "cuda", "@njit",
+             "prange", "differential_evolution", "workers=-1", "multiprocessing",
+             "gpu")
+    return "remote" if any(k in c for k in heavy) else "local"
+
 async def execute_python_code(code: str, workspace_dir: str = "workspace", timeout: int = 60) -> dict:
     """
     Saves the Python code in the workspace and executes it asynchronously in an isolated subprocess.
@@ -15,7 +30,11 @@ async def execute_python_code(code: str, workspace_dir: str = "workspace", timeo
     """
     timeout = int(os.environ.get("ASTRA_ORACLE_TIMEOUT", timeout))
 
-    if os.environ.get("ASTRA_ORACLE_MODE", "local").strip().lower() == "remote":
+    mode = os.environ.get("ASTRA_ORACLE_MODE", "local").strip().lower()
+    if mode == "auto":
+        mode = _decide_oracle(code)
+        logger.info("Oracle AUTO -> %s", mode)
+    if mode == "remote":
         from core.remote_executor import execute_remote_code
         return await execute_remote_code(code, timeout=timeout)
 
