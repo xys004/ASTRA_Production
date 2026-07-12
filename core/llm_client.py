@@ -125,6 +125,7 @@ class ASTRAIntelligence:
         self.client = None
         self.prompt_tokens = 0
         self.completion_tokens = 0
+        self.cli_kind = None   # set para proveedores de suscripcion claude_cli/codex_cli
 
         if self.provider in _OPENAI_COMPAT:
             cfg = _OPENAI_COMPAT[self.provider]
@@ -170,6 +171,13 @@ class ASTRAIntelligence:
             except ImportError:
                 logger.error("Gemini SDK not installed. Run: pip install google-genai")
 
+        elif self.provider in ("claude_cli", "codex_cli"):
+            # Backend de SUSCRIPCION: usa los CLIs oficiales (Claude Code / Codex)
+            # en modo headless. NO usa API de pago -> no requiere API key.
+            self.cli_kind = "claude" if self.provider == "claude_cli" else "codex"
+            self.api_key = "CLI_SUBSCRIPTION"   # marca "modo real" (evita SIMULATED)
+            self.client = "CLI"
+
         else:
             logger.error(f"Unsupported provider: {self.provider}")
 
@@ -183,6 +191,18 @@ class ASTRAIntelligence:
             return "SIMULATED_RESPONSE"
 
         try:
+            if self.provider in ("claude_cli", "codex_cli"):
+                # Suscripcion via CLI: combinamos system+user en un solo prompt
+                # (los CLIs headless reciben un unico prompt) y corremos en un hilo
+                # para no bloquear el loop async.
+                from core.cli_backend import call_cli
+                combined = f"{system_prompt}\n\n{user_prompt}" if system_prompt else user_prompt
+                res = await asyncio.to_thread(call_cli, self.cli_kind, combined)
+                if not res.ok:
+                    # Tope de cuota / fallo -> semantica API_ERROR (el loop lo salta/reintenta)
+                    return f"API_ERROR: {res.error}"
+                return res.text
+
             if self.provider in _OPENAI_COMPAT:
                 model = _OPENAI_COMPAT[self.provider]["model"]
                 response = await self.client.chat.completions.create(

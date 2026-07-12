@@ -66,6 +66,19 @@ PROVIDERS = {
         "package": "openai",
         "label": "Groq",
     },
+    # --- Backends de SUSCRIPCION (CLIs oficiales, sin API de pago) ---
+    "claude_cli": {
+        "env": None,
+        "package": None,
+        "label": "Claude (CLI suscripcion)",
+        "cli_bin": "claude",
+    },
+    "codex_cli": {
+        "env": None,
+        "package": None,
+        "label": "Codex/ChatGPT (CLI suscripcion)",
+        "cli_bin": "codex",
+    },
 }
 
 PHASES = {
@@ -163,7 +176,11 @@ def configured_providers() -> list[str]:
     load_project_env()
     providers = []
     for provider, meta in PROVIDERS.items():
-        if meta["env"] is None:
+        if meta.get("cli_bin"):
+            # Backend de suscripcion: disponible si el binario del CLI esta en PATH
+            if shutil.which(meta["cli_bin"]):
+                providers.append(provider)
+        elif meta["env"] is None:
             # ADC-based provider (Vertex AI) — available if SDK is installed
             if _module_available(meta["package"]):
                 providers.append(provider)
@@ -174,9 +191,9 @@ def configured_providers() -> list[str]:
 
 def choose_default_provider() -> str:
     preferred = os.environ.get("ASTRA_PROVIDER", "").strip().lower()
-    if preferred in PROVIDERS and os.environ.get(PROVIDERS[preferred]["env"]):
-        return preferred
     configured = configured_providers()
+    if preferred in configured:
+        return preferred
     return configured[0] if configured else "gemini"
 
 
@@ -356,6 +373,12 @@ def run_preflight(provider: str | None = None, verify_api: bool = True, phase_pr
         if meta is None:
             checks.append(Check("API provider", False, f"unsupported provider: {selected}"))
             continue
+        if meta.get("cli_bin"):
+            # Backend de suscripcion: basta con que el binario del CLI exista
+            present = shutil.which(meta["cli_bin"]) is not None
+            checks.append(Check(f"{meta['label']} CLI", present,
+                                f"{meta['cli_bin']} (headless)" if present else f"{meta['cli_bin']} NO en PATH"))
+            continue
         if meta["env"] is None:
             # ADC-based provider — no key check, just confirm SDK is present
             checks.append(Check(f"{meta['label']} credentials", True, "Application Default Credentials (ADC)", required=False))
@@ -402,7 +425,9 @@ def run_preflight(provider: str | None = None, verify_api: bool = True, phase_pr
     if verify_api:
         for selected in sorted(selected_providers):
             meta = PROVIDERS.get(selected)
-            if not meta or not _module_available(meta["package"]):
+            # Los backends de suscripcion (CLI) no se verifican en vivo aqui:
+            # gastaria cuota real. Su chequeo es solo la presencia del binario.
+            if not meta or meta.get("cli_bin") or not meta.get("package") or not _module_available(meta["package"]):
                 continue
             has_credentials = meta["env"] is None or bool(os.environ.get(meta["env"]))
             if has_credentials:
