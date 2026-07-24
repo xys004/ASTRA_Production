@@ -52,9 +52,14 @@ async def execute_remote_code(code: str, timeout: int = 60) -> dict:
         }
     )
 
+    # Win32-OpenSSH (System32) muere con exit 255 y CERO output cuando el proceso
+    # padre no tiene consola (caso: server MCP lanzado por el host de Claude).
+    # ASTRA_REMOTE_SSH_BIN permite apuntar a un ssh que no la necesite (p.ej. el de Git).
+    ssh_bin = os.environ.get("ASTRA_REMOTE_SSH_BIN", "").strip() or "ssh"
+
     remote_cmd = f"{_quote_remote_arg(remote_python)} {_quote_remote_arg(remote_worker)}"
     cmd = [
-        "ssh",
+        ssh_bin,
         "-T",
         "-o",
         "BatchMode=yes",

@@ -21,20 +21,24 @@ Versión 1.0 — Mayo 2026
 
 ## 1. Descripción General
 
-ASTRA es un sistema multi-agente de inteligencia artificial diseñado para generar, formalizar y validar hipótesis científicas mediante un proceso automatizado de cinco fases:
+ASTRA es un sistema multi-modelo orientado por objetivos, diseñado para generar,
+desafiar, formalizar y validar hipótesis científicas mediante deliberación:
 
 | Fase | Agente | Función |
 |------|--------|---------|
 | 1 — Recepción | — | Recibe la intuición o documento del usuario |
-| 2 — Conjetura | Motor de Conjeturas | Formaliza la intuición en una hipótesis rigurosa con axiomas y definiciones |
-| 3 — Traducción | Traductor Formal | Genera un script de validación en Python usando SymPy, SciPy u otro CAS |
-| 4 — Oráculo de Validación | Ejecutor en sandbox | Ejecuta el script en un entorno aislado y captura la salida |
-| 5 — Análisis | Analista de Refutación | Interpreta el resultado: VALIDATED, REFUTED o CODE_ERROR |
+| 2 — Deliberación | Codex + agy | Generan conjeturas independientes, hacen crítica cruzada y sintetizan un consenso ligado al objetivo |
+| 3 — Traducción | Claude Opus 4.8 | Escribe un validador falsable en Python, CAS o Lean |
+| 4 — Revisión de código | Codex | Audita si el código de Claude puede probar o refutar los claims decisivos |
+| 5 — Oráculo de Validación | Ejecutor sandbox/ASTRUM | Ejecuta el script aprobado y captura evidencia reproducible |
+| 6 — Análisis | Codex | Lee código y evidencia: VALIDATED, REFUTED o CODE_ERROR |
+| 7 — Navegación | agy | Relaciona el resultado con el objetivo final y propone el siguiente paso |
 
 ASTRA opera en dos modos:
 
 - **Ciclo Único** — el usuario aporta una intuición; ASTRA la procesa a través del pipeline una vez y espera aprobación antes de agregar el resultado a la Base Axiomática.
-- **Bucle de Investigación** — el usuario aporta una pregunta de investigación macro; ASTRA cicla hipótesis de forma autónoma, guiado por un quinto agente (el Navegador de Investigación), hasta alcanzar un hito y pausar para revisión humana.
+- **Bucle de Investigación** — el usuario aporta una pregunta macro; los tres
+  modelos la comparten mientras agy navega ciclos deliberativos sucesivos.
 
 ---
 
@@ -43,7 +47,8 @@ ASTRA opera en dos modos:
 ### Requisitos previos
 
 - Python 3.10 o superior
-- Al menos una clave API de proveedor LLM (Vertex AI ADC, Gemini, Anthropic, OpenAI, DeepSeek, xAI, Qwen, Mistral o Groq)
+- Las CLI autenticadas de Codex, Claude Code y Antigravity (`agy`) para el mapa
+  de producción, o al menos un proveedor API opcional
 - Todas las dependencias Python instaladas (`pip install -r requirements.txt` dentro del `venv`)
 
 ### Variables de entorno
@@ -278,6 +283,9 @@ ASTRA soporta los siguientes proveedores LLM:
 
 | Clave de proveedor | Modelo utilizado | Variable de clave API |
 |---|---|---|
+| `codex_cli` | GPT-5.6 Sol (`xhigh`) | Inicio de sesión de la suscripción Codex |
+| `claude_cli` | Claude Opus 4.8 | Inicio de sesión de Claude Code |
+| `agy_cli` | Gemini 3.1 Pro High mediante Antigravity | Inicio de sesión Google/Antigravity |
 | `vertexai` | Gemini 2.5 Flash (vía GCP) | `VERTEX_PROJECT` + ADC |
 | `gemini` | Gemini 2.5 Flash | `GEMINI_API_KEY` |
 | `anthropic` | Claude Sonnet 4.6 | `ANTHROPIC_API_KEY` |
@@ -293,12 +301,16 @@ ASTRA soporta los siguientes proveedores LLM:
 
 | Rol | Proveedor recomendado | Motivo |
 |---|---|---|
-| Conjetura | Vertex AI / Gemini | Razonamiento científico formal sólido y LaTeX de calidad |
-| Traductor | Anthropic Claude | Mayor calidad y corrección del código generado |
-| Analista | OpenAI GPT-4o | Salida JSON confiable e interpretación de resultados consistente |
-| Navegador | Vertex AI / Gemini | Razonamiento estratégico sólido y adherencia al formato JSON |
+| Conjetura | `codex_cli,agy_cli` | Propuestas independientes y crítica cruzada adversarial |
+| Síntesis | `codex_cli` | Síntesis matemática orientada al objetivo |
+| Traductor | `claude_cli` | Opus 4.8 escribe y revisa el validador |
+| Revisor de código | `codex_cli` | Auditoría independiente del programa de Claude |
+| Analista | `codex_cli` | Lee el código y la evidencia de ejecución |
+| Navegador | `agy_cli` | Explora el siguiente paso respecto del objetivo compartido |
 
-Si no se encuentra ninguna clave API para un proveedor seleccionado, ASTRA opera en **modo Simulado** — los ciclos completan con datos de marcador de posición, sin llamadas reales a LLM.
+Los proveedores CLI usan OAuth de suscripción y no requieren clave API del
+modelo. Las APIs siguen siendo opcionales; un proveedor API sin credenciales
+opera en modo simulado.
 
 ---
 

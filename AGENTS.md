@@ -1,4 +1,4 @@
-# ASTRA_Production Agent Notes
+# ASTRA Agent Notes
 
 Before changing the remote oracle path, read:
 

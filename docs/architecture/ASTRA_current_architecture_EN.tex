@@ -1,0 +1,248 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[a4paper,top=2.4cm,bottom=2.4cm,left=2.2cm,right=2.2cm]{geometry}
+\usepackage{fontspec}
+\usepackage[english,provide=*]{babel}
+\babelprovide[import]{english}
+\babelprovide[import]{spanish}
+\babelfont{rm}{Noto Serif}
+\babelfont{sf}{Noto Sans}
+\babelfont{tt}{Noto Sans Mono}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,backgrounds}
+\usepackage[colorlinks=true,linkcolor=blue!60!black,citecolor=blue!60!black,urlcolor=blue!60!black]{hyperref}
+\setlist[itemize]{label=--,leftmargin=*}
+\setlist[enumerate]{leftmargin=*}
+\emergencystretch=2em
+
+\title{\textbf{ASTRA Production}\\[2mm]
+\large An Autonomous Architecture for Scientific Theorem Reasoning and Validation}
+\author{Nelson Bolívar\\\textit{Science-Stack Research Group}}
+\date{Architecture version: July 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+ASTRA Production (\textit{Autonomous Symbolic Theorem Reasoning Architecture}) is a multi-agent research engine that turns scientific intuition into a falsifiable hypothesis, translates the hypothesis into an executable computational experiment, and critically analyzes the resulting evidence before accepting a conclusion. Its central design principle is the separation of language generation from evidence: language models propose, formalize, and analyze, while a symbolic or numerical computation oracle executes the validation program and returns reproducible evidence. The system supports isolated cycles and autonomous research campaigns, multiple model providers, local and remote mathematical engines, automatic code correction, human theorem approval, and persistent reports. This document describes the currently implemented architecture, its guarantees, and its limitations.
+\end{abstract}
+
+\section{Motivation and epistemic principle}
+
+Language models are useful for formulating hypotheses, connecting domains, and writing programs, but a plausible response is not a proof. ASTRA therefore adopts an explicit separation of responsibilities:
+
+\begin{itemize}
+  \item the \textbf{heuristic layer} proposes conjectures, generates code, and explains results;
+  \item the \textbf{execution layer} computes with actual symbolic, numerical, or logical engines;
+  \item the \textbf{control layer} preserves state, applies retries, guards verdicts, and requests human decisions;
+  \item the \textbf{documentation layer} records code, output, analysis, providers, and research evolution.
+\end{itemize}
+
+ASTRA does not claim to automate mathematical truth. It turns AI-assisted reasoning into an inspectable process:
+\[
+\begin{aligned}
+\text{intuition}&\longrightarrow\text{falsifiable hypothesis}
+\longrightarrow\text{program}\\
+&\longrightarrow\text{executed evidence}
+\longrightarrow\text{reviewable verdict}.
+\end{aligned}
+\]
+
+Model output never replaces execution. Conversely, successful execution is not sufficient by itself: the program must faithfully represent the claim and produce a signal that discriminates validation from refutation.
+
+\section{Current architecture}
+
+ASTRA runs as a local application with a browser interface. A Flask server exposes the interface and control API, while an asynchronous orchestrator maintains the state machine in the background. Agents communicate with LLM providers through a common client layer, and the oracle routes generated code to the appropriate computation engine.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  node distance=10mm and 9mm,
+  font=\sffamily\small,
+  ui/.style={rectangle,rounded corners,draw=blue!60!black,fill=blue!6,thick,align=center,minimum width=31mm,minimum height=9mm},
+  agent/.style={rectangle,rounded corners,draw=purple!65!black,fill=purple!6,thick,align=center,minimum width=31mm,minimum height=9mm},
+  oracle/.style={rectangle,draw=teal!70!black,fill=teal!7,thick,align=center,minimum width=35mm,minimum height=9mm},
+  gate/.style={diamond,aspect=2,draw=orange!75!black,fill=orange!10,thick,align=center,inner sep=1.5pt},
+  arr/.style={-{Stealth[length=2.2mm]},thick}
+]
+\node[ui] (input) {Browser interface\\intuition or document};
+\node[agent,below=of input] (conj) {Conjecture agent\\falsifiable hypothesis};
+\node[agent,below=of conj] (trans) {Formal translator\\executable code};
+\node[oracle,below=of trans] (exec) {Validation oracle\\local or remote};
+\node[agent,right=18mm of exec] (analyst) {Result analyst\\structured verdict};
+\node[gate,above=13mm of analyst] (status) {Status};
+\node[ui,above right=8mm and 17mm of status] (human) {Human approval\\axiomatic base};
+\node[agent,below right=9mm and 17mm of status] (nav) {Navigator\\next direction};
+
+\draw[arr] (input)--(conj);
+\draw[arr] (conj)--(trans);
+\draw[arr] (trans)--(exec);
+\draw[arr] (exec)--(analyst);
+\draw[arr] (analyst)--(status);
+\draw[arr] (status)--node[above,sloped]{validated}(human);
+\draw[arr] (status)--node[below,sloped]{cycle closed}(nav);
+\draw[arr,dashed] (status.west) -| node[pos=.28,above]{code error: repair} (trans.east);
+\draw[arr,dashed] (nav.south) |- node[pos=.28,below]{new hypothesis} (conj.west);
+\end{tikzpicture}
+\caption{Logical flow of ASTRA Production. The Navigator participates in Research Loop mode, while human approval protects admission of results to the axiomatic base.}
+\label{fig:architecture}
+\end{figure}
+
+\subsection{Input and interface}
+
+The user may enter a claim directly or upload PDF/TXT material. The application provides two operating modes:
+
+\begin{itemize}
+  \item \textbf{Single Cycle}: evaluates one concrete intuition through a complete pass.
+  \item \textbf{Research Loop}: decomposes a macro-level question into a sequence of related conjectures and preserves alternative branches.
+\end{itemize}
+
+The interface displays status, the current conjecture, generated script, oracle output, axiomatic base, reports, and event log. It also lets the user stop execution, approve or reject results, and configure providers for each role.
+
+\subsection{Conjecture agent}
+
+The first agent receives the intuition and accumulated context. It must produce a specific, falsifiable statement with variables, assumptions, domain, and success criterion. In iterative mode it also uses established theorems and previous refutations to avoid reopening closed paths.
+
+\subsection{Formal translator}
+
+The translator converts the conjecture into a self-contained validation script. The program must compute a discriminating quantity: a symbolic residual, identity, initial-condition check, inequality, counterexample, tensor property, or numerical comparison with explicit tolerances. It may declare the engine through an \texttt{ASTRA\_ENGINE} header and suggest local or remote execution through \texttt{ASTRA\_ORACLE}.
+
+The translator does not issue the scientific verdict. It constructs the experiment by which the claim can be decided.
+
+\subsection{Validation oracle}
+
+The oracle executes the program and captures return code, standard output, errors, and engine metadata. Python provides the common foundation, with libraries including SymPy, Z3, NumPy, SciPy, mpmath, EinsteinPy, Pint, fluids, and QuTiP. ASTRA can also route jobs to SageMath, Maxima, or Cadabra when available.
+
+Execution may be:
+
+\begin{itemize}
+  \item \textbf{local}, suitable for symbolic algebra and moderate computation;
+  \item \textbf{remote}, through an SSH-connected Linux worker for heavy workloads, GPU use, or tools installed on the compute workstation.
+\end{itemize}
+
+The policy may be fixed by configuration or inferred from markers and script characteristics. A missing optional engine must cause an explicit failure rather than a fabricated validation.
+
+\subsection{Analyst and verdict guard}
+
+The analyst receives the conjecture and raw evidence. It returns a structured response with one of four primary states:
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+State & Meaning \\
+\midrule
+\texttt{VALIDATED} & Computational evidence supports the stated hypothesis. \\
+\texttt{REFUTED} & Execution finds a counterexample or contradicts the hypothesis. \\
+\texttt{CODE\_ERROR} & The program failed to execute the intended test correctly. \\
+\texttt{API\_ERROR} & The LLM provider, network, or relevant quota failed. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+When a \texttt{CODE\_ERROR} occurs, ASTRA requests corrected code and reruns validation up to the configured limit. The verdict guard restricts conclusions that are incompatible with execution evidence. This reduces, but does not eliminate, the risk that the analyst will turn a technical failure into a scientific claim.
+
+\subsection{Human approval and axiomatic base}
+
+A hypothesis marked as validated remains pending. Only after researcher approval is it added as an established theorem. Refutations and their reasons also enter the working context so that discarded paths are not silently repeated. This human gate recognizes that program correctness, physical assumptions, and the scope of a conclusion still require expert judgment.
+
+\section{Autonomous research loop}
+
+During a campaign, ASTRA maintains a \textit{Research Session} associated with a macro question. After each cycle, the Navigator assesses progress and proposes:
+
+\begin{itemize}
+  \item the next depth-first research direction;
+  \item parallel branches worth preserving;
+  \item whether a milestone requiring review has been reached;
+  \item whether the macro question may be considered resolved.
+\end{itemize}
+
+If a conjecture is validated, the system may generalize it, explore its boundaries, or apply it to another regime. If it is refuted, the system seeks an alternative that avoids the specific cause of failure. The researcher may accept the proposal, redirect the investigation, or activate a saved branch. In autonomous mode ASTRA passes milestones without pausing until the Navigator declares resolution, the maximum runtime is reached, or the user stops the session.
+
+This is a depth-first procedure with branch memory; it is neither an exhaustive search nor a guarantee that a resolution declaration is correct.
+
+\section{Controlling ASTRA from an agent}
+
+ASTRA is not limited to its browser interface. Its Model Context Protocol (MCP) server exposes the oracle as tools callable by Codex, Claude Code, Gemini, or another compatible client. The agent conversing with the researcher can therefore plan the test, write the validation program, request execution, and inspect evidence without manually moving results between applications.
+
+The current interface provides six principal operations:
+
+\begin{center}
+\small
+\begin{tabular}{@{}lp{10.8cm}@{}}
+\toprule
+Tool & Function \\
+\midrule
+\texttt{astra\_execute} & Runs an existing script on the local, remote, or automatic oracle. \\
+\texttt{astra\_cycle} & Runs conjecture, translation, oracle, and analysis as one complete cycle. \\
+\texttt{astra\_probe} & Reads the phase and heartbeat of a cycle without interrupting it. \\
+\texttt{astra\_submit} & Submits long computation as a detached job. \\
+\texttt{astra\_job} & Lists or polls jobs, incremental output, and final results. \\
+\texttt{astra\_status} & Checks availability of the remote worker. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The MCP server is registered by pointing the client to ASTRA's environment interpreter and \path{mcp_server/server.py}; a new agent session is then opened so that the tools are loaded. The researcher may ask, for example, ``construct an independent test of the Ricci scalar, run it with \texttt{astra\_execute}, and do not accept the result until the residuals have been inspected.'' Computations longer than a few minutes should use \texttt{astra\_submit} and be followed with \texttt{astra\_job}.
+
+This mode makes the conversational agent the planning layer and ASTRA the traceable execution layer. The agent receives no additional authority: it must still expose code, assumptions, output, and the decision criterion.
+
+\section{Extension through scientific engines and packages}
+
+The oracle layer is extensible rather than a closed list. Any package available in the execution environment may participate in validation. In-house scientific packages include:
+
+\begin{center}
+\path{GR_python}\quad \path{pyWarpFactory}\quad \path{warp_bubble_optimization}.
+\end{center}
+
+Integration has a simple contract: the script must import the package, fix reproducible inputs, produce inspectable evidence, and end with an explicit verdict. The same package must be installed in the selected local or remote environment.
+
+This mechanism allows ASTRA to reuse validated solvers, metrics, optimizers, energy-condition analyses, and test suites. Important conclusions should combine independent legs whenever possible---for example, a symbolic identity, fixed-seed numerical evaluations, and a known limiting case.
+
+\subsection{Lean 4 and Mathlib}
+
+Lean 4 is integrated as an optional engine through the marker \texttt{\# ASTRA\_ENGINE: lean}. The translator may generate a file importing Mathlib; ASTRA passes it to a native compiler or one installed in WSL. Acceptance by the Lean kernel provides mechanical verification suitable for formal logic, discrete mathematics, algebra, and theorems that can be represented in the proof assistant's language.
+
+Lean does not replace numerical physics calculations or prove that a formalization faithfully represents a physical system. Its guarantee applies to the formal statement and imported axioms. If the compiler rejects a proof, ASTRA classifies the event as a code error and may request a correction; rejection must never be turned into a refutation of the theorem.
+
+\subsection{Wolfram Mathematica as a complementary oracle}
+
+When the model has access to a Wolfram plugin or the \path{mathematica-agent-bridge} project, the agent can write and execute Wolfram Language directly. The local bridge connects external processes to a Mathematica kernel through a JSON queue and can operate on an open notebook or headlessly through \texttt{wolframscript}. Its actions include \texttt{evaluate-wl}, \texttt{simplify-symbolic}, \texttt{compare-expressions}, \texttt{commutator}, and \texttt{gr-curvature}, as well as reading, writing, and evaluating notebook cells.
+
+Mathematica can act as a second independent validator: the agent runs a test through ASTRA and repeats the identity, tensor, or limit through the bridge. Agreement between independently implemented engines strengthens the evidence; disagreement triggers inspection of conventions, domains, and assumptions. The bridge evaluates code with the local user's privileges and should therefore be enabled only for trusted agents and command folders.
+
+\section{Providers, engines, and deployment}
+
+The conjecture, translation, analysis, and navigation roles may be assigned independently to supported providers, including Gemini/Vertex AI, Anthropic, OpenAI, DeepSeek, xAI, Qwen, Mistral, and Groq. Subscription-authenticated clients may also be used through their command-line interfaces. A shared layer normalizes calls, errors, and model selection. Separating providers by phase makes it possible to choose creativity, mathematical ability, coding reliability, or cost according to the role.
+
+The desktop installation creates a Python environment and launches the interface at \url{http://127.0.0.1:5050}. Credentials and oracle parameters remain in local configuration and must not be committed to the repository. ASTRA stores sessions and reports in the application's workspace.
+
+\section{Persistence, traceability, and calibration}
+
+Each cycle produces HTML and Markdown reports containing the intuition, conjecture, script, execution result, analysis, and selected providers. Investigations can be saved, reloaded, and reviewed through history. The benchmark suite covers general relativity, ordinary differential equations, fluid mechanics, logic, quantum systems, and symbolic computation.
+
+Benchmarks serve two purposes: they verify that the engines remain operational and compare how well different providers construct discriminating tests. They do not replace scientific validation of a new problem, but they expose infrastructure regressions and systematic biases.
+
+\section{Guarantees and limitations}
+
+ASTRA improves reproducibility because it preserves and executes the program, but it does not automatically turn a computational check into a universal proof. Several obligations remain:
+
+\begin{itemize}
+  \item verify that the formal conjecture matches the original question;
+  \item inspect whether the code tests a weakened or circular version of the claim;
+  \item distinguish numerical evidence, symbolic identity, and logical proof;
+  \item state domains, units, boundary conditions, and tolerances;
+  \item repeat results that depend on precision, grid, or platform;
+  \item subject consequential conclusions to independent human review.
+\end{itemize}
+
+Thus, \texttt{VALIDATED} means ``validated by the oracle under the recorded program and assumptions,'' not ``absolute mathematical truth.'' ASTRA's strength lies in making the evidence chain visible and repeatable.
+
+\section{Conclusion}
+
+ASTRA Production has evolved from a fixed processing scheme into a configurable, iterative, multi-agent research architecture. Formulation, translation, execution, analysis, navigation, and approval are distinct responsibilities. The oracle provides a reference external to model discourse; reports preserve traceability; and the human gate prevents autonomy from being mistaken for scientific authority. The result is a platform for conducting research with language models without silently delegating to them the final criterion of truth.
+
+\end{document}

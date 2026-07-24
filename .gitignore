@@ -3,12 +3,15 @@ venv/
 env/
 .astra-wsl-venv/
 .env
+.env.*
+!.env.example
 
 # Execution Workspace
 workspace/*.py
 workspace/*.sage
 workspace/*.mac
 workspace/*.cdb
+workspace/*.lean
 workspace/uploads/
 workspace/assets/
 workspace/reports/
@@ -44,4 +47,16 @@ workspace/sessions/
 workspace/benchmark_runs/
 workspace/research_runs/
 workspace/investigations/
-workspace/
+mcp_server/venv/
+
+# Generated cycle state and local validation scripts
+workspace/**
+!workspace/.keep
+/verify_*.py
+
+# Local safety copies created during development
+*.bak*
+
+# Mathematica bridge queues and other generated oracle traffic
+bridge/commands/
+bridge/response-*.json

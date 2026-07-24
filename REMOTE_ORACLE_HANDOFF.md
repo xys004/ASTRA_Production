@@ -14,7 +14,7 @@ Tailscale + SSH.
 
 Local project:
 
-`C:\Users\Nelson\Desktop\Proyectos\ASTRA_Production`
+`C:\Users\Nelson\Dev\ASTRA`
 
 Remote worker:
 

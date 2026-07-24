@@ -1,17 +1,39 @@
-# ASTRA Production
+# ASTRA
 
 **Autonomous Symbolic Theorem Reasoning Architecture**
 
-ASTRA is a multi-agent epistemological research engine that turns scientific intuition into mathematically validated or refuted theorems. It connects LLM reasoning agents to real symbolic/numerical computation engines and presents results through a browser-based research interface.
+ASTRA is a goal-driven, multi-model epistemological research engine. It turns
+scientific intuition into falsifiable conjectures, executable evidence, explicit
+refutations, and new research directions. Its design follows the
+generation–verification–revision spirit of research agents such as
+[Aletheia](https://deepmind.google/blog/accelerating-mathematical-and-scientific-discovery-with-gemini-deep-think/),
+but ASTRA uses three independent subscription CLIs instead of Gemini Deep Think.
 
 ## What It Does
 
-1. **Conjecture Engine** — formalizes an intuition, note, or paper excerpt into a falsifiable mathematical hypothesis.
-2. **Formal Translator** — converts the hypothesis into a runnable validation script (Python, SageMath, Maxima, or Cadabra).
-3. **Validation Oracle** — executes the script and captures stdout/stderr.
-4. **Refutation Analyst** — classifies the result as `VALIDATED`, `REFUTED`, `CODE_ERROR`, or `API_ERROR`.
-5. **Human Approval** — decides whether a validated theorem joins the Axiomatic Base.
-6. **Research Navigator** — in Research Loop mode, proposes the next depth-first direction and manages parallel branches.
+1. **Shared Objective** — every model receives the same final scientific goal and
+   the current research direction.
+2. **Parallel Conjecture** — GPT‑5.6 Sol and agy independently explore hypotheses,
+   then cross-criticize them; GPT‑5.6 Sol synthesizes a falsifiable consensus.
+3. **Formal Translation** — Claude Opus 4.8 converts the consensus into a runnable
+   Python, SageMath, Maxima, Cadabra, or Lean 4 validator.
+4. **Independent Code Review** — GPT‑5.6 Sol audits whether Claude's program can
+   actually prove or refute the decisive claims. Claude revises when required.
+5. **Validation Oracle** — local or ASTRUM execution captures reproducible evidence.
+6. **Refutation Analysis** — GPT‑5.6 Sol reads the code and the execution evidence;
+   a printed `PASS` is not accepted as authority.
+7. **Research Navigation** — agy relates the result back to the shared objective,
+   proposes the next direction, and preserves independent branches.
+8. **Human Approval** — a human decides whether validated results join the
+   Axiomatic Base.
+
+The production role map is:
+
+| Role | Backend |
+|---|---|
+| Primary conjecture, synthesis, code review, final analysis | Codex CLI — `gpt-5.6-sol`, `xhigh` |
+| Co-conjecture, cross-critique, research navigation | Antigravity `agy` CLI — `gemini-3.1-pro-high` |
+| Formal translation and code revision | Claude Code CLI — `claude-opus-4-8` |
 
 ASTRA is designed for theoretical physics, GR, quantum systems, fluid mechanics, symbolic calculus, differential equations, and mathematical model checking.
 
@@ -26,8 +48,8 @@ No Anaconda or preinstalled packages required — just Python 3.9+ and PowerShel
 Download or clone this repository:
 
 ```powershell
-git clone https://github.com/xys004/ASTRA_Production.git
-cd ASTRA_Production
+git clone https://github.com/AstrumDrive/ASTRA.git
+cd ASTRA
 ```
 
 Or download the ZIP from GitHub and extract it anywhere.
@@ -45,11 +67,16 @@ The installer will:
 > If PowerShell blocks execution, run this first:
 > `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned`
 
-### Step 3 — Configure API keys
+### Step 3 — Configure model access
 
 Launch ASTRA from the desktop shortcut. The browser opens at `http://127.0.0.1:5050`.
 
-Click **Settings ⚙** in the top-right corner to enter your API keys — no need to edit files manually.
+The production configuration uses authenticated Claude Code, Codex, and
+Antigravity (`agy`) CLIs. It does not use Gemini API billing. Sign in to each CLI
+once, then keep the production role map from `.env.example`.
+
+API-backed providers remain available as optional alternatives. Click
+**Settings ⚙** to enter keys when you intentionally choose one.
 
 ASTRA works with **any one of these providers**:
 
@@ -111,9 +138,19 @@ External CAS (optional, via WSL on Windows):
 # ASTRA_ENGINE: sage      # SageMath
 # ASTRA_ENGINE: maxima    # Maxima CAS
 # ASTRA_ENGINE: cadabra   # Cadabra (tensor algebra)
+# ASTRA_ENGINE: lean      # Lean 4 + Mathlib (formal proofs)
 ```
 
 If an optional CAS is missing, the oracle returns a clear failure instead of misclassifying as validated.
+
+ASTRA can also validate through any installed Python package, including project-specific
+research libraries. A generated script may import the package normally, compute independent
+checks, print the evidence, and end with `VERDICT: PASS` or `VERDICT: FAIL`.
+
+For Wolfram Language and Mathematica notebooks, an agent can use the optional
+[`mathematica-agent-bridge`](https://github.com/xys004/mathematica-agent-bridge) alongside
+ASTRA. This lets the agent write and execute Wolfram Language, compare expressions,
+inspect notebooks, and use Mathematica as an independent cross-validation oracle.
 
 ---
 

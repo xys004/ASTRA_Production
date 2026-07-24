@@ -23,12 +23,21 @@ def _decide_oracle(code: str) -> str:
              "gpu")
     return "remote" if any(k in c for k in heavy) else "local"
 
-async def execute_python_code(code: str, workspace_dir: str = "workspace", timeout: int = 60) -> dict:
+async def execute_python_code(code: str, workspace_dir: str = "workspace", timeout: int = None) -> dict:
     """
     Saves the Python code in the workspace and executes it asynchronously in an isolated subprocess.
     Captures standard output, error, and respects a timeout to prevent infinite loops in solvers.
     """
-    timeout = int(os.environ.get("ASTRA_ORACLE_TIMEOUT", timeout))
+    # Precedencia: timeout EXPLICITO del llamador > ASTRA_ORACLE_TIMEOUT (.env) > 60.
+    # (Bug historico: el env SIEMPRE pisaba al parametro, asi que astra_execute
+    # con timeout=600 moria igual a los 180 del .env — calculos pesados imposibles.)
+    if timeout is None:
+        try:
+            timeout = int(str(os.environ.get("ASTRA_ORACLE_TIMEOUT", "60")).strip().strip("'\""))
+        except ValueError:
+            timeout = 60
+    else:
+        timeout = int(timeout)
 
     mode = os.environ.get("ASTRA_ORACLE_MODE", "local").strip().lower()
     if mode == "auto":
@@ -42,7 +51,7 @@ async def execute_python_code(code: str, workspace_dir: str = "workspace", timeo
     os.makedirs(workspace_dir, exist_ok=True)
     engine = detect_engine(code)
 
-    if engine in {"sage", "maxima", "cadabra"}:
+    if engine in {"sage", "maxima", "cadabra", "lean"}:
         logger.info(f"Oracle routing script to external CAS: {engine}")
         return execute_external_cas(code, engine, workspace_dir, timeout)
 

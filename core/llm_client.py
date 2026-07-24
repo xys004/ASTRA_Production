@@ -51,6 +51,11 @@ _OPENAI_COMPAT = {
         "base_url": "https://api.groq.com/openai/v1",
         "model":    "llama-3.3-70b-versatile",
     },
+    "perplexity": {
+        "env":      "PERPLEXITY_API_KEY",
+        "base_url": "https://api.perplexity.ai",
+        "model":    "sonar-pro",        # busqueda web con citas (API, no suscripcion)
+    },
 }
 
 
@@ -119,13 +124,18 @@ class ASTRAIntelligence:
     Supports OpenAI, Anthropic, Google Gemini/Vertex AI, DeepSeek,
     xAI Grok, Qwen, Mistral, Codestral, and Groq.
     """
-    def __init__(self, provider: str = "gemini"):
+    def __init__(self, provider: str = "gemini", cli_models: str = None,
+                 cli_timeout: int = None):
         self.provider = provider.lower()
+        self.cli_models = cli_models    # escalera de modelos POR FASE para el CLI (opcional)
+        self.cli_timeout = cli_timeout  # presupuesto por llamada especifico de la fase
         self.api_key = None
         self.client = None
         self.prompt_tokens = 0
         self.completion_tokens = 0
         self.cli_kind = None   # set para proveedores de suscripcion claude_cli/codex_cli
+        self.cli_last_model = None  # modelo CLI que respondio la ultima llamada (escalera)
+        self.cli_warnings = []      # avisos de cuota/fallback, expuestos en el JSON del ciclo
 
         if self.provider in _OPENAI_COMPAT:
             cfg = _OPENAI_COMPAT[self.provider]
@@ -171,10 +181,15 @@ class ASTRAIntelligence:
             except ImportError:
                 logger.error("Gemini SDK not installed. Run: pip install google-genai")
 
-        elif self.provider in ("claude_cli", "codex_cli"):
-            # Backend de SUSCRIPCION: usa los CLIs oficiales (Claude Code / Codex)
-            # en modo headless. NO usa API de pago -> no requiere API key.
-            self.cli_kind = "claude" if self.provider == "claude_cli" else "codex"
+        elif self.provider in ("claude_cli", "codex_cli", "gemini_cli", "agy_cli"):
+            # Backend de SUSCRIPCION: usa los CLIs oficiales (Claude Code / Codex /
+            # Gemini CLI / agy=Antigravity) en modo headless. NO usa API de pago ->
+            # no requiere API key. (gemini_cli/agy = OAuth de suscripcion, cuota de la
+            # cuenta Google; distintos del provider 'gemini', que factura contra
+            # GEMINI_API_KEY. agy SUSTITUYE a gemini_cli, descontinuado para cuentas
+            # individuales.)
+            self.cli_kind = {"claude_cli": "claude", "codex_cli": "codex",
+                             "gemini_cli": "gemini", "agy_cli": "agy"}[self.provider]
             self.api_key = "CLI_SUBSCRIPTION"   # marca "modo real" (evita SIMULATED)
             self.client = "CLI"
 
@@ -191,13 +206,37 @@ class ASTRAIntelligence:
             return "SIMULATED_RESPONSE"
 
         try:
-            if self.provider in ("claude_cli", "codex_cli"):
-                # Suscripcion via CLI: combinamos system+user en un solo prompt
-                # (los CLIs headless reciben un unico prompt) y corremos en un hilo
-                # para no bloquear el loop async.
+            if self.cli_kind:
+                # Suscripcion via CLI (claude/codex/gemini/agy): combinamos system+user
+                # en un solo prompt (los CLIs headless reciben un unico prompt) y
+                # corremos en un hilo para no bloquear el loop async. Enrutamos por
+                # self.cli_kind (no por lista de providers) para cubrir TODOS los
+                # backends CLI; asi gemini_cli/agy_cli tambien pasan por call_cli.
                 from core.cli_backend import call_cli
                 combined = f"{system_prompt}\n\n{user_prompt}" if system_prompt else user_prompt
-                res = await asyncio.to_thread(call_cli, self.cli_kind, combined)
+                if self.cli_kind == "codex":
+                    # ASTRA's Codex turns are deliberative model calls, not autonomous
+                    # workspace tasks.  Everything that may be inspected (objective,
+                    # conjecture, validator and evidence) is already embedded above.
+                    # Explicitly suppress tool exploration so xhigh reasoning is spent
+                    # on the scientific exchange instead of scanning the repository.
+                    combined = (
+                        "ASTRA INTERNAL DELIBERATION MODE.\n"
+                        "Respond directly from the context in this prompt. Do not "
+                        "inspect the workspace, browse, run commands, call tools, "
+                        "spawn agents, wait for files, or modify anything. Return "
+                        "only the requested scientific or JSON response.\n\n"
+                        + combined
+                    )
+                res = await asyncio.to_thread(call_cli, self.cli_kind, combined,
+                                              models=self.cli_models,
+                                              timeout=self.cli_timeout)
+                if res.model_used:
+                    self.cli_last_model = res.model_used
+                if res.warning:
+                    # Hubo fallback por cuota: dejar rastro en el log y en el ciclo
+                    logger.warning(res.warning)
+                    self.cli_warnings.append(res.warning)
                 if not res.ok:
                     # Tope de cuota / fallo -> semantica API_ERROR (el loop lo salta/reintenta)
                     return f"API_ERROR: {res.error}"
@@ -275,12 +314,82 @@ class ASTRAIntelligence:
         if response == "SIMULATED_RESPONSE":
             return "import sympy as sp\nprint('VERDICT: PASS\\nEvidence: 0')"
 
-        if "```python" in response:
-            response = response.split("```python")[1].split("```")[0].strip()
-        elif "```" in response:
-            response = response.split("```")[1].split("```")[0].strip()
+        # Robust extraction: CLI models sometimes return prose/evidence or several
+        # blocks. Pick the fenced block that actually COMPILES as Python (or carries an
+        # ASTRA_ENGINE marker for Sage/Maxima/Cadabra) instead of the first block blindly.
+        import ast, re as _re
+        _blocks = _re.findall(r"```[A-Za-z0-9_+-]*\n(.*?)```", response, _re.DOTALL)
+        _cands = [b.strip() for b in _blocks if b.strip()] or [response.strip()]
+        def _score(c):
+            if _re.match(r"#\s*ASTRA_ENGINE:\s*(sage|maxima|cadabra)", c):
+                return (2, len(c))
+            try:
+                ast.parse(c)
+                if _re.search(r"(^|\n)\s*(import |from |def |print\(|@)", c):
+                    return (2, len(c))
+                return (1, len(c))
+            except SyntaxError:
+                return (0, len(c))
+        response = max(_cands, key=_score)
 
         return response
+
+    async def review_validation_code(
+        self,
+        shared_goal: str,
+        conjecture: str,
+        code: str,
+    ) -> dict:
+        """Independent pre-oracle audit of the translator's validation code."""
+        logger.info(f"[{self.provider.upper()}] Reviewing validation-code coverage...")
+
+        from agents.reviewer import CODE_REVIEWER_PROMPT
+
+        user_prompt = (
+            f"SHARED FINAL OBJECTIVE:\n{shared_goal[:2000]}\n\n"
+            f"CONSENSUS CONJECTURE:\n{conjecture[:5000]}\n\n"
+            f"PROPOSED VALIDATION SCRIPT:\n```text\n{code[:14000]}\n```"
+        )
+        response = await self._call_api(CODE_REVIEWER_PROMPT, user_prompt)
+        if response == "SIMULATED_RESPONSE":
+            return {
+                "status": "APPROVED",
+                "reasoning": "Simulated code review.",
+                "revision_instructions": "",
+                "coverage": [],
+            }
+        if isinstance(response, str) and response.startswith("API_ERROR:"):
+            return {
+                "status": "API_ERROR",
+                "reasoning": response,
+                "revision_instructions": "",
+                "coverage": [],
+            }
+
+        parsed = _extract_json_object(_fix_json_backslashes(response))
+        if not isinstance(parsed, dict):
+            return {
+                "status": "REVISE",
+                "reasoning": "Reviewer output was not valid JSON.",
+                "revision_instructions": (
+                    "Regenerate a compact, falsifiable validator whose decisive checks "
+                    "and failure paths are explicit."
+                ),
+                "coverage": [],
+            }
+
+        status = str(parsed.get("status") or "REVISE").upper()
+        if status not in {"APPROVED", "REVISE", "REJECT"}:
+            status = "REVISE"
+        coverage = parsed.get("coverage")
+        if not isinstance(coverage, list):
+            coverage = []
+        return {
+            "status": status,
+            "reasoning": str(parsed.get("reasoning") or response)[:2000],
+            "revision_instructions": str(parsed.get("revision_instructions") or "")[:3000],
+            "coverage": [str(item)[:500] for item in coverage[:12]],
+        }
 
     async def navigate_research(
         self,
@@ -351,58 +460,91 @@ class ASTRAIntelligence:
             "macro_resolved": False,
         }
 
-    async def analyze_results(self, conjecture: str, exec_result: dict) -> dict:
-        """Phase 5: Refutation Analyst"""
+    async def analyze_results(
+        self,
+        conjecture: str,
+        exec_result: dict,
+        shared_goal: str = "",
+    ) -> dict:
+        """Phase 5: independent evidence and validation-code audit."""
         logger.info(f"[{self.provider.upper()}] Analyzing execution stdout/stderr...")
 
         from agents.analyst import REFUTATION_ANALYST_PROMPT
         system_prompt = REFUTATION_ANALYST_PROMPT
 
-        # --- Guardas DETERMINISTAS: mandan sobre el juicio del LLM ---
-        # Antes, una corrida CAIDA se auto-"validaba" (falso VALIDATED de Schwarzschild
-        # cuando el sympy local estaba roto). La verdad primaria es el veredicto explicito
-        # del script + el exit code, NO la opinion del analista.
+        # Deterministic evidence constrains the LLM verdict, but no longer bypasses the
+        # analyst. Codex must read Claude's code even when it prints a clean PASS.
         _exit = exec_result.get("exit_code", 0)
         _stdout_up = (exec_result.get("stdout") or "").upper()
         _has_stderr = bool((exec_result.get("stderr") or "").strip())
-        if "VERDICT: FAIL" in _stdout_up:
-            return {"status": "REFUTED",
-                    "reasoning": "El script de validacion reporto VERDICT: FAIL."}
-        if "VERDICT: PASS" in _stdout_up and _exit == 0 and not _has_stderr:
-            return {"status": "VALIDATED",
-                    "reasoning": "El script reporto VERDICT: PASS con ejecucion limpia (exit 0, sin stderr)."}
+        _explicit_fail = "VERDICT: FAIL" in _stdout_up
+        _clean_pass = "VERDICT: PASS" in _stdout_up and _exit == 0 and not _has_stderr
+        _crashed = _exit != 0 or _has_stderr
 
-        if exec_result.get("exit_code", 0) != 0 or exec_result.get("stderr"):
-            if not self.api_key:
-                return {"status": "CODE_ERROR", "corrected_code": "print('Fixed Code')"}
+        if not self.api_key:
+            if _crashed:
+                return {"status": "CODE_ERROR", "reasoning": "Execution failed."}
+            if _explicit_fail:
+                return {"status": "REFUTED", "reasoning": "Validation script reported FAIL."}
+            if _clean_pass:
+                return {"status": "VALIDATED", "reasoning": "Validation script reported a clean PASS."}
+            return {"status": "CODE_ERROR", "reasoning": "No explicit executable verdict."}
 
-            user_prompt = f"Conjecture:\n{conjecture}\n\nExecution Error:\n{exec_result['stderr']}"
-            response = await self._call_api(system_prompt, user_prompt)
-            if isinstance(response, str) and response.startswith("API_ERROR:"):
-                return {"status": "API_ERROR", "reasoning": response}
-            parsed = _extract_json_object(response)
-            # ENDURECIDO: una ejecucion caida NO puede ser VALIDATED (nada se verifico).
-            if parsed and parsed.get("status") in {"CODE_ERROR", "REFUTED"}:
+        review = exec_result.get("code_review") or {}
+        user_prompt = (
+            f"SHARED FINAL OBJECTIVE:\n{shared_goal or conjecture}\n\n"
+            f"CONSENSUS CONJECTURE:\n{conjecture}\n\n"
+            f"VALIDATION SCRIPT:\n```text\n"
+            f"{(exec_result.get('validation_code') or '')[:16000]}\n```\n\n"
+            f"PRE-ORACLE CODE REVIEW:\n{review}\n\n"
+            f"EXECUTION EXIT CODE: {_exit}\n"
+            f"EXECUTION STDOUT:\n{(exec_result.get('stdout') or '')[:10000]}\n\n"
+            f"EXECUTION STDERR:\n{(exec_result.get('stderr') or '')[:6000]}"
+        )
+        response = await self._call_api(system_prompt, user_prompt)
+        if isinstance(response, str) and response.startswith("API_ERROR:"):
+            return {"status": "API_ERROR", "reasoning": response}
+
+        parsed = _extract_json_object(_fix_json_backslashes(response))
+        status = str((parsed or {}).get("status") or "").upper()
+        if status not in {"CODE_ERROR", "REFUTED", "VALIDATED"}:
+            parsed = None
+
+        # A crashed run never establishes a theorem.
+        if _crashed:
+            if parsed and status in {"CODE_ERROR", "REFUTED"}:
                 return parsed
-            return {"status": "CODE_ERROR",
-                    "corrected_code": (parsed or {}).get("corrected_code"),
-                    "reasoning": (parsed or {}).get("reasoning") or response}
+            return {
+                "status": "CODE_ERROR",
+                "corrected_code": (parsed or {}).get("corrected_code"),
+                "reasoning": (parsed or {}).get("reasoning") or response,
+            }
 
-        else:
-            if not self.api_key:
-                return {"status": "VALIDATED", "reasoning": "Null residual."}
-
-            user_prompt = f"Conjecture:\n{conjecture}\n\nExecution Output:\n{exec_result['stdout']}"
-            response = await self._call_api(system_prompt, user_prompt)
-            if isinstance(response, str) and response.startswith("API_ERROR:"):
-                return {"status": "API_ERROR", "reasoning": response}
-            parsed = _extract_json_object(response)
-            if parsed and parsed.get("status") in {"CODE_ERROR", "REFUTED", "VALIDATED"}:
+        # An explicit failing check cannot be promoted to VALIDATED by prose.
+        if _explicit_fail:
+            if parsed and status in {"REFUTED", "CODE_ERROR"}:
                 return parsed
+            return {
+                "status": "REFUTED",
+                "reasoning": "The executable validator reported VERDICT: FAIL. " + response[:1000],
+            }
 
-            stdout = exec_result.get("stdout", "").upper()
-            if "VERDICT: FAIL" in stdout:
-                return {"status": "REFUTED", "reasoning": "Validation script reported VERDICT: FAIL."}
-            if "VERDICT: PASS" in stdout:
-                return {"status": "VALIDATED", "reasoning": "Validation script reported VERDICT: PASS."}
-            return {"status": "CODE_ERROR", "corrected_code": None, "reasoning": response}
+        if parsed:
+            return parsed
+
+        # Parsing failed after a clean PASS. Preserve deterministic evidence only when
+        # the independent pre-oracle review approved the validator; otherwise force a
+        # conservative retry instead of silently accepting the script.
+        if _clean_pass and str(review.get("status") or "").upper() == "APPROVED":
+            return {
+                "status": "VALIDATED",
+                "reasoning": (
+                    "Clean executable PASS with an approved independent code review; "
+                    "the final analyst response was not parseable."
+                ),
+            }
+        return {
+            "status": "WEAK_PASS" if _clean_pass else "CODE_ERROR",
+            "corrected_code": None,
+            "reasoning": response,
+        }

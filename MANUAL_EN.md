@@ -21,20 +21,24 @@ Version 1.0 — May 2026
 
 ## 1. Overview
 
-ASTRA is a multi-agent AI system designed to generate, formalize, and validate scientific hypotheses through an automated five-phase pipeline:
+ASTRA is a goal-driven, multi-model system designed to generate, challenge,
+formalize, and validate scientific hypotheses through a deliberative pipeline:
 
 | Phase | Agent | What it does |
 |-------|-------|--------------|
 | 1 — Intake | — | Receives the intuition or document |
-| 2 — Conjecture | Conjecture Engine | Formalizes the intuition into a rigorous hypothesis with axioms and definitions |
-| 3 — Translation | Formal Translator | Writes a Python validation script using SymPy, SciPy, or other CAS |
-| 4 — Validation Oracle | Sandbox executor | Runs the script in an isolated environment and captures output |
-| 5 — Analysis | Refutation Analyst | Interprets the result: VALIDATED, REFUTED, or CODE_ERROR |
+| 2 — Deliberation | Codex + agy | Generate independent conjectures, cross-criticize, and synthesize a consensus tied to the shared objective |
+| 3 — Translation | Claude Opus 4.8 | Writes a falsifiable validator using Python, a CAS, or Lean |
+| 4 — Code review | Codex | Audits whether Claude's code can really establish or refute the decisive claims |
+| 5 — Validation Oracle | Sandbox/ASTRUM executor | Runs the approved script and captures reproducible evidence |
+| 6 — Analysis | Codex | Reads code and evidence: VALIDATED, REFUTED, or CODE_ERROR |
+| 7 — Navigation | agy | Relates the result to the final objective and proposes the next direction |
 
 ASTRA operates in two modes:
 
 - **Single Cycle** — you supply one intuition; ASTRA runs it through the pipeline once and waits for your approval before adding the result to the Axiomatic Base.
-- **Research Loop** — you supply a macro research question; ASTRA autonomously cycles through hypotheses, guided by a fifth agent (the Research Navigator), until it reaches a milestone and pauses for your review.
+- **Research Loop** — you supply a macro research question; all three models
+  share it while agy navigates successive deliberative cycles.
 
 ---
 
@@ -43,7 +47,8 @@ ASTRA operates in two modes:
 ### Prerequisites
 
 - Python 3.10+
-- At least one LLM API key (Vertex AI ADC, Gemini, Anthropic, OpenAI, DeepSeek, xAI, Qwen, Mistral, or Groq)
+- Authenticated Codex, Claude Code, and Antigravity (`agy`) CLIs for the
+  production role map, or at least one optional API-backed provider
 - All Python dependencies installed (`pip install -r requirements.txt` inside the `venv`)
 
 ### Environment variables
@@ -277,6 +282,9 @@ ASTRA supports the following LLM providers:
 
 | Provider key | Model used | API key variable |
 |---|---|---|
+| `codex_cli` | GPT-5.6 Sol (`xhigh`) | Codex subscription login |
+| `claude_cli` | Claude Opus 4.8 | Claude Code subscription login |
+| `agy_cli` | Gemini 3.1 Pro High through Antigravity | Google/Antigravity login |
 | `vertexai` | Gemini 2.5 Flash (via GCP) | `VERTEX_PROJECT` + ADC |
 | `gemini` | Gemini 2.5 Flash | `GEMINI_API_KEY` |
 | `anthropic` | Claude Sonnet 4.6 | `ANTHROPIC_API_KEY` |
@@ -292,12 +300,15 @@ ASTRA supports the following LLM providers:
 
 | Role | Recommended provider | Reason |
 |---|---|---|
-| Conjecture | Vertex AI / Gemini | Strong at formal scientific reasoning and LaTeX |
-| Translator | Anthropic Claude | Highest code quality and correctness |
-| Analyst | OpenAI GPT-4o | Reliable JSON output and result interpretation |
-| Navigator | Vertex AI / Gemini | Strong at strategic reasoning and JSON adherence |
+| Conjecture | `codex_cli,agy_cli` | Independent proposals and adversarial cross-critique |
+| Synthesis | `codex_cli` | Goal-directed mathematical synthesis |
+| Translator | `claude_cli` | Opus 4.8 writes and revises the validator |
+| Code reviewer | `codex_cli` | Independent audit of Claude's program |
+| Analyst | `codex_cli` | Reads both code and execution evidence |
+| Navigator | `agy_cli` | Explores the next direction relative to the shared objective |
 
-If no API key is found for a selected provider, ASTRA operates in **Simulated mode** — cycles complete with placeholder data, no real LLM calls are made.
+CLI providers use subscription OAuth and require no model API key. API providers
+remain optional; a selected API provider without credentials operates in simulated mode.
 
 ---
 

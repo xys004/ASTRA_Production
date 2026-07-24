@@ -30,7 +30,7 @@
           rápido / fallback                         Ryzen 9 + RTX 3080, stack completo
 ```
 
-**Piezas clave y rutas** (todo bajo `C:\Users\Nelson\Desktop\Proyectos\ASTRA_Production\`):
+**Piezas clave y rutas** (todo bajo `C:\Users\Nelson\Dev\ASTRA\`):
 
 | Pieza | Ruta | Qué es |
 |-------|------|--------|
@@ -72,7 +72,7 @@ ssh -i "C:\Users\Nelson\.ssh\google_compute_engine" -o "ProxyCommand=tailscale n
 
 ### 3.1 Core (venv 3.9)
 ```powershell
-cd C:\Users\Nelson\Desktop\Proyectos\ASTRA_Production
+cd C:\Users\Nelson\Dev\ASTRA
 python3.9 -m venv venv
 .\venv\Scripts\python -m pip install -r requirements.txt
 # Fixes conocidos (el venv se corrompió una vez):
@@ -137,9 +137,20 @@ navega) y ASTRA su **verificador con GPU**.
 
 | Herramienta | Firma | Para qué |
 |-------------|-------|----------|
-| `astra_execute` | `(code, oracle="astrum", timeout=180)` | corre TU código y devuelve stdout + veredicto |
-| `astra_cycle` | `(intuition, oracle="astrum", timeout=420)` | pipeline completo de ASTRA sobre una intuición |
+| `astra_execute` | `(code, oracle="local", timeout=180)` | corre TU código y devuelve stdout + veredicto. `timeout` ahora se respeta de verdad (fix 2026-07-15: antes el env lo pisaba) |
+| `astra_cycle` | `(intuition, oracle="local", timeout=1500, exec_timeout=0)` | pipeline completo. **Un ciclo de física pesada tarda 10-25 min y es NORMAL** (traducción medida: 350-700s) — sondear con `astra_probe`, no matar. Si el traductor agota su presupuesto, la respuesta incluye la `conjecture` ya pagada: tradúcela tú y usa `astra_execute` |
+| `astra_probe` | `()` | **SONDA**: ¿qué hace ASTRA ahora? — fase en vuelo + heartbeat + ciclos recientes, leído de `workspace\progress\`. Gratis e instantánea; sondear cada ~60s antes de asumir cuelgue |
+| `astra_submit` | `(code, oracle="local", max_seconds=86400)` | **JOB ASÍNCRONO** para cómputo >10 min: retorna `job_id` al instante y el trabajo corre desacoplado (sobrevive al cliente y sus reinicios). Local o ASTRUM (`astrum`: el runner sostiene el SSH — laptop despierta) |
+| `astra_job` | `(job_id="")` | Sondea un job: status, heartbeat, **tail EN VIVO del stdout** (python local), y el resultado final (verdict/exit/duración). Sin `job_id`: lista los 10 recientes |
 | `astra_status` | `()` | ¿ASTRUM está vivo? |
+
+**Política de duraciones** (el traductor ya la estima con `# ASTRA_EST_RUNTIME: short|medium|long` y el ciclo la reporta en `est_runtime`):
+
+| Clase | Duración | Vía |
+|---|---|---|
+| short | < 2-3 min | defaults (`astra_execute` / `astra_cycle` tal cual) |
+| medium | 3-10 min | `astra_execute(timeout=N)` o `astra_cycle(exec_timeout=N)` explícitos |
+| long | > 10 min (muro síncrono del cliente MCP ≈15 min) | **`astra_submit` + `astra_job`** — sin muros; para sweeps, cotiza con corrida piloto: 1 punto medido × N puntos |
 
 **Devuelven JSON** con `stdout`, `exit_code`, `verdict` (PASS/FAIL/NONE), `oracle_used`, etc.
 El script debe terminar imprimiendo `VERDICT: PASS` o `VERDICT: FAIL`.
@@ -151,8 +162,8 @@ El script debe terminar imprimiendo `VERDICT: PASS` o `VERDICT: FAIL`.
 
 ### 5.1 (Re)registrar el MCP
 ```powershell
-$MPY = "C:\Users\Nelson\Desktop\Proyectos\ASTRA_Production\mcp_server\venv\Scripts\python.exe"
-$SRV = "C:\Users\Nelson\Desktop\Proyectos\ASTRA_Production\mcp_server\server.py"
+$MPY = "C:\Users\Nelson\Dev\ASTRA\mcp_server\venv\Scripts\python.exe"
+$SRV = "C:\Users\Nelson\Dev\ASTRA\mcp_server\server.py"
 
 # Claude Code (global, todos tus proyectos):
 claude mcp add astra -s user -- $MPY $SRV
@@ -175,8 +186,8 @@ Elegible por corrida (dropdown en la web, o parámetro `oracle` en las tools):
 
 | Modo | Qué hace |
 |------|----------|
-| **`astrum`** (default) | corre en tu workstation remota (RTX 3080, stack completo) |
-| **`local`** | corre en el venv 3.9 local — rápido, siempre disponible, **fallback si ASTRUM está caído** |
+| **`astrum`** | corre en tu workstation remota (RTX 3080, stack completo). Default de la GUI web |
+| **`local`** (default de las tools MCP desde 2026-07-15) | corre en el venv 3.9 local — rápido, siempre disponible, **fallback si ASTRUM está caído** |
 | **`auto`** | *deciden los modelos*: el traductor puede marcar `# ASTRA_ORACLE: remote` o `local`; si no, una heurística manda GPU/cómputo pesado (torch/cupy/jax, `differential_evolution`, multiprocessing) a ASTRUM y lo simbólico ligero a local |
 
 ---
@@ -187,10 +198,10 @@ Vive en la raíz del proyecto (contiene tus keys; **no lo subas a git público**
 Claves relevantes de esta configuración:
 
 ```ini
-# Proveedores por fase (backend de suscripción)
-ASTRA_CONJECTURE_PROVIDER=codex_cli
+# Proveedores por fase (config vigente 2026-07-15)
+ASTRA_CONJECTURE_PROVIDER=claude_cli
 ASTRA_TRANSLATOR_PROVIDER=claude_cli
-ASTRA_ANALYST_PROVIDER=claude_cli
+ASTRA_ANALYST_PROVIDER=gemini      # API free-tier (flash): tercera pierna, no gasta cuota Claude
 ASTRA_NAVIGATOR_PROVIDER=codex_cli
 
 # Oráculo por defecto = ASTRUM
@@ -204,15 +215,48 @@ ASTRA_REMOTE_WORKER=~/astra-worker/astra_remote_worker.py
 ASTRA_REMOTE_WORKDIR=~/astra-worker/workspace
 ASTRA_REMOTE_CONNECT_TIMEOUT=15
 ASTRA_REMOTE_SSH_OPTIONS=-i C:\Users\Nelson\.ssh\google_compute_engine -o "ProxyCommand=tailscale nc %h %p"
+
+# Escalera de fallback por CUOTA (cli_backend): modelos a intentar en orden.
+# 'default' = el modelo por defecto del CLI (hoy claude=Opus 4.8). Las cuotas de
+# suscripción son POR MODELO: agotar uno no agota los demás. Si hubo fallback,
+# el JSON del ciclo trae 'warnings' (aviso textual) y 'cli_models' (quién
+# respondió cada fase). Los peldaños agotados fallan en segundos: casi no añade latencia.
+ASTRA_CLAUDE_MODELS=default,sonnet
+# ASTRA_CODEX_MODELS=default
+
+# Modelos por FASE (2026-07-15): escalera propia por fase; si esta vacia aplica
+# la global del CLI. Conjetura queda en Opus (default); traductor/analista en
+# Sonnet — el harness de auto-refutacion + auditor determinista absorben la
+# diferencia, y ante cuota agotada la escalera SUBE a Opus sola.
+ASTRA_TRANSLATOR_MODELS=sonnet,default
+ASTRA_ANALYST_MODELS=sonnet,default
+# Reintentos del ciclo: autofix mecanico gratis primero, luego traductor.
+ASTRA_MAX_RETRIES=2
+# Cache de ciclos (hash intuicion+providers+oraculo -> workspace/cycle_cache). 0=off.
+ASTRA_CYCLE_CACHE=1
+# Presupuesto POR llamada CLI (2026-07-15): una fase colgada muere sola
+# (API_ERROR + nombre de fase) en vez de que el timeout externo del MCP mate
+# el ciclo sin diagnostico. El kill es de ARBOL (taskkill /T): sin el, el
+# claude nieto sobrevivia, el drenaje bloqueaba (fases de 956s medidas con
+# timeout=600) y quedaba un huerfano quemando cuota por cada timeout.
+ASTRA_CLI_TIMEOUT=240
+# El TRADUCTOR es la fase lenta por naturaleza — MEDIDO: sonnet ~354s para
+# ~194 lineas desde tarea compacta; conjeturas grandes de Opus -> mas.
+# Presupuestos: 240 (conj) + 720 (trad) + 360 (retry minimo) + exec < 1800 (pared Codex).
+ASTRA_TRANSLATOR_TIMEOUT=720
+# Perplexity (API OpenAI-compatible; no existe CLI oficial de suscripcion):
+# PERPLEXITY_API_KEY=pplx-...
 ```
-Proveedores válidos por fase: `claude_cli`, `codex_cli` (suscripción) o los de API (`gemini`, `openai`, `anthropic`, `vertexai`, …) si tienes esas keys.
+Proveedores válidos por fase: `claude_cli`, `codex_cli`, `gemini_cli` (suscripción) o los de API (`gemini`, `openai`, `anthropic`, `vertexai`, `perplexity`, …) si tienes esas keys. Perplexity (`sonar-pro`, búsqueda web con citas) brilla como **navegador/conjetura con literatura al día**, no como traductor de código.
+
+**`gemini_cli`** (añadido 2026-07-15, **aparcado**): el backend está completo (stdin + `-p .`, `-o json`, `--approval-mode plan` solo-lectura, escalera `ASTRA_GEMINI_MODELS`, OAuth forzado ocultando `GEMINI_API_KEY`), **pero Google descontinuó el gemini CLI para cuentas individuales el 2026-06-18** (`IneligibleTierError`: free/AI Pro/Ultra ya no son atendidos; el login se completa pero el backend rechaza). El reemplazo oficial es el **Antigravity CLI (`agy`)**, anunciado como fork compatible: cuando esté instalado desde un canal **oficial** (⚠️ el npm sin scope `antigravity-cli@0.0.1` NO es de Google — typosquat probable), basta `ASTRA_GEMINI_BIN='agy'` en el `.env` para activar todo. Mientras tanto, la tercera pierna práctica es el proveedor **`gemini` por API** (key ya en `.env`, free tier de AI Studio p/flash): `ASTRA_ANALYST_PROVIDER='gemini'`.
 
 ---
 
 ## 8. Cheat-sheet de comandos
 
 ```powershell
-$CORE = "C:\Users\Nelson\Desktop\Proyectos\ASTRA_Production"
+$CORE = "C:\Users\Nelson\Dev\ASTRA"
 $PY   = "$CORE\venv\Scripts\python.exe"
 
 # Abrir la web
@@ -236,11 +280,19 @@ $PY   = "$CORE\venv\Scripts\python.exe"
 | Síntoma | Causa / Solución |
 |---------|------------------|
 | Todo tarda 30–100 s por paso | Arranque en frío del CLI de suscripción. **Normal**, no está colgado. |
-| `API_ERROR: ... usage limit` | Cuota de la cuenta agotada. Espera el reset, o cambia de cuenta (`codex login`). |
+| ¿Colgado o pensando? | Usa **`astra_probe`** (o lee `workspace\progress\cycle_*.json`): dice la fase en vuelo y hace cuántos segundos late. Regla de espera: fases de modelo 30–240 s; ejecución hasta su `exec_timeout`. Sondea 2-3 veces antes de matar nada. |
+| `astra_cycle` colgado o lentísimo (histórico) | Resuelto 2026-07-15: los `claude -p` internos heredaban la config MCP **global** del usuario (recursión del propio server astra + servers `npx` que no conectan). Fix: `--strict-mcp-config` en `cli_backend.py` (además bajó el overhead por llamada ~7×). |
+| `API_ERROR: ... usage limit` | Cuota del **modelo** agotada. La escalera `ASTRA_*_MODELS` baja sola al siguiente y deja `warnings` en el JSON del ciclo. Si dice `CUOTA AGOTADA en toda la escalera`, hay que esperar la ventana de uso, ampliar la escalera, o cambiar de cuenta (`codex login`; para claude, perfiles vía `CLAUDE_CONFIG_DIR`). |
+| `warnings` en el resultado del ciclo | Una fase la respondió un modelo fallback por cuota (`cli_models` dice cuál). La calidad puede variar respecto al modelo principal. |
+| Status `WEAK_PASS` | El script imprimió PASS pero el **auditor determinista** (AST, `core/verdict_guard.py`) lo rechazó: sin rama FAIL alcanzable, cero comparaciones, o CHECKs en FAIL. El ciclo ya reintenta reforzarlo solo (`ASTRA_MAX_RETRIES`); si persiste, trátalo como "no verificado". |
+| El mismo prompt vuelve al instante con `cached: true` | Cache de ciclos (`workspace/cycle_cache/`). Es correcto: misma intuición+providers+oráculo ⇒ misma matemática. Bórralo o `ASTRA_CYCLE_CACHE=0` para forzar recomputo. |
+| Timeout del ciclo sin saber qué fase colgó | Ya no pasa (2026-07-15): cada llamada CLI muere sola a los `ASTRA_CLI_TIMEOUT` s → `API_ERROR` + fase; el resultado trae `timings` (segundos por fase); y si el timeout externo aun mata el proceso, el error del MCP incluye `last_progress` (fase culpable + edad) leído de `workspace\progress\cycle_<pid>.json`. |
+| Tailscale `NoState` con servicio Running (ASTRUM inalcanzable, `Connection closed by UNKNOWN port 65535`) | Causa vista 2026-07-15: la GUI `tailscale-ipn.exe` no estaba corriendo y sin *unattended mode* el demonio espera el perfil para siempre. Fix: arrancar la GUI o mejor `tailscale set --unattended=true` (**ya aplicado** — sobrevive sin GUI). Reiniciar solo el servicio NO basta. |
 | ASTRUM no responde | Tailscale caído o nodo apagado → usa **Oráculo: Local** mientras tanto. |
 | `cannot import name 'BinaryRelation'` (sympy) | sympy 1.14 corrupto → reinstala `sympy<1.14` (§3.1). |
 | Web no arranca (`werkzeug...`) | paquete web corrupto → `pip install --force-reinstall flask werkzeug`. |
 | Codex se cuelga | Requiere CLI ≥0.144 y stdin con EOF — **ya manejado** en `cli_backend.py`. |
+| `gemini_cli` → `IneligibleTierError: no longer supported for individuals` | **No es tu auth**: Google cortó el gemini CLI para cuentas individuales (2026-06-18). Migrar al Antigravity CLI (`agy`, solo canal oficial) y poner `ASTRA_GEMINI_BIN='agy'`; o usar el proveedor `gemini` por API. (Gotcha Windows ya manejado: `-p ""` pierde el arg vacío en PowerShell → se usa `-p .`.) |
 | `astra_execute` da `CODE_ERROR` | El código generado falló; `astra_cycle` reintenta 1 vez. Con `astra_execute`, corrige y reintenta tú. |
 | Un `VALIDATED` sospechoso | El analista está **endurecido**: exit≠0 nunca es VALIDATED; confía en `VERDICT:` del script. |
 

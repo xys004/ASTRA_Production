@@ -1,0 +1,255 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[a4paper,top=2.4cm,bottom=2.4cm,left=2.2cm,right=2.2cm]{geometry}
+\usepackage{fontspec}
+\usepackage[spanish,provide=*]{babel}
+\babelprovide[import]{spanish}
+\babelprovide[import]{english}
+\babelfont{rm}{Noto Serif}
+\babelfont{sf}{Noto Sans}
+\babelfont{tt}{Noto Sans Mono}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,backgrounds}
+\usepackage[colorlinks=true,linkcolor=blue!60!black,citecolor=blue!60!black,urlcolor=blue!60!black]{hyperref}
+\setlist[itemize]{label=--,leftmargin=*}
+\setlist[enumerate]{leftmargin=*}
+\emergencystretch=2em
+
+\title{\textbf{ASTRA Production}\\[2mm]
+\large Arquitectura autónoma de razonamiento y validación de teoremas científicos}
+\author{Nelson Bolívar\\\textit{Science-Stack Research Group}}
+\date{Versión de arquitectura: julio de 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+ASTRA Production (\textit{Autonomous Symbolic Theorem Reasoning Architecture}) es un motor multiagente de investigación que transforma una intuición científica en una hipótesis falsable, la traduce a un experimento computacional ejecutable y somete el resultado a análisis crítico antes de aceptar una conclusión. Su principio central es separar la generación lingüística de la evidencia: los modelos de lenguaje proponen, formalizan y analizan; un oráculo de cálculo simbólico o numérico ejecuta el programa de validación y devuelve evidencia reproducible. El sistema admite ciclos aislados y campañas autónomas de investigación, varios proveedores de modelos, motores matemáticos locales o remotos, corrección automática de código, aprobación humana de teoremas e informes persistentes. Este documento describe la arquitectura implementada actualmente, sus garantías y sus límites.
+\end{abstract}
+
+\section{Motivación y principio epistemológico}
+
+Los modelos de lenguaje son útiles para formular hipótesis, conectar dominios y escribir programas, pero una respuesta plausible no constituye una demostración. ASTRA adopta por ello una división explícita de responsabilidades:
+
+\begin{itemize}
+  \item la \textbf{capa heurística} propone conjeturas, genera código y explica resultados;
+  \item la \textbf{capa de ejecución} calcula con motores simbólicos, numéricos o lógicos reales;
+  \item la \textbf{capa de control} conserva el estado, aplica reintentos, protege el veredicto y solicita decisiones humanas;
+  \item la \textbf{capa documental} registra código, salida, análisis, proveedores y evolución de la investigación.
+\end{itemize}
+
+La afirmación de trabajo no es que ASTRA automatice la verdad matemática, sino que convierte el razonamiento asistido por IA en un proceso inspeccionable:
+\[
+\begin{aligned}
+\text{intuición}&\longrightarrow\text{hipótesis falsable}
+\longrightarrow\text{programa}\\
+&\longrightarrow\text{evidencia ejecutada}
+\longrightarrow\text{veredicto revisable}.
+\end{aligned}
+\]
+
+La salida de un modelo nunca reemplaza la ejecución. A su vez, una ejecución exitosa no basta por sí sola: el programa debe representar correctamente la afirmación y producir una señal discriminante entre validación y refutación.
+
+\section{Arquitectura vigente}
+
+ASTRA se ejecuta como una aplicación local con interfaz web. El servidor Flask expone la interfaz y una API de control; un orquestador asíncrono mantiene la máquina de estados en segundo plano. Los agentes se comunican con proveedores LLM mediante una capa común, mientras que el oráculo enruta el código hacia el motor adecuado.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  node distance=10mm and 9mm,
+  font=\sffamily\small,
+  ui/.style={rectangle,rounded corners,draw=blue!60!black,fill=blue!6,thick,align=center,minimum width=31mm,minimum height=9mm},
+  agent/.style={rectangle,rounded corners,draw=purple!65!black,fill=purple!6,thick,align=center,minimum width=31mm,minimum height=9mm},
+  oracle/.style={rectangle,draw=teal!70!black,fill=teal!7,thick,align=center,minimum width=35mm,minimum height=9mm},
+  gate/.style={diamond,aspect=2,draw=orange!75!black,fill=orange!10,thick,align=center,inner sep=1.5pt},
+  arr/.style={-{Stealth[length=2.2mm]},thick}
+]
+\node[ui] (input) {Interfaz web\\intuición o documento};
+\node[agent,below=of input] (conj) {Agente de conjeturas\\hipótesis falsable};
+\node[agent,below=of conj] (trans) {Traductor formal\\código ejecutable};
+\node[oracle,below=of trans] (exec) {Oráculo de validación\\local o remoto};
+\node[agent,right=18mm of exec] (analyst) {Analista de resultados\\veredicto estructurado};
+\node[gate,above=13mm of analyst] (status) {Estado};
+\node[ui,above right=8mm and 17mm of status] (human) {Aprobación humana\\base axiomática};
+\node[agent,below right=9mm and 17mm of status] (nav) {Navigator\\siguiente dirección};
+
+\draw[arr] (input)--(conj);
+\draw[arr] (conj)--(trans);
+\draw[arr] (trans)--(exec);
+\draw[arr] (exec)--(analyst);
+\draw[arr] (analyst)--(status);
+\draw[arr] (status)--node[above,sloped]{validada}(human);
+\draw[arr] (status)--node[below,sloped]{ciclo cerrado}(nav);
+\draw[arr,dashed] (status.west) -| node[pos=.28,above]{error de código: corregir} (trans.east);
+\draw[arr,dashed] (nav.south) |- node[pos=.28,below]{nueva hipótesis} (conj.west);
+\end{tikzpicture}
+\caption{Flujo lógico de ASTRA Production. El Navigator interviene en el modo de investigación; la aprobación humana protege la incorporación de resultados a la base axiomática.}
+\label{fig:architecture}
+\end{figure}
+
+\subsection{Entrada e interfaz}
+
+El usuario puede introducir una afirmación directamente o cargar material PDF/TXT. La aplicación ofrece dos modalidades:
+
+\begin{itemize}
+  \item \textbf{Ciclo único}: evalúa una intuición concreta mediante una pasada completa.
+  \item \textbf{Bucle de investigación}: descompone una pregunta macroscópica en una secuencia de conjeturas relacionadas y mantiene ramas alternativas.
+\end{itemize}
+
+La interfaz muestra el estado, la conjetura vigente, el script generado, la salida del oráculo, la base axiomática, los informes y el registro de eventos. También permite detener la ejecución, aprobar o rechazar resultados y configurar los proveedores por rol.
+
+\subsection{Agente de conjeturas}
+
+El primer agente recibe la intuición y el contexto acumulado. Su tarea es producir una afirmación específica y falsable, con variables, supuestos, dominio y criterio de éxito. En el modo iterativo también utiliza teoremas establecidos y refutaciones anteriores para evitar repetir rutas cerradas.
+
+\subsection{Traductor formal}
+
+El traductor convierte la conjetura en un script autocontenido. El código debe calcular una cantidad verificable: un residual simbólico, una identidad, condiciones iniciales, una desigualdad, un contraejemplo, una propiedad tensorial o una comparación numérica con tolerancias explícitas. Puede declarar el motor mediante una cabecera como \texttt{ASTRA\_ENGINE} y sugerir ejecución local o remota con \texttt{ASTRA\_ORACLE}.
+
+El traductor no emite el veredicto científico. Construye el experimento que permitirá decidirlo.
+
+\subsection{Oráculo de validación}
+
+El oráculo ejecuta el programa y captura código de retorno, salida estándar, errores y metadatos del motor. Python constituye la base común, con bibliotecas como SymPy, Z3, NumPy, SciPy, mpmath, EinsteinPy, Pint, fluids y QuTiP. ASTRA también puede enrutar trabajos a SageMath, Maxima o Cadabra cuando están disponibles.
+
+La ejecución puede ser:
+
+\begin{itemize}
+  \item \textbf{local}, adecuada para álgebra simbólica y cálculos moderados;
+  \item \textbf{remota}, mediante un trabajador Linux por SSH para cargas pesadas, GPU o herramientas instaladas en la estación de cálculo.
+\end{itemize}
+
+La política puede fijarse por configuración o inferirse de marcadores y características del script. La ausencia de un motor opcional debe producir un fallo explícito, no una validación ficticia.
+
+\subsection{Analista y guardia de veredicto}
+
+El analista recibe la conjetura y la evidencia bruta. Devuelve una respuesta estructurada con uno de cuatro estados principales:
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+Estado & Significado \\
+\midrule
+\texttt{VALIDATED} & La evidencia computacional respalda la hipótesis formulada. \\
+\texttt{REFUTED} & La ejecución produce un contraejemplo o contradice la hipótesis. \\
+\texttt{CODE\_ERROR} & El programa no logró ejecutar correctamente la prueba. \\
+\texttt{API\_ERROR} & Falló el proveedor LLM, la red o la cuota correspondiente. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Cuando aparece \texttt{CODE\_ERROR}, ASTRA solicita código corregido y repite la validación hasta el límite configurado. La guardia de veredicto restringe conclusiones incompatibles con la evidencia de ejecución. Esto reduce, aunque no elimina, el riesgo de que el analista convierta un fallo técnico en una afirmación científica.
+
+\subsection{Aprobación humana y base axiomática}
+
+Una hipótesis marcada como validada queda en espera. Sólo después de la aprobación del investigador se incorpora como teorema establecido. Las refutaciones, con su justificación, también alimentan el contexto para bloquear caminos ya descartados. Esta puerta humana reconoce que la corrección del programa, los supuestos físicos y el alcance de la conclusión todavía requieren juicio experto.
+
+\section{Bucle autónomo de investigación}
+
+En una campaña, ASTRA mantiene una \textit{Research Session} asociada a una pregunta macroscópica. Después de cada ciclo, el Navigator evalúa el progreso y propone:
+
+\begin{itemize}
+  \item la siguiente dirección en profundidad;
+  \item ramas paralelas que conviene conservar;
+  \item si se alcanzó un hito que requiere revisión;
+  \item si la pregunta macroscópica puede considerarse resuelta.
+\end{itemize}
+
+Si una conjetura fue validada, el sistema puede generalizarla, explorar sus fronteras o aplicarla a otro régimen. Si fue refutada, busca una alternativa que evite la causa concreta del fracaso. El investigador puede continuar con la propuesta, redirigir el trabajo o activar una rama guardada. En modo autónomo, ASTRA atraviesa los hitos sin pausa hasta que el Navigator declara resolución, se alcanza el tiempo máximo o el usuario detiene la sesión.
+
+Este procedimiento es profundidad-primero con memoria de ramas; no equivale a una búsqueda exhaustiva ni garantiza que la declaración de resolución sea correcta.
+
+\section{Control de ASTRA desde un agente}
+
+ASTRA no está limitado a su interfaz web. El servidor \textit{Model Context Protocol} (MCP) expone el oráculo como herramientas que pueden invocar Codex, Claude Code, Gemini u otro cliente compatible. De este modo, el agente que conversa con el investigador puede formular el plan, escribir el programa de prueba, pedir la ejecución y examinar la evidencia sin copiar manualmente resultados entre aplicaciones.
+
+La interfaz actual ofrece seis operaciones principales:
+
+\begin{center}
+\small
+\begin{tabular}{@{}lp{10.8cm}@{}}
+\toprule
+Herramienta & Función \\
+\midrule
+\texttt{astra\_execute} & Ejecuta un script ya escrito en el oráculo local, remoto o automático. \\
+\texttt{astra\_cycle} & Ejecuta el ciclo completo: conjetura, traducción, oráculo y análisis. \\
+\texttt{astra\_probe} & Consulta la fase y el \textit{heartbeat} de un ciclo sin interrumpirlo. \\
+\texttt{astra\_submit} & Envía un cálculo largo como trabajo desacoplado. \\
+\texttt{astra\_job} & Lista o sondea trabajos, salida incremental y resultado final. \\
+\texttt{astra\_status} & Comprueba la disponibilidad del trabajador remoto. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+El MCP se registra apuntando el cliente al intérprete del entorno de ASTRA y a \path{mcp_server/server.py}; después se abre una sesión nueva del agente para cargar las herramientas. El investigador puede entonces pedir, por ejemplo: ``formula una prueba independiente del escalar de Ricci, ejecútala con \texttt{astra\_execute} y no aceptes el resultado hasta revisar los residuales''. Para cálculos de más de unos minutos conviene usar \texttt{astra\_submit} y seguirlos con \texttt{astra\_job}.
+
+Esta modalidad convierte al agente conversacional en la capa de planificación y a ASTRA en la capa de ejecución trazable. El agente no recibe autoridad adicional: sigue obligado a presentar código, supuestos, salida y criterio de decisión.
+
+\section{Extensión mediante motores y paquetes científicos}
+
+La capa del oráculo es extensible y no constituye una lista cerrada. Todo paquete disponible en el entorno donde corre el script puede participar en una validación. Entre los paquetes científicos desarrollados por el propio equipo se encuentran:
+
+\begin{center}
+\path{GR_python}\quad \path{pyWarpFactory}\quad \path{warp_bubble_optimization}.
+\end{center}
+
+El requisito de integración es sencillo: el script debe poder importar el paquete, fijar entradas reproducibles, producir evidencia inspeccionable y terminar con un veredicto explícito. El mismo paquete debe instalarse en el entorno local o en el trabajador remoto elegido.
+
+Esta capacidad permite reutilizar solvers, métricas, optimizadores, análisis de condiciones de energía y bancos de pruebas ya validados. Para disminuir errores comunes, una conclusión importante debería combinar patas independientes: por ejemplo, una identidad simbólica, evaluaciones numéricas con semilla fija y un límite conocido.
+
+\subsection{Lean 4 y Mathlib}
+
+Lean 4 se integra como motor opcional mediante la marca \texttt{\# ASTRA\_ENGINE: lean}. El traductor puede generar un archivo que importe Mathlib; ASTRA lo entrega al compilador nativo o al instalado en WSL. La aceptación por el kernel de Lean proporciona verificación mecánica apropiada para lógica formal, matemáticas discretas, álgebra y teoremas que ya puedan expresarse en el lenguaje del asistente de pruebas.
+
+Lean no sustituye los cálculos físicos numéricos ni prueba que la formalización represente correctamente al sistema real. Su garantía se aplica al enunciado formal y a los axiomas importados. Si el compilador rechaza la prueba, ASTRA lo clasifica como error de código y puede solicitar una corrección; nunca debe convertir el rechazo en una refutación del teorema.
+
+\subsection{Wolfram Mathematica como oráculo complementario}
+
+Cuando el modelo dispone del complemento de Wolfram o de Mathematica Agent Bridge, el agente puede escribir y ejecutar Wolfram Language directamente. El bridge local comunica procesos externos con un kernel de Mathematica mediante una cola JSON y puede operar sobre un notebook abierto o en modo \textit{headless} con \texttt{wolframscript}. Entre sus acciones se encuentran:
+
+\begin{center}
+\path{evaluate-wl}, \path{simplify-symbolic}, \path{compare-expressions},
+\path{commutator} y \path{gr-curvature}.
+\end{center}
+
+El bridge también permite leer, escribir y evaluar celdas.
+
+Mathematica puede actuar como segundo validador independiente: el agente ejecuta una prueba en ASTRA y repite la identidad, el tensor o el límite con el bridge. La concordancia entre motores de implementación distinta fortalece la evidencia; una discrepancia obliga a revisar convenciones, dominios y supuestos. El bridge evalúa código con los privilegios del usuario local, por lo que sólo debe habilitarse para agentes y carpetas de comandos confiables.
+
+\section{Proveedores, motores y despliegue}
+
+Los roles de conjetura, traducción, análisis y navegación pueden asignarse independientemente a proveedores compatibles, incluidos Gemini/Vertex AI, Anthropic, OpenAI, DeepSeek, xAI, Qwen, Mistral y Groq. También pueden utilizarse clientes autenticados por suscripción a través de sus interfaces de línea de comandos. Una capa común normaliza llamadas, errores y selección de modelos. Separar los proveedores por fase permite elegir creatividad, capacidad matemática, fiabilidad de código o coste según la tarea.
+
+La instalación de escritorio crea un entorno Python y arranca la interfaz en \url{http://127.0.0.1:5050}. Las credenciales y parámetros del oráculo se mantienen en configuración local y no deben incorporarse al repositorio. ASTRA conserva sesiones e informes en el espacio de trabajo de la aplicación.
+
+\section{Persistencia, trazabilidad y calibración}
+
+Cada ciclo genera informes HTML y Markdown con la intuición, conjetura, script, resultado de ejecución, análisis y proveedores utilizados. Las investigaciones pueden guardarse, recargarse y revisarse desde el historial. La suite de \textit{benchmarks} incluye problemas de relatividad general, ecuaciones diferenciales, fluidos, lógica, sistemas cuánticos y cálculo simbólico.
+
+Los \textit{benchmarks} cumplen dos funciones: comprobar que los motores siguen operativos y comparar la capacidad de distintos proveedores para construir pruebas discriminantes. No sustituyen la validación científica del problema nuevo, pero detectan regresiones de infraestructura y sesgos sistemáticos.
+
+\section{Garantías y límites}
+
+ASTRA mejora la reproducibilidad porque conserva y ejecuta el programa, pero no convierte automáticamente una prueba computacional en una demostración universal. Persisten varias obligaciones:
+
+\begin{itemize}
+  \item verificar que la conjetura formal corresponde a la pregunta original;
+  \item inspeccionar que el código no compruebe una versión debilitada o circular;
+  \item distinguir evidencia numérica, identidad simbólica y demostración lógica;
+  \item declarar dominios, unidades, condiciones de frontera y tolerancias;
+  \item repetir resultados sensibles a precisión, malla o plataforma;
+  \item someter las conclusiones relevantes a revisión humana independiente.
+\end{itemize}
+
+Por ello, \texttt{VALIDATED} significa ``validado por el oráculo bajo el programa y los supuestos registrados'', no ``verdad matemática absoluta''. La fortaleza de ASTRA reside en hacer visible y repetible la cadena de evidencia.
+
+\section{Conclusión}
+
+ASTRA Production ha evolucionado desde un esquema de procesamiento fijo hacia una arquitectura de investigación multiagente, configurable e iterativa. La formulación, la traducción, la ejecución, el análisis, la navegación y la aprobación son responsabilidades diferenciadas. El oráculo aporta una referencia externa al discurso de los modelos; los informes preservan la trazabilidad; y la puerta humana impide que la autonomía se confunda con autoridad científica. El resultado es una plataforma para investigar con modelos de lenguaje sin delegarles silenciosamente el criterio final de verdad.
+
+\end{document}

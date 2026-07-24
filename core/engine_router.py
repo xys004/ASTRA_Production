@@ -8,7 +8,7 @@ import sys
 import uuid
 
 
-ENGINE_MARKER = re.compile(r"^\s*#\s*ASTRA_ENGINE:\s*(python|sympy|sage|maxima|cadabra)\s*$", re.I | re.M)
+ENGINE_MARKER = re.compile(r"^\s*#\s*ASTRA_ENGINE:\s*(python|sympy|sage|maxima|cadabra|lean)\s*$", re.I | re.M)
 
 
 def _is_windows() -> bool:
@@ -46,6 +46,7 @@ def available_cas() -> dict[str, str | None]:
         "sage": _native_or_wsl("sage"),
         "maxima": _native_or_wsl("maxima"),
         "cadabra": _native_or_wsl("cadabra2"),
+        "lean": _native_or_wsl("lean"),
     }
 
 
@@ -63,6 +64,8 @@ def detect_engine(code: str) -> str:
         return "maxima"
     if "/* cadabra */" in code.lower() or re.search(r"::\s*(Indices|Metric|AntiSymmetric|Symmetric|Derivative|Depends)", code):
         return "cadabra"
+    if "import Mathlib" in code or re.search(r"^\s*(theorem|lemma|example)\s+.*:=", code, re.M):
+        return "lean"
     return "python"
 
 
@@ -98,7 +101,7 @@ def _command_for(engine: str, filepath: str) -> list[str] | None:
 
 
 def execute_external_cas(code: str, engine: str, workspace_dir: str, timeout: int) -> dict:
-    extensions = {"sage": ".sage", "maxima": ".mac", "cadabra": ".cdb"}
+    extensions = {"sage": ".sage", "maxima": ".mac", "cadabra": ".cdb", "lean": ".lean"}
     os.makedirs(workspace_dir, exist_ok=True)
     filepath = os.path.join(workspace_dir, f"astra_{engine}_{uuid.uuid4().hex[:8]}{extensions[engine]}")
     with open(filepath, "w", encoding="utf-8") as handle:

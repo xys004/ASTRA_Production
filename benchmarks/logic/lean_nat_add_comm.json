@@ -1,0 +1,18 @@
+{
+  "id": "lean_nat_add_comm",
+  "domain": "logic",
+  "difficulty": "easy",
+  "claim": "For all natural numbers n and m, n + m = m + n.",
+  "expected": "VALIDATED",
+  "preferred_engines": ["lean"],
+  "success_criteria": [
+    "The script uses # ASTRA_ENGINE: lean",
+    "The script imports Mathlib and is accepted by the Lean 4 kernel",
+    "The script prints VERDICT: PASS only after the theorem declaration compiles"
+  ],
+  "failure_modes": [
+    "Replacing formal verification with finite sampling",
+    "Printing PASS without compiling a theorem"
+  ],
+  "prompt": "Create a Lean 4 script using Mathlib that proves Nat.add_comm and prints VERDICT: PASS after the theorem is accepted."
+}

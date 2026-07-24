@@ -66,6 +66,11 @@ PROVIDERS = {
         "package": "openai",
         "label": "Groq",
     },
+    "perplexity": {
+        "env": "PERPLEXITY_API_KEY",
+        "package": "openai",
+        "label": "Perplexity (Sonar, busqueda web con citas)",
+    },
     # --- Backends de SUSCRIPCION (CLIs oficiales, sin API de pago) ---
     "claude_cli": {
         "env": None,
@@ -79,23 +84,50 @@ PROVIDERS = {
         "label": "Codex/ChatGPT (CLI suscripcion)",
         "cli_bin": "codex",
     },
+    "gemini_cli": {
+        "env": None,
+        "package": None,
+        "label": "Gemini CLI (OAuth Code Assist, cuota gratis diaria)",
+        "cli_bin": "gemini",
+    },
+    "agy_cli": {
+        "env": None,
+        "package": None,
+        "label": "agy / Antigravity CLI (reemplaza gemini_cli; OAuth Google, sin API)",
+        "cli_bin": "agy",
+    },
 }
 
 PHASES = {
     "conjecture": {
         "env": "ASTRA_CONJECTURE_PROVIDER",
         "label": "Conjecture Engine",
-        "recommendation": "gemini",
+        "recommendation": "codex_cli",
     },
     "translator": {
         "env": "ASTRA_TRANSLATOR_PROVIDER",
         "label": "Formal Translator",
-        "recommendation": "anthropic",
+        "recommendation": "claude_cli",
+    },
+    "reviewer": {
+        "env": "ASTRA_REVIEWER_PROVIDER",
+        "label": "Validation-Code Reviewer",
+        "recommendation": "codex_cli",
     },
     "analyst": {
         "env": "ASTRA_ANALYST_PROVIDER",
         "label": "Refutation Analyst",
-        "recommendation": "openai",
+        "recommendation": "codex_cli",
+    },
+    "navigator": {
+        "env": "ASTRA_NAVIGATOR_PROVIDER",
+        "label": "Research Navigator",
+        "recommendation": "agy_cli",
+    },
+    "synth": {
+        "env": "ASTRA_SYNTH_PROVIDER",
+        "label": "Deliberation Synthesizer",
+        "recommendation": "codex_cli",
     },
 }
 
@@ -205,6 +237,11 @@ def phase_provider(phase: str) -> str:
     load_project_env()
     meta = PHASES[phase]
     explicit = os.environ.get(meta["env"], "").strip().lower()
+    if "," in explicit:
+        explicit = next(
+            (item.strip() for item in explicit.split(",") if item.strip() in PROVIDERS),
+            "",
+        )
     if explicit in PROVIDERS:
         return explicit
     fallback = os.environ.get("ASTRA_PROVIDER", "").strip().lower()
@@ -236,9 +273,12 @@ def _provider_from_choice(configured: list[str], raw: str, current: str) -> str:
 
 def _recommended_provider_for_phase(phase: str, configured: list[str]) -> str:
     preferred_order = {
-        "conjecture": ["gemini", "anthropic", "openai"],
-        "translator": ["anthropic", "openai", "gemini"],
-        "analyst": ["openai", "anthropic", "gemini"],
+        "conjecture": ["codex_cli", "agy_cli", "gemini", "anthropic", "openai"],
+        "translator": ["claude_cli", "anthropic", "codex_cli", "openai", "gemini"],
+        "reviewer": ["codex_cli", "claude_cli", "openai", "anthropic", "agy_cli"],
+        "analyst": ["codex_cli", "claude_cli", "openai", "anthropic", "agy_cli"],
+        "navigator": ["agy_cli", "codex_cli", "gemini", "openai", "anthropic"],
+        "synth": ["codex_cli", "claude_cli", "agy_cli", "openai", "anthropic"],
     }[phase]
     for provider in preferred_order:
         if provider in configured:
@@ -365,6 +405,13 @@ def run_preflight(provider: str | None = None, verify_api: bool = True, phase_pr
     checks.append(Check("Project .env", env_path().exists(), str(env_path())))
 
     selected_providers = set((phase_providers or phase_provider_map()).values())
+    for meta in PHASES.values():
+        raw = os.environ.get(meta["env"], "")
+        selected_providers.update(
+            item.strip().lower()
+            for item in raw.strip().strip("'\"").split(",")
+            if item.strip().lower() in PROVIDERS
+        )
     if provider:
         selected_providers.add(provider)
 
