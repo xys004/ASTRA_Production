@@ -1,5 +1,9 @@
 import unittest
 import importlib.util
+import contextlib
+import io
+import json
+from pathlib import Path
 
 from core.code_patching import apply_exact_edit_patch
 from core.validator_preflight import (
@@ -8,6 +12,7 @@ from core.validator_preflight import (
     repair_validation_code,
     smoke_validation_code,
 )
+from scripts.benchmark_validator_repair import build_report
 
 
 class ValidatorPreflightTests(unittest.TestCase):
@@ -58,6 +63,29 @@ print("VERDICT: PASS" if ok else "VERDICT: FAIL")
         self.assertTrue(result["changed"])
         self.assertIn("x.is_zero is False", result["code"])
         self.assertEqual(audit_validation_code(result["code"])["status"], "APPROVED")
+
+    def test_unsimplified_symbolic_tensor_zero_gets_local_repair(self):
+        code = """import sympy as sp
+theta, r = sp.symbols('theta r', real=True)
+def all_zero(R):
+    n = len(R)
+    return all(R[i][j][k][l] == 0 for i in range(n) for j in range(n)
+               for k in range(n) for l in range(n))
+expr = r * (sp.sin(2*theta)*sp.tan(theta) + sp.cos(2*theta) - 1) / (2*sp.tan(theta))
+ok = all_zero([[[[expr]]]])
+print('VERDICT: PASS' if ok else 'VERDICT: FAIL')
+"""
+        audit = audit_validation_code(code)
+        labels = {item["label"] for item in audit["findings"]}
+        self.assertIn("unsimplified_symbolic_zero", labels)
+        result = repair_validation_code(code, audit)
+        self.assertTrue(result["changed"])
+        self.assertIn("trigsimp", result["code"])
+        self.assertEqual(audit_validation_code(result["code"])["status"], "APPROVED")
+        scope = {}
+        with contextlib.redirect_stdout(io.StringIO()):
+            exec(result["code"], scope)
+        self.assertTrue(scope["ok"])
 
     def test_module_level_swallowed_exception_is_reraised_locally(self):
         code = """
@@ -172,6 +200,29 @@ print("VERDICT: PASS")
             {"edits": [{"old": "a" * 70, "new": "b"}]},
         )
         self.assertEqual(wholesale["status"], "REJECTED")
+
+    def test_quick_repair_benchmark_is_scoped_and_calibrated(self):
+        root = Path(__file__).resolve().parents[1]
+        cases = json.loads(
+            (
+                root
+                / "benchmarks"
+                / "quality"
+                / "validator_audit"
+                / "adversarial_validators.json"
+            ).read_text(encoding="utf-8")
+        )
+        report = build_report(
+            cases,
+            repeats=1,
+            historical_run=root / "missing-checkpoint.json",
+        )
+        summary = report["summary"]
+        self.assertEqual(summary["targeted_cases"], 4)
+        self.assertEqual(summary["target_detection_rate"], 1.0)
+        self.assertEqual(summary["target_local_repair_rate"], 1.0)
+        self.assertEqual(summary["sound_false_block_rate"], 0.0)
+        self.assertIn("not a scientific-quality", report["scope"])
 
 
 if __name__ == "__main__":

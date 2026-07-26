@@ -118,6 +118,59 @@ def _unknown_as_nonzero(node: ast.Compare) -> bool:
     return is_true and isinstance(node.ops[0], (ast.IsNot, ast.NotEq))
 
 
+def _sympy_aliases(tree: ast.AST) -> set[str]:
+    aliases: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "sympy":
+                    aliases.add(alias.asname or "sympy")
+    return aliases
+
+
+def _numeric_zero(node: ast.AST) -> bool:
+    return (
+        isinstance(node, ast.Constant)
+        and isinstance(node.value, (int, float, complex))
+        and not isinstance(node.value, bool)
+        and node.value == 0
+    )
+
+
+def _symbolic_zero_without_normalization(
+    node: ast.Compare,
+    *,
+    parents: dict[ast.AST, ast.AST],
+    sympy_aliases: set[str],
+) -> str | None:
+    """Find a raw tensor-entry equality inside a dedicated all-zero helper."""
+    if (
+        len(node.ops) != 1
+        or not isinstance(node.ops[0], ast.Eq)
+        or len(node.comparators) != 1
+        or not _numeric_zero(node.comparators[0])
+        or not any(isinstance(item, ast.Subscript) for item in ast.walk(node.left))
+    ):
+        return None
+    scope = _enclosing_scope(node, parents)
+    if not isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        return None
+    normalized_name = scope.name.lower().replace("_", "")
+    if normalized_name not in {"allzero", "tensorallzero", "tensoriszero"}:
+        return None
+    for item in ast.walk(node.left):
+        if not isinstance(item, ast.Call) or not isinstance(item.func, ast.Attribute):
+            continue
+        owner = item.func.value
+        if (
+            isinstance(owner, ast.Name)
+            and owner.id in sympy_aliases
+            and item.func.attr in {"simplify", "trigsimp", "cancel", "factor"}
+        ):
+            return None
+    return sorted(sympy_aliases)[0] if sympy_aliases else None
+
+
 def audit_validation_code(code: str) -> dict[str, Any]:
     findings: list[PreflightFinding] = []
     engine = detect_engine(code or "")
@@ -153,6 +206,7 @@ def audit_validation_code(code: str) -> dict[str, Any]:
         for parent in ast.walk(tree)
         for child in ast.iter_child_nodes(parent)
     }
+    sympy_aliases = _sympy_aliases(tree)
     for node in ast.walk(tree):
         if isinstance(node, ast.ExceptHandler):
             name = _exception_name(node)
@@ -200,6 +254,26 @@ def audit_validation_code(code: str) -> dict[str, Any]:
                     ),
                 )
             )
+        elif isinstance(node, ast.Compare):
+            sympy_alias = _symbolic_zero_without_normalization(
+                node,
+                parents=parents,
+                sympy_aliases=sympy_aliases,
+            )
+            if sympy_alias:
+                findings.append(
+                    PreflightFinding(
+                        label="unsimplified_symbolic_zero",
+                        severity="critical",
+                        line=getattr(node, "lineno", None),
+                        autofixable=True,
+                        message=(
+                            "A tensor all-zero helper compares a raw symbolic entry "
+                            "with zero. Exact trigonometric identities may remain "
+                            "noncanonical and create a false scientific FAIL."
+                        ),
+                    )
+                )
 
     # Stable de-duplication keeps repair prompts compact.
     unique: dict[tuple[str, int | None, str], PreflightFinding] = {}
@@ -245,9 +319,10 @@ def repair_validation_code(
     """Apply only semantics-preserving, deterministic validator repairs.
 
     The function never invents scientific checks. It changes an indeterminate
-    SymPy predicate into an explicit ``is False`` test and makes a dangerous
-    broad exception operational by re-raising it. Edits are source-local so
-    comments, formatting, and unrelated validation legs remain intact.
+    SymPy predicate into an explicit ``is False`` test, canonicalizes raw
+    symbolic tensor-zero checks, and makes a dangerous broad exception
+    operational by re-raising it. Edits are source-local so comments,
+    formatting, and unrelated validation legs remain intact.
     """
     audit = audit or audit_validation_code(code)
     if audit.get("engine", "python") != "python":
@@ -257,6 +332,12 @@ def repair_validation_code(
     except SyntaxError:
         return {"code": code, "changed": False, "repairs": []}
 
+    parents = {
+        child: parent
+        for parent in ast.walk(tree)
+        for child in ast.iter_child_nodes(parent)
+    }
+    sympy_aliases = _sympy_aliases(tree)
     target_lines = {
         (str(item.get("label") or ""), item.get("line"))
         for item in audit.get("findings") or []
@@ -294,6 +375,59 @@ def repair_validation_code(
                             "description": (
                                 "Require an explicit SymPy false result; "
                                 "indeterminate None no longer passes."
+                            ),
+                        },
+                    )
+                )
+        elif (
+            isinstance(node, ast.Compare)
+            and ("unsimplified_symbolic_zero", line) in target_lines
+        ):
+            sympy_alias = _symbolic_zero_without_normalization(
+                node,
+                parents=parents,
+                sympy_aliases=sympy_aliases,
+            )
+            if sympy_alias:
+                left_start = _absolute_offset(
+                    offsets,
+                    node.left.lineno,
+                    node.left.col_offset,
+                    len(code),
+                )
+                left_end = _absolute_offset(
+                    offsets,
+                    node.left.end_lineno,
+                    node.left.end_col_offset,
+                    len(code),
+                )
+                start = _absolute_offset(
+                    offsets,
+                    node.lineno,
+                    node.col_offset,
+                    len(code),
+                )
+                end = _absolute_offset(
+                    offsets,
+                    node.end_lineno,
+                    node.end_col_offset,
+                    len(code),
+                )
+                expression = code[left_start:left_end]
+                replacement = (
+                    f"{sympy_alias}.trigsimp({expression}, method='fu') == 0"
+                )
+                edits.append(
+                    (
+                        start,
+                        end,
+                        replacement,
+                        {
+                            "label": "unsimplified_symbolic_zero",
+                            "line": line,
+                            "description": (
+                                "Canonicalize exact trigonometric identities before "
+                                "the tensor all-zero decision."
                             ),
                         },
                     )

@@ -43,9 +43,11 @@ different package environment.
 
 Two repair layers are used in order:
 
-1. ASTRA applies only two safe source-local transformations itself:
+1. ASTRA applies only three safe source-local transformations itself:
    `.is_zero is not True` becomes the explicit `.is_zero is False`, and a
    module-level broad exception that can contaminate the verdict is re-raised.
+   A raw tensor-entry `== 0` inside a dedicated SymPy all-zero helper is
+   canonicalized with `trigsimp(..., method='fu')` before the decision.
 2. If the independent reviewer still finds a bounded defect, Claude receives
    the current validator and exact instructions and may return at most eight
    unique exact-snippet replacements in JSON.
@@ -116,7 +118,8 @@ The quality suite permanently includes:
 
 - `audit_regression_operational_error_as_refutation`;
 - `audit_regression_indeterminate_is_zero_as_nonzero`;
-- `audit_regression_einsteinpy_list_symbols_supported`.
+- `audit_regression_einsteinpy_list_symbols_supported`;
+- `audit_regression_unsimplified_symbolic_tensor_zero`.
 
 Their provenance points to the first trajectory canary. The third is a sound-code
 case: flagging the list-based EinsteinPy call as an API defect is a reviewer

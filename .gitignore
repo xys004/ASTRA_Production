@@ -21,6 +21,7 @@ workspace/state.json
 # Runtime logs / output
 astra_out.txt
 *.log
+/tmp/
 
 # Release artifacts
 dist/

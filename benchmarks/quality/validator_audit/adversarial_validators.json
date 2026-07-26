@@ -176,5 +176,20 @@
     "objective": "Check flat two-dimensional Minkowski curvature with the installed EinsteinPy MetricTensor API.",
     "intuition": "EinsteinPy accepts the coordinate-symbol collection as either a list or tuple; API speculation must not be treated as a verified defect.",
     "code": "import sympy as sp\nfrom einsteinpy.symbolic import MetricTensor, RiemannCurvatureTensor\nt,x=sp.symbols('t x', real=True)\ng=MetricTensor(sp.diag(-1,1).tolist(), list((t,x)))\narr=RiemannCurvatureTensor.from_metric(g).tensor()\nok=all(sp.simplify(arr[a,b,c,d]).is_zero is True for a in range(2) for b in range(2) for c in range(2) for d in range(2))\nprint('CHECK full_riemann_zero:', 'OK' if ok else 'FAIL')\nprint('VERDICT: PASS' if ok else 'VERDICT: FAIL')\n"
+  },
+  {
+    "id": "audit_regression_unsimplified_symbolic_tensor_zero",
+    "track": "validator_audit",
+    "domain": "general_relativity",
+    "difficulty": "regression",
+    "expected": "REVISE",
+    "expected_review": ["REVISE", "REJECT"],
+    "expected_defects": ["unsimplified_symbolic_zero"],
+    "severity": "critical",
+    "tags": ["vnext_regression"],
+    "provenance": "research_trajectory_20260726_062455_cycle_1_diagnostic_execution",
+    "objective": "Establish that every symbolic Riemann component vanishes without turning a noncanonical exact identity into a false scientific refutation.",
+    "intuition": "Raw SymPy equality can report a false negative for exact trigonometric identities that require canonicalization.",
+    "code": "import sympy as sp\ntheta,r=sp.symbols('theta r', real=True)\ndef all_zero(R):\n    n=len(R)\n    return all(R[i][j][k][l] == 0 for i in range(n) for j in range(n) for k in range(n) for l in range(n))\nexpr=r*(sp.sin(2*theta)*sp.tan(theta)+sp.cos(2*theta)-1)/(2*sp.tan(theta))\nok=all_zero([[[[expr]]]])\nprint('CHECK full_riemann_zero:', 'OK' if ok else 'FAIL', expr)\nprint('VERDICT: PASS' if ok else 'VERDICT: FAIL')\n"
   }
 ]

@@ -275,8 +275,22 @@ review, and limits Claude to one auditable exact-edit patch instead of a full
 validator regeneration. It preserves the distinction between scientific
 refutation and operational failure. `full-vnext0` remains available only to
 reproduce the first, null-result repair experiment.
+
+Fast release evidence can be reproduced without waiting for a full trajectory:
+
+```powershell
+python scripts\benchmark_validator_repair.py --repeats 300
+python scripts\run_quality_benchmarks.py --tier smoke `
+  --tracks execution --oracle both --jobs 4
+```
+
 See [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md) for the tested release
 state, evidence gates, reproduction commands, and explicit limitations.
+The current investor, client and strategic-partner brief is available as
+[source](docs/investor/ASTRA_Investor_Brief_EN.tex) and
+[PDF](output/pdf/ASTRA_Investor_Brief_EN.pdf).
+The measured figures and claim boundaries used by that brief are frozen in the
+[26 July 2026 evidence snapshot](docs/evidence/PRODUCTION_SNAPSHOT_20260726.md).
 
 ---
 

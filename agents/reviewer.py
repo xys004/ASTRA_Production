@@ -32,6 +32,8 @@ AUDIT RULES:
    hardcoded_pass, unreachable_failure, self_comparison, sampling_as_proof,
    wrong_domain, missing_assumption, wrong_tolerance, wrong_units,
    unknown_as_pass, swallowed_exception, missing_dependency, engine_mismatch.
+   unsimplified_symbolic_zero may be used when a raw symbolic tensor entry is
+   compared to zero without canonicalization.
    APPROVED code normally has an empty defect_labels list.
 9. ASTRA verdict semantics are about the CONJECTURE, not task completion:
    VERDICT: PASS means the conjecture survived its decisive checks;

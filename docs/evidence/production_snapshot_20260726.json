@@ -1,0 +1,107 @@
+{
+  "schema_version": "1.0",
+  "snapshot_date": "2026-07-26",
+  "scope": "Release, portability, compact-architecture and repair evidence. This is not a frontier-model leaderboard.",
+  "source_state": "The Git commit containing this snapshot.",
+  "runtime_run_provenance_commit": "9063950d25c98ade19c54cd7b8260766e6d37b29",
+  "release_suite": {
+    "tests_passed": 68,
+    "tests_total": 68,
+    "python": "3.9.13"
+  },
+  "client_cross_oracle": {
+    "run_id": "client_validation_20260726_062631",
+    "cases": 4,
+    "bundles_passed": 8,
+    "bundles_total": 8,
+    "claim_verdict_agreement": 1.0,
+    "oracles": [
+      "local",
+      "astrum"
+    ]
+  },
+  "parallel_execution_smoke": {
+    "run_id": "quality_20260726_064413",
+    "workers": 4,
+    "runs_passed": 8,
+    "runs_total": 8,
+    "evidence_grade_a": 8,
+    "verdict_accuracy": 1.0,
+    "cross_oracle_agreement": 1.0,
+    "latency_seconds": {
+      "p50": 5.422,
+      "p95": 8.598
+    }
+  },
+  "validator_repair_vnext1": {
+    "run_id": "validator_repair_quick_20260726_065805",
+    "adversarial_and_calibration_cases": 14,
+    "targeted_patterns": 4,
+    "target_detection_rate": 1.0,
+    "target_local_repair_rate": 1.0,
+    "sound_calibration_cases": 3,
+    "sound_false_block_rate": 0.0,
+    "repeats_per_case": 300,
+    "latency_ms": {
+      "median": 0.702454,
+      "p95": 1.912621
+    }
+  },
+  "paired_diversity_canary": {
+    "cases": 4,
+    "diverse_passed": 2,
+    "homogeneous_control_passed": 2,
+    "pass_rate_difference": 0.0,
+    "mean_perspective_diversity": {
+      "diverse": 0.7459,
+      "homogeneous_control": 0.5958
+    },
+    "interpretation": "The heterogeneous proposer manipulation increased perspective separation but did not produce a pass-rate advantage in four cases."
+  },
+  "research_trajectory_vnext0": {
+    "run_id": "research_trajectory_20260726_035736",
+    "cycles": 4,
+    "credible_cycles": 0,
+    "conversion_rate": 0.0,
+    "mean_cycle_seconds": 1044.805,
+    "total_cycle_seconds": 4179.22
+  },
+  "research_trajectory_vnext1_one_cell": {
+    "run_id": "research_trajectory_20260726_062455",
+    "protocol_fingerprint": "ef119a1e27e51481483ef1166792bec9442a3147c2e5f5436e3918eb2e079054",
+    "selection_fingerprint": "5bba99f9ad69174b2b724283ba9202639f5899fbb6da34485a02bc74ea6352cc",
+    "case": "gr_invariant_audit",
+    "configuration": "full-vnext1",
+    "seed": 11,
+    "strict_primary_models": true,
+    "status": "TOOL_ERROR",
+    "failed_phase": "reviewer",
+    "failure": "gpt-5.6-sol reviewer timed out at the 240-second phase ceiling",
+    "credible_cycles": 0,
+    "estimated_model_calls": 8,
+    "wall_seconds": 1453.5,
+    "resolved_models": {
+      "codex": "gpt-5.6-sol",
+      "agy": "gemini-3.1-pro-high",
+      "claude": "claude-opus-4-8"
+    }
+  },
+  "unreviewed_diagnostic_salvage": {
+    "admission_status": "NOT_ADMITTED",
+    "oracle": "astrum",
+    "raw_artifact_verdict": "FAIL",
+    "raw_failure": "riem_symbolic_sphere",
+    "repair": "unsimplified_symbolic_zero",
+    "repaired_artifact_verdict": "PASS",
+    "checks_passed": 12,
+    "checks_total": 12,
+    "execution_seconds": 0.476,
+    "interpretation": "This validates the deterministic repair and remote execution only. The artifact did not receive the required independent model approval."
+  },
+  "claim_boundaries": [
+    "No scientific-quality uplift over frontier systems is claimed.",
+    "No audited per-discovery cost comparison with Deep Think, Aletheia, Co-Scientist or AlphaEvolve is available.",
+    "The full frozen comparative Research Trajectory canary remains pending.",
+    "Public benchmark pilots and four-case canaries are calibration evidence, not leaderboard results."
+  ]
+}

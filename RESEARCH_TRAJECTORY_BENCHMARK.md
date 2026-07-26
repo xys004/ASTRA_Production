@@ -177,6 +177,44 @@ python scripts\run_research_trajectory_benchmarks.py `
   --config full,full-linear --seeds 11 --max-cycles 4
 ```
 
+### Fast release evidence ladder
+
+Use three gates with different meanings instead of treating every release check
+as a full scientific trajectory:
+
+1. **Deterministic repair gate** (seconds): exercises the exact source patterns
+   vNext.1 claims to repair without a model call and calibrates false blocking
+   against sound validators.
+2. **Cross-oracle application gate** (about one minute): runs independent
+   application cases locally and on ASTRUM and compares claim verdicts.
+3. **One-cell trajectory canary** (minutes to tens of minutes at maximum-model
+   settings): keeps the full specialist role topology but limits the run to one
+   frozen case, one seed, and one cycle.
+
+```powershell
+.\venv\Scripts\python.exe scripts\benchmark_validator_repair.py --repeats 300
+
+.\venv\Scripts\python.exe scripts\run_client_validation.py `
+  --only client_capacity_policy_refutation,client_control_response,client_fluid_pressure_scaling,client_formula_regression `
+  --oracle both --timeout 180
+
+.\venv\Scripts\python.exe scripts\run_research_trajectory_benchmarks.py `
+  --tier canary --only gr_invariant_audit --config full-vnext1 `
+  --seeds 11 --max-cycles 1 --oracle astrum --strict-primary-models
+```
+
+The first two gates are release diagnostics; only the third measures an
+end-to-end research cycle. A successful one-cell run establishes operability,
+not a comparative scientific uplift.
+
+The 26 July 2026 maximum-model one-cell diagnostic did not clear that third
+gate: it stopped at the 240-second reviewer ceiling after 1,451 seconds. A
+separate, explicitly unreviewed ASTRUM execution then exposed a noncanonical
+SymPy tensor-zero comparison. Validator Repair vNext.1 now detects and repairs
+that exact pattern locally; the repaired artifact passed all 12 checks on
+ASTRUM in 0.476 seconds. This is a regression and repair result, not an admitted
+scientific outcome. The full comparative canary remains pending.
+
 ## Expert scoring
 
 Give each evaluator only the directory:
@@ -206,6 +244,11 @@ and other evidence jobs. Model cells remain sequential to avoid turning CLI
 quota timing into an architectural confound. A trivial validator may be slower
 remotely due to SSH startup; the cluster should be used for sufficiently heavy
 or parallelizable evidence.
+
+Independent cases, seeds, parameter sweeps, and validator legs may fan out
+across local workers and ASTRUM. The dependent proposal, critique, synthesis,
+translation, review, audit, and navigation phases inside one trajectory remain
+ordered: parallelizing those phases would change the architecture being tested.
 
 Project packages are declared by portable environment variables rather than
 personal filesystem paths:

@@ -2,6 +2,9 @@
 
 Status date: 2026-07-26
 
+Tracked evidence:
+[docs/evidence/PRODUCTION_SNAPSHOT_20260726.md](docs/evidence/PRODUCTION_SNAPSHOT_20260726.md)
+
 ## Release state
 
 ASTRA Production enables Validator Repair vNext.1:
@@ -19,8 +22,19 @@ misreported as scientific evidence.
 
 ## Verified gates
 
-- Production Python 3.9 environment: 66/66 automated tests passed.
+- Production Python 3.9 environment: 68/68 automated tests passed.
 - Client-oriented local evidence suite: 5/5 supported cases passed.
+- Cross-oracle client replication: 8/8 evidence bundles passed across four
+  paired local--ASTRUM cases, with 100% claim-verdict agreement.
+- Four-worker execution smoke: 8/8 grade-A local--ASTRUM runs, 100% verdict
+  accuracy and agreement, with 5.422 s P50 and 8.598 s P95 latency.
+- Validator Repair vNext.1 quick gate: 4/4 targeted source patterns detected
+  and safely repaired, 0/3 sound calibration scripts falsely blocked, with
+  0.702 ms median and 1.913 ms P95 deterministic repair time over 300 repeats.
+- The paired public-benchmark diversity canary produced greater mean proposal
+  separation for heterogeneous ASTRA (0.7459 versus 0.5958), while both arms
+  passed 2/4 cases. This validates the diversity manipulation, not a quality
+  advantage.
 - Covered local validators: Z3, SciPy, Pint, SymPy, and GR_python.
 - Lean 4 routing, placeholder rejection, and evidence-bundle behavior are
   covered by automated tests.
@@ -33,6 +47,16 @@ The local client run is recorded in the ignored runtime report:
 ```text
 workspace/client_validation_runs/client_validation_20260726_061211.json
 workspace/client_validation_runs/client_validation_20260726_061211.md
+workspace/client_validation_runs/client_validation_20260726_062631.json
+workspace/client_validation_runs/client_validation_20260726_062631.md
+workspace/quick_evidence/validator_repair_quick_20260726_062852.json
+workspace/quick_evidence/validator_repair_quick_20260726_062852.md
+workspace/quick_evidence/validator_repair_quick_20260726_065805.json
+workspace/quick_evidence/validator_repair_quick_20260726_065805.md
+workspace/quality_benchmark_runs/quality_20260726_064413.json
+workspace/quality_benchmark_runs/quality_20260726_064413.md
+workspace/research_trajectory_runs/research_trajectory_20260726_062455/checkpoint.json
+workspace/research_trajectory_runs/research_trajectory_20260726_062455/checkpoint.md
 ```
 
 ## What vNext.1 improves
@@ -49,17 +73,28 @@ workspace/client_validation_runs/client_validation_20260726_061211.md
    long generation.
 6. Benchmark metrics separately count deterministic edits, model patch attempts,
    accepted model patches, model review calls, and repair acceptance rate.
+7. A dedicated SymPy tensor all-zero helper now canonicalizes exact
+   trigonometric identities before deciding whether a component is nonzero.
 
 ## Honest limits
 
 - The frozen vNext.0 trajectory canary produced no conversion uplift over the
   baseline (0% versus 0%). That negative result motivated vNext.1.
-- vNext.1 has passed deterministic, integration, and client evidence gates, but
-  its comparative research-trajectory canary has not yet completed. No claim of
-  scientific-quality or conversion-rate improvement should be made until the
-  same frozen cases, seeds, budgets, and oracle are rerun.
-- The local client run does not exercise the ASTRUM-only Lean theorem or measure
-  cross-oracle agreement.
+- The maximum-model vNext.1 one-cell diagnostic completed with a reviewer
+  timeout after 1,451 seconds and therefore produced no admitted evidence. An
+  explicitly unreviewed ASTRUM diagnostic exposed one symbolic-normalization
+  false negative; the new deterministic repair made all 12 validator checks
+  pass in 0.476 seconds. This is repair evidence, not scientific acceptance.
+- vNext.1 has passed deterministic, integration, client, and cross-oracle
+  gates, but its comparative research-trajectory canary has not yet completed.
+  No claim of scientific-quality or conversion-rate improvement should be made
+  until the same frozen cases, seeds, budgets, and oracle are rerun.
+- The four paired local--ASTRUM cases do not exercise the ASTRUM-only Lean
+  theorem. Lean routing remains covered by automated tests, not by this paired
+  client snapshot.
+- The quick repair gate measures only exact deterministic source patterns. It
+  is not evidence of scientific-quality improvement; the frozen long-horizon
+  canary remains the appropriate conversion test.
 - A refused patch is an intentional abstention, not a scientific failure.
 
 ## Reproduction
@@ -69,6 +104,12 @@ workspace/client_validation_runs/client_validation_20260726_061211.md
 
 .\venv\Scripts\python.exe scripts\run_client_validation.py `
   --oracle local --timeout 180
+
+.\venv\Scripts\python.exe scripts\run_client_validation.py `
+  --only client_capacity_policy_refutation,client_control_response,client_fluid_pressure_scaling,client_formula_regression `
+  --oracle both --timeout 180
+
+.\venv\Scripts\python.exe scripts\benchmark_validator_repair.py --repeats 300
 
 .\venv\Scripts\python.exe scripts\run_research_trajectory_benchmarks.py `
   --tier canary --config full-vnext1 --seeds 11 --max-cycles 2 `

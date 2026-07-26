@@ -31,6 +31,13 @@
 \definecolor{linegray}{HTML}{D6E0E5}
 \definecolor{green}{HTML}{23866A}
 
+\hypersetup{
+  pdftitle={ASTRA: Compact, Verifiable AI for Scientific Discovery},
+  pdfauthor={Nelson Bolívar, Astrum Drive},
+  pdfsubject={Investor, client and strategic partner evidence brief},
+  pdfkeywords={ASTRA, Astrum Drive, scientific AI, multi-model research, verification, benchmarks}
+}
+
 \color{ink}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{5pt}
@@ -140,7 +147,7 @@
 \vspace{2.0cm}
 {\sffamily\bfseries\fontsize{38}{41}\selectfont\textcolor{white}{ASTRA}}\par
 \vspace{3mm}
-{\sffamily\bfseries\fontsize{21}{25}\selectfont\textcolor{white}{Verifiable AI for Scientific Discovery}}\par
+{\sffamily\bfseries\fontsize{21}{25}\selectfont\textcolor{white}{Compact, Verifiable AI for Scientific Discovery}}\par
 \vspace{7mm}
 {\sffamily\fontsize{13}{18}\selectfont\textcolor{white!88}{A multi-model research platform that turns scientific objectives into\\
 falsifiable conjectures, reviewed executable tests, reproducible evidence,\\
@@ -148,9 +155,9 @@ and the next decision.}}\par
 
 \vspace{3.5cm}
 \begin{minipage}{0.76\textwidth}
-{\sffamily\large\bfseries\color{navy}Investor, VC, Client and Strategic Partner Brief}\par
+{\sffamily\large\bfseries\color{navy}Investor, VC, Client and Strategic Partner Evidence Brief}\par
 \vspace{4mm}
-{\sffamily\color{slate}Executive narrative, product value, customer applications, system architecture, algorithmic workflow, validation model, commercialization roadmap and risks.}
+{\sffamily\color{slate}Product thesis, current benchmark evidence, competitive reference architecture, algorithmic workflow, deployment economics, commercialization roadmap and explicit limits.}
 \end{minipage}
 
 \vfill
@@ -214,27 +221,41 @@ experimentation without surrendering traceability.
 \end{keybox}
 
 \begin{plainbox}
-\textbf{Category reference.} Google DeepMind's Aletheia research agent demonstrates
-the scientific value of a generator--verifier--reviser loop powered by Gemini Deep
-Think. ASTRA shares that epistemic pattern, but implements it as a multi-model,
-execution-grounded and local-first product architecture for scientific R\&D.
+\textbf{Category reference.} Google DeepMind's Deep Think, Aletheia,
+Co-Scientist and AlphaEvolve demonstrate that long-horizon search, debate,
+verification and automated evaluation can extend frontier models in science.
+ASTRA adopts that general direction but makes a different product choice:
+heterogeneous models, reviewed executable validators, local or private compute,
+and evidence bundles that can be inspected by a customer.
 \end{plainbox}
 
 \subsection*{What exists today}
 
-\metric{3}{specialized model roles in the production configuration}
+\metric{68/68}{automated production tests passing}
 \hfill
-\metric{8}{explicit stages from shared objective to human approval}
+\metric{8/8}{local--ASTRUM client evidence bundles passing}
 \hfill
-\metric{1}{persistent evidence chain across every cycle}
+\metric{100\%}{cross-oracle agreement on four paired cases}
 
 \vspace{4mm}
 The current system includes a browser application, an MCP interface for agent control,
-local and remote execution, detached long-running jobs, benchmark cases, report
-persistence, optional formal proof and CAS engines, package extensions, retry and
-autofix logic, and human approval gates.
+local and remote execution, detached long-running jobs, benchmark suites, report
+persistence, formal proof and CAS routes, package extensions, bounded repair and human
+approval gates. Validator Repair vNext.1 compiles and audits code before model review,
+applies safe source-local fixes in milliseconds and restricts Claude to one exact,
+auditable patch rather than a wholesale regeneration.
 
-\newpage
+\begin{keybox}
+\textbf{Evidence position, not a leaderboard claim.} ASTRA currently demonstrates
+operational reliability, cross-environment reproducibility and useful multi-model
+controls. In a four-case paired public-benchmark canary, the heterogeneous proposal
+team produced greater measured perspective separation than the homogeneous control
+(0.7459 versus 0.5958), but both passed 2/4 cases. It does not yet demonstrate higher
+scientific success than Deep Think, Aletheia or other frontier systems. The frozen
+long-horizon canary is the release gate for that stronger claim; the first vNext.0
+result was a valid null result.
+\end{keybox}
+
 \section*{Part I -- Product and commercial view}
 
 \subsection*{One product, three audiences}
@@ -307,7 +328,6 @@ hypotheses rather than declared pricing:
   compute, model and scientific-software partners.
 \end{itemize}
 
-\newpage
 \section*{Why ASTRA can be differentiated}
 
 \begin{tabularx}{\textwidth}{@{}p{3.7cm} Y Y@{}}
@@ -347,120 +367,169 @@ The orchestration layer can adopt stronger models without rebuilding the scienti
 workflow. Models are replaceable capabilities; the evidence architecture persists.
 \end{multicols}
 
-\newpage
-\section*{Reference comparison: ASTRA and Aletheia / Gemini Deep Think}
+\section*{Reference landscape: frontier research agents}
 
-Google DeepMind describes Aletheia as a mathematics research agent powered by an
-advanced Gemini Deep Think model. Its documented loop generates a candidate solution,
-uses a natural-language verifier, revises minor defects, restarts critically flawed
-solutions and can admit failure. It also uses search, web browsing and computational
-tools for long-horizon mathematical research.\footnote{\href{https://deepmind.google/blog/accelerating-mathematical-and-scientific-discovery-with-gemini-deep-think/}{Google DeepMind, ``Accelerating Mathematical and Scientific Discovery with Gemini Deep Think,'' February 11, 2026.}}
-The associated research paper reports evaluations from Olympiad and PhD-level
-exercises through open research problems.\footnote{\href{https://arxiv.org/abs/2602.10177}{Feng et al., ``Towards Autonomous Mathematics Research,'' arXiv:2602.10177, 2026.}}
+The category is moving from one-shot answers toward compound systems that search,
+debate, verify and evolve candidate work. Google DeepMind reports professional
+mathematics and science results from Gemini Deep Think and its Aletheia research
+agent.\footnote{\href{https://deepmind.google/blog/accelerating-mathematical-and-scientific-discovery-with-gemini-deep-think/}{Google DeepMind, ``Accelerating Mathematical and Scientific Discovery with Gemini Deep Think,'' 2026.}}
+Aletheia iteratively generates, verifies and revises natural-language
+solutions.\footnote{\href{https://arxiv.org/abs/2602.10177}{Feng et al., ``Towards Autonomous Mathematics Research,'' arXiv:2602.10177, 2026.}}
+Google's Co-Scientist uses a multi-agent generate--debate--evolve process for
+hypothesis generation,\footnote{\href{https://deepmind.google/blog/co-scientist-a-multi-agent-ai-partner-to-accelerate-research/}{Google DeepMind, ``Co-Scientist: A multi-agent AI partner to accelerate research,'' 2026.}}
+while AlphaEvolve combines a fast and a deep model with automated evaluators and
+evolutionary search over programs.\footnote{\href{https://deepmind.google/blog/alphaevolve-a-gemini-powered-coding-agent-for-designing-advanced-algorithms/}{Google DeepMind, ``AlphaEvolve,'' 2025.}}
 
-\begin{tabularx}{\textwidth}{@{}>{\bfseries\color{navy}}p{3.15cm} Y Y@{}}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries\color{navy}}p{2.7cm} p{4.2cm} Y@{}}
 \toprule
-Dimension & Aletheia / Gemini Deep Think & ASTRA \\
+System & Publicly described strength & Relationship to ASTRA \\
 \midrule
-Foundation &
-An advanced Gemini Deep Think reasoning model wrapped in a mathematics research agent. &
-A role-separated ensemble: Codex, Antigravity and Claude, coordinated around one objective. \\
+Gemini Deep Think / Aletheia &
+Frontier reasoning plus a long-horizon generator--verifier--reviser loop for
+professional mathematics and scientific problems. &
+Closest epistemic reference. ASTRA does not claim comparable published research
+performance; it externalizes verification into reviewed code and customer-controlled
+engines. \\
 \addlinespace
-Core loop &
-Generator, natural-language verifier and reviser; critical failures restart generation. &
-Parallel conjecture, cross-critique, synthesis, code author, independent code reviewer, oracle, analyst and navigator. \\
+Google Co-Scientist &
+Asynchronous specialized agents generate, debate, rank and evolve research
+hypotheses with scientist guidance. &
+Validates multi-agent scientific collaboration as a category. ASTRA uses a smaller
+fixed role map and emphasizes executable evidence after hypothesis generation. \\
 \addlinespace
-Focus &
-Long-horizon natural-language proof and professional mathematics research. &
-Executable scientific validation across symbolic, numerical, logical and package-specific workflows. \\
+AlphaEvolve &
+An ensemble balances breadth and depth while automated evaluators drive evolutionary
+program search. &
+Shares evaluator-grounded iteration. ASTRA targets heterogeneous scientific workflows
+rather than domains with one cheap scalar evaluator. \\
 \addlinespace
-Verification &
-Natural-language verification, tools, code-assisted checks and human expert grading. &
-Pre-execution code audit plus deterministic engine output, verdict guards, result analysis and human approval. \\
-\addlinespace
-Research search &
-Google Search and web browsing are documented parts of the research agent. &
-Core governance currently centers on execution; literature navigation can be supplied by an upstream agent and remains a productization target. \\
-\addlinespace
-Tool ecosystem &
-Intensive tool use within Google's research system. &
-Routed local or remote oracle: Python science stack, Z3, Lean, CAS tools, Mathematica bridge and internal packages. \\
-\addlinespace
-Deployment &
-Google-hosted frontier research capability. &
-Local-first orchestration with optional remote compute and agent access through MCP. \\
-\addlinespace
-Memory &
-Iterative solution state and research context. &
-Shared objective, axiomatic base, explicit refutations, branch memory, reports and human admission gate. \\
-\addlinespace
-Evidence maturity &
-Expert-graded benchmark and research results reported by Google DeepMind and collaborators. &
-Operational integration cycles and regression tests; external domain benchmarks and customer pilots are the next evidence threshold. \\
+ASTRA &
+Codex, Antigravity and Claude separate conjecture, navigation, implementation and
+review; deterministic oracles decide executable checks. &
+Local-first assurance layer for physics, mathematics and engineering, with package
+adapters, human approval and auditable failure semantics. \\
 \bottomrule
 \end{tabularx}
 
-\subsection*{What is genuinely shared}
+\subsection*{The shared principle and the distinct product bet}
 
 \begin{multicols}{2}
-\begin{itemize}
-  \item verification is a process, not a final prompt;
-  \item candidate work must be revised or discarded;
-  \item the system should be able to admit failure;
-  \item proof and refutation should be pursued together;
-  \item tools and code can strengthen reasoning;
-  \item expert review remains part of the evidence chain.
-\end{itemize}
+\textbf{\color{navy}Shared principle.}
+Verification is a process rather than a final prompt. Candidate work must be challenged,
+revised or discarded; proof and refutation should be pursued together; tools can extend
+reasoning; and an expert remains responsible for consequential acceptance.
+
+\columnbreak
+\textbf{\color{navy}ASTRA's product bet.}
+Scientific customers also need model plurality, validator-code review,
+engine-grounded evidence, private deployment, internal-package integration and an
+organizational approval trail. ASTRA packages those controls without training a new
+foundation model.
 \end{multicols}
 
-\subsection*{Where ASTRA makes a different product bet}
+\begin{riskbox}
+\textbf{No false equivalence.} Deep Think, Aletheia, Co-Scientist and AlphaEvolve are
+frontier research programs with reported results that ASTRA has not reproduced.
+Their public disclosures do not provide an apples-to-apples per-discovery cost.
+ASTRA's current claim is narrower: useful controls and reproducible evidence can be
+delivered with a compact three-model orchestrator and a single scientific workstation.
+\end{riskbox}
+
+\newpage
+\section*{Benchmark evidence as of July 26, 2026}
+
+\subsection*{What has been measured}
+
+\begin{tabularx}{\textwidth}{@{}>{\bfseries\color{navy}}p{3.2cm} p{2.7cm} Y@{}}
+\toprule
+Evidence gate & Result & Interpretation \\
+\midrule
+Automated production suite & 68/68 passed &
+Core routing, deliberation, Lean safeguards, external evaluators, trajectory metrics,
+validator repair and client evidence remain regression-tested. \\
+\addlinespace
+Local client validation & 5/5 passed &
+Z3, SciPy, Pint, SymPy and GR\_python produced complete evidence bundles in the
+production Python environment. \\
+\addlinespace
+Local--ASTRUM replication & 8/8 passed; 100\% agreement &
+Four application cases produced matching claim verdicts on Windows and the remote
+Linux workstation. This is reproducibility evidence, not broad scientific accuracy. \\
+\addlinespace
+Parallel execution smoke & 8/8 grade-A runs &
+Four deterministic cases ran on both oracles with four workers: verdict accuracy and
+cross-oracle agreement were both 100\%; P50/P95 latency was 5.422/8.598 seconds. \\
+\addlinespace
+vNext.1 local repair gate & 4/4 repaired &
+Every exact source pattern that the deterministic repairer claims to support was
+detected and repaired; median/P95 repair time was 0.702/1.913 ms. \\
+\addlinespace
+Sound-code calibration & 0/3 false blocks &
+Three sound validators, including an EinsteinPy API regression, remained approved by
+the deterministic gate. The sample is intentionally small and must grow. \\
+\addlinespace
+Paired diversity canary & 2/4 passed in both arms &
+Heterogeneous proposers increased mean perspective separation from 0.5958 to 0.7459,
+but produced no pass-rate uplift in four public cases. \\
+\addlinespace
+Long-horizon vNext.0 canary & 0/4 credible cycles &
+The first repair strategy did not improve conversion and averaged 1,045 seconds per
+cycle. ASTRA records this as a null result, not a success. \\
+\addlinespace
+vNext.1 one-cell diagnostic & reviewer timeout; repaired artifact 12/12 &
+The maximum-model cycle stopped at the 240-second reviewer ceiling after 1,451
+seconds. A diagnostic ASTRUM run exposed one noncanonical symbolic-zero failure;
+the new deterministic repair made all twelve checks pass. This remains unreviewed
+diagnostic evidence, not an admitted scientific result. \\
+\bottomrule
+\end{tabularx}
 
 \begin{keybox}
-Aletheia is the strongest public reference for the research-agent pattern; ASTRA is
-not presented as matching its published mathematical performance. ASTRA's product bet
-is that customers will also need \textbf{model plurality, validator-code review,
-engine-grounded evidence, private deployment, internal-package integration and
-organizational approval workflows}. The opportunity is to turn the pattern demonstrated
-at the frontier into an auditable R\&D operating layer.
+\textbf{Why the null results are useful.} vNext.0 showed that asking Claude to regenerate
+large validators more often increased latency without clearing the reviewer. vNext.1
+therefore applies safe deterministic edits first, performs compile/import smoke checks,
+allows at most one bounded exact-edit model patch, and refuses scripts too large for
+that patch context. The one-cell vNext.1 diagnostic then added a third local repair:
+canonicalization of raw symbolic tensor-zero checks. This is a measured improvement in
+control and cost exposure; the full comparative canary must still determine whether it
+improves scientific conversion.
 \end{keybox}
+
+\subsection*{External benchmark strategy}
+
+ASTRA has pinned adapters or protocols for SciCode, miniF2F, FrontierScience and
+AInsteinBench. SciCode evaluates code generation on scientist-curated research
+problems,\footnote{\href{https://arxiv.org/abs/2407.13168}{Tian et al., ``SciCode: A Research Coding Benchmark Curated by Scientists,'' 2024.}}
+FrontierScience tests expert-level scientific reasoning,\footnote{\href{https://openai.com/index/frontierscience/}{OpenAI, ``Evaluating AI's ability to perform scientific research tasks,'' 2025.}}
+and AInsteinBench targets coding agents inside scientific software
+repositories.\footnote{\href{https://github.com/ByteDance-Seed/AInsteinBench}{ByteDance Seed, ``AInsteinBench,'' accessed July 2026.}}
+AstaBench is a useful future umbrella because it spans literature, data, planning,
+tools, coding and search across more than 2,400 problems.\footnote{\href{https://allenai.org/asta/bench}{Allen Institute for AI, ``AstaBench,'' accessed July 2026.}}
 
 \begin{plainbox}
-\textbf{Important distinction.} Gemini Deep Think is a specialized reasoning mode
-built on Gemini 3.1 Pro.\footnote{\href{https://deepmind.google/models/gemini/deep-think/}{Google DeepMind, ``Gemini 3.1 Deep Think,'' accessed July 2026.}}
-Aletheia is the agentic research system built around that capability. ASTRA is a
-separate orchestration architecture and does not use Aletheia or Deep Think. Its current
-Antigravity role uses a high-reasoning Gemini 3.1 Pro model alongside Codex and Claude,
-with different responsibilities and independent execution.
+\textbf{Benchmark discipline.} Adapter readiness is not a score. Operational errors are
+excluded from scientific pass rates, architecture comparisons use frozen cases and
+budgets, and qualitative depth or novelty requires architecture-blinded expert review.
+The machine-readable release snapshot is tracked with the source repository.
 \end{plainbox}
 
-\subsection*{Strategic interpretation}
+\subsection*{Compact operating profile}
 
-For investors and clients, DeepMind's work reduces category risk: it demonstrates that
-iterative generation, verification, revision, balanced proof/refutation and human
-collaboration can materially extend model usefulness in research. ASTRA's remaining
-commercial question is whether its broader, deployable assurance layer can create
-measurable value in customer workflows outside a frontier research laboratory.
-
-\subsection*{Current proof of operation}
-
-On July 23, 2026, the local production configuration completed an end-to-end
-integration cycle:
-
-\begin{itemize}
-  \item Claude Opus 4.8 produced a proposed validator.
-  \item GPT-5.6 Sol rejected the first artifact as non-executable and epistemically invalid.
-  \item Claude revised it; GPT-5.6 Sol approved the corrected validator.
-  \item Exact polynomial normalization and Z3 returned a decisive \texttt{PASS}.
-  \item GPT-5.6 Sol independently interpreted the code and evidence as \texttt{VALIDATED}.
-  \item Antigravity navigation marked the integration objective resolved and proposed boundary tests.
-\end{itemize}
-
-\begin{keybox}
-\textbf{What this proves:} the implemented models, review loop, execution oracle and
-navigator can exchange artifacts and close a complete cycle. \textbf{What it does not
-prove:} market adoption, universal scientific correctness, or readiness for every
-enterprise environment. Those are the next validation programs.
-\end{keybox}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries\color{navy}}p{3.4cm} Y@{}}
+\toprule
+Resource dimension & ASTRA production profile \\
+\midrule
+Foundation-model development & No model pretraining or fine-tuning is required; ASTRA orchestrates authenticated model services. \\
+Model portfolio & Codex \texttt{gpt-5.6-sol} at \texttt{xhigh}, Antigravity/agy
+\texttt{gemini-3.1-pro-high}, and Claude Code \texttt{claude-opus-4-8}, with
+phase-specific roles and recorded bounded fallbacks. \\
+Scientific compute & Local workstation plus one 16-core / 32-thread ASTRUM node with 29 GiB RAM and an RTX 3080; heavy validators route remotely. \\
+Validation software & Primarily open scientific engines plus optional Mathematica and internal packages. \\
+Repair exposure & Deterministic edits first; at most one bounded model patch in vNext.1. \\
+Measured cost proxies & Model-call count, phase wall time, oracle time, repair attempts and evidence yield per call. \\
+Unmeasured economics & No audited total-cost-per-accepted-result comparison with frontier systems yet. \\
+\bottomrule
+\end{tabularx}
 
 \subsection*{Metrics for design-partner pilots}
 
@@ -468,12 +537,12 @@ enterprise environment. Those are the next validation programs.
 \toprule
 Product metric & Why it matters \\
 \midrule
-Time from objective to first reproducible test & Measures research-cycle compression \\
-Independent reviewer rejection rate & Reveals how often first-pass validators are unsafe \\
-Revision success rate & Measures value of the cross-model correction loop \\
-False-acceptance rate on adversarial benchmarks & Core assurance and trust metric \\
-Reproduction rate on a second machine or engine & Tests portability of evidence \\
-Human review time per accepted result & Measures whether traceability reduces expert burden \\
+Time and model calls to first reproducible test & Measures research-cycle compression and inference exposure \\
+Independent reviewer rejection and recovery & Measures value of heterogeneous perspectives \\
+False-acceptance rate on adversarial holdouts & Core assurance and trust metric \\
+Cross-oracle reproduction rate & Tests portability and environmental independence \\
+Human review time per accepted result & Tests whether traceability reduces expert burden \\
+Accepted evidence per dollar or subscription-hour & Required before making a cost-superiority claim \\
 \bottomrule
 \end{tabularx}
 
@@ -499,7 +568,7 @@ Human review time per accepted result & Measures whether traceability reduces ex
 \node[model,below right=of goal] (agyconj) {Antigravity\\co-conjecture};
 \node[model,below=16mm of goal] (synth) {Cross-critique\\Codex synthesis};
 \node[review,below=of synth] (claude) {Claude Opus\\validation code};
-\node[review,below=of claude] (reviewer) {Codex reviewer\\approve or revise};
+\node[review,below=of claude] (reviewer) {Deterministic preflight\\+ Codex reviewer};
 \node[engine,below=of reviewer] (oracle) {Execution oracle\\symbolic, numeric, formal};
 \node[model,below left=of oracle] (analyst) {Codex analyst\\evidence verdict};
 \node[model,below right=of oracle] (navigator) {Antigravity navigator\\next direction};
@@ -512,7 +581,7 @@ Human review time per accepted result & Measures whether traceability reduces ex
 \draw[arr] (synth)--(claude);
 \draw[arr] (claude)--(reviewer);
 \draw[arr] (reviewer)--node[right]{approved}(oracle);
-\draw[loop] (reviewer.west) -- ++(-13mm,0) |- node[pos=.28,left]{revise} (claude.west);
+\draw[loop] (reviewer.west) -- ++(-16mm,0) |- node[pos=.27,left,align=right]{local fix or\\one exact patch} (claude.west);
 \draw[arr] (oracle)--(analyst);
 \draw[arr] (oracle)--(navigator);
 \draw[arr] (analyst)--(gate);
@@ -527,11 +596,12 @@ Human review time per accepted result & Measures whether traceability reduces ex
 \end{center}
 
 \begin{darkbox}
-\textbf{Role separation is the central control.}
+\textbf{Role separation and bounded correction are the central controls.}
 Codex leads conjecture, synthesis, code review and evidence analysis.
 Antigravity contributes an independent conjecture and maintains research direction.
-Claude authors and revises validation code. Deterministic engines, not model consensus,
-produce the evidence.
+Claude authors validation code and may supply one exact-edit repair. ASTRA first
+applies safe deterministic fixes and compile/import smoke checks. Deterministic
+engines, not model consensus, produce the evidence.
 \end{darkbox}
 
 \subsection*{Interfaces and deployment}
@@ -549,7 +619,27 @@ Security posture & Credentials remain in local configuration; private execution 
 \bottomrule
 \end{tabularx}
 
-\newpage
+\subsection*{Fast and deep execution profiles}
+
+\begin{plainbox}
+\textbf{What can run in parallel.} Independent validation cases, random seeds,
+parameter sweeps and cross-oracle replications can fan out across local workers and
+ASTRUM. Within a single scientific cycle, model roles remain ordered where one artifact
+depends on another. Subscription-backed model calls are kept sequential in comparative
+benchmarks so contention and quota timing do not become hidden confounders.
+\end{plainbox}
+
+ASTRUM exposes 16 physical / 32 logical CPU threads, 29 GiB RAM and an RTX 3080.
+CPU-parallel SciPy, NumPy and symbolic workloads use the node when appropriate; GPU
+work routes only when the validator is genuinely GPU-shaped. The fast release profile
+uses deterministic regression and replay gates first. The deep profile runs frozen,
+long-horizon model trajectories and architecture-blinded expert scoring.
+
+In the current four-worker smoke, eight deterministic local/ASTRUM runs all earned
+grade A, with 100\% verdict accuracy and cross-oracle agreement. This demonstrates
+parallel release throughput and portability; it does not measure multi-model
+scientific depth.
+
 \section*{The core algorithm}
 
 \begin{plainbox}
@@ -564,15 +654,17 @@ maximum code revisions $R$, execution policy $O$.
              $q_a \leftarrow \mathrm{Antigravity.critique}(p_c)$\\
 4.\quad $h \leftarrow \mathrm{Codex.synthesize}(G,p_c,p_a,q_c,q_a)$\\
 5.\quad $v_0 \leftarrow \mathrm{Claude.translate}(G,h)$\\
-6.\quad for $i=0,\ldots,R$:\\
-\hspace*{7mm}$r_i \leftarrow \mathrm{Codex.review}(G,h,v_i)$\\
-\hspace*{7mm}if $r_i=\mathrm{APPROVED}$: break\\
-\hspace*{7mm}$v_{i+1} \leftarrow \mathrm{Claude.revise}(v_i,r_i)$\\
-7.\quad $e \leftarrow \mathrm{Oracle.execute}(v_i,O)$\\
-8.\quad $s \leftarrow \mathrm{Guard}(v_i,e)$\\
-9.\quad $a \leftarrow \mathrm{Codex.analyze}(G,h,v_i,e,s)$\\
-10.\quad $n \leftarrow \mathrm{Antigravity.navigate}(G,K,h,a)$\\
-11.\quad $\mathrm{HumanGate}(h,v_i,e,a,n)$
+6.\quad $(d,c) \leftarrow \mathrm{Preflight.audit\_and\_compile}(v_0)$\\
+7.\quad $v_1 \leftarrow \mathrm{LocalRepair}(v_0,d)$ \hfill [safe patterns only]\\
+8.\quad $r \leftarrow \mathrm{Codex.review}(G,h,v_1,c)$\\
+9.\quad if $r=\mathrm{REVISE}$ and patchable:\\
+\hspace*{7mm}$p \leftarrow \mathrm{Claude.exactPatch}(v_1,r)$;\quad
+              $v_2 \leftarrow \mathrm{ApplyBounded}(v_1,p)$\\
+10.\quad $e \leftarrow \mathrm{Oracle.execute}(v_2,O)$\\
+11.\quad $s \leftarrow \mathrm{Guard}(v_2,e)$\\
+12.\quad $a \leftarrow \mathrm{Codex.analyze}(G,h,v_2,e,s)$\\
+13.\quad $n \leftarrow \mathrm{Antigravity.navigate}(G,K,h,a)$\\
+14.\quad $\mathrm{HumanGate}(h,v_2,e,a,n)$
 \end{plainbox}
 
 \subsection*{Conservative decision semantics}
@@ -623,7 +715,6 @@ the recorded validator, execution and assumptions. It does not mean absolute tru
 The evidence remains open to stronger proof, independent replication and expert review.
 \end{keybox}
 
-\newpage
 \section*{Scientific engine and extension model}
 
 \subsection*{Oracle portfolio}
@@ -684,14 +775,13 @@ reviewed.''
 \end{itemize}
 \end{multicols}
 
-\newpage
 \section*{Commercialization roadmap}
 
 \begin{tabularx}{\textwidth}{@{}>{\bfseries\color{navy}}p{2.5cm} p{4.0cm} Y@{}}
 \toprule
 Phase & Product objective & Evidence required before advancing \\
 \midrule
-Now & Operational multi-model research loop and scientific oracle & Repeated benchmark passes; documented end-to-end cycles; reproducible local installation \\
+Now & Operational multi-model research loop, vNext.1 assurance and scientific oracle & Maintain 100\% release-suite pass; harden maximum-model phase budgets; complete the frozen comparative canary; publish evidence snapshots \\
 \addlinespace
 Pilot hardening & Deploy with a small number of design partners & Measured time-to-evidence, reviewer correction value, reproduction rate and expert satisfaction \\
 \addlinespace
@@ -723,7 +813,7 @@ Platform expansion & Private deployment, partner engines and model marketplace &
 Risk & Why it matters & Mitigation direction \\
 \midrule
 Validator mismatch & Code may test a weaker or different claim & Independent code review, human gate, benchmarked failure patterns \\
-Model latency and quota & Maximum-quality cycles can take minutes & Phase budgets, fallbacks, caching, fast and deep profiles \\
+Model latency and quota & Maximum-quality cycles can take tens of minutes & Deterministic repair, one bounded patch, phase budgets, caching, detached runs and ASTRUM fan-out \\
 False confidence & Users may overread \texttt{VALIDATED} & Explicit semantics, evidence display, independent engines, approval policy \\
 Scientific breadth & No system is expert in every domain & Vertical focus, package adapters, domain reviewers and scoped claims \\
 Enterprise security & Generated code executes with real resources & Isolation, allowlists, containers, credentials policy and audit logs \\
@@ -734,13 +824,15 @@ Go-to-market diffusion & ``Science'' is too broad as an initial segment & Start 
 \subsection*{The next proof points}
 
 \begin{itemize}
-  \item demonstrate lower false-acceptance rates than a single-model baseline;
-  \item reproduce partner results across a second environment or engine;
-  \item quantify expert time saved per accepted or refuted claim;
+  \item rerun the maximum-model one-cell diagnostic after phase-budget hardening, then
+  complete the frozen vNext.1 comparison against baseline and vNext.0;
+  \item expand adversarial holdouts beyond the four deterministic repair patterns;
+  \item publish scored SciCode, FrontierScience, miniF2F and AInsteinBench subsets
+  with operational failures reported separately;
+  \item quantify expert time, model calls and compute cost per accepted or refuted claim;
   \item identify one vertical where ASTRA becomes a paid part of the weekly R\&D workflow.
 \end{itemize}
 
-\newpage
 \section*{Engagement proposal}
 
 \begin{darkbox}
@@ -770,11 +862,12 @@ reproducibility, review effort and false acceptance.
 The immediate diligence questions are concrete:
 
 \begin{enumerate}
-  \item Does independent review materially improve generated validators?
+  \item Does heterogeneous review materially improve generated validators under equal budgets?
   \item Which customer segment has the highest cost of unverifiable AI output?
   \item Can the evidence architecture become a repeatable team workflow?
   \item Which data, adapters and calibration assets compound with usage?
-  \item Can private deployment and scientific specialization support durable economics?
+  \item Can private deployment and scientific specialization support durable economics
+  despite frontier-model dependence?
 \end{enumerate}
 
 \subsection*{For a strategic partner}
@@ -794,6 +887,14 @@ scientific workflow, one baseline, one reproducibility target and an agreed set 
 acceptance metrics. The goal is not a demo; it is evidence that ASTRA changes a real
 R\&D decision.
 \end{keybox}
+
+\begin{plainbox}
+\textbf{Astrum Drive value proposition.} ASTRA turns frontier-model capability into a
+governed scientific workflow that Astrum Drive can own, calibrate and integrate. The
+near-term asset is not a claim to have built a larger model; it is the control plane,
+validator library, benchmark discipline, package graph and accumulated evidence needed
+to make powerful models useful in consequential physics and engineering work.
+\end{plainbox}
 
 \vfill
 \begin{center}

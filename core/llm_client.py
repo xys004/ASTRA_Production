@@ -485,6 +485,7 @@ class ASTRAIntelligence:
             "sampling_as_proof", "wrong_domain", "missing_assumption",
             "wrong_tolerance", "wrong_units", "unknown_as_pass",
             "swallowed_exception", "missing_dependency", "engine_mismatch",
+            "unsimplified_symbolic_zero",
         }
         defect_labels = parsed.get("defect_labels")
         if not isinstance(defect_labels, list):
