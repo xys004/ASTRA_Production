@@ -1,0 +1,50 @@
+{
+  "id": "lean_assumption_repair",
+  "title": "Counterexample-guided repair of a finite-sum inference",
+  "domain": "formal_logic",
+  "objective": "Map the boundary between true and false versions of the following informal inference: local pairwise lower constraints on a finite family of real numbers force a useful global lower bound on their total sum. Generate several precise candidate formulations, use small finite countermodels to eliminate overgeneralizations, identify assumptions that are sufficient without being vacuous, and kernel-check at least one corrected theorem in Lean 4.",
+  "success_definition": "The program should not merely prove a supplied theorem. It must explore multiple formalizations, expose at least one false generalization, explain why it fails, and converge to a corrected statement whose assumptions and scope are explicit.",
+  "deliverables": [
+    "A hypothesis map containing false and corrected formulations across at least two finite dimensions.",
+    "Executable counterexample searches for rejected formulations.",
+    "A Lean 4 plus Mathlib proof of at least one nontrivial corrected theorem.",
+    "A dependency explanation showing which assumptions do real logical work."
+  ],
+  "preferred_validators": [
+    "Lean 4 with pinned Mathlib",
+    "Z3",
+    "SymPy or exact rational enumeration",
+    "ASTRUM Lean environment"
+  ],
+  "resources": [
+    "Lean 4 environment resolved through ASTRA_LOCAL_LEAN4_ROOT or the configured ASTRUM oracle"
+  ],
+  "linear_control_directions": [
+    "Formalize one pairwise-constraint statement for three real variables.",
+    "Search bounded rational assignments for a counterexample.",
+    "Repeat the search for four real variables.",
+    "Add nonnegativity assumptions and retest the statement.",
+    "Derive a summed inequality from all pairwise constraints.",
+    "Identify a concise sufficient assumption set.",
+    "Encode the corrected finite-dimensional statement in Lean 4.",
+    "Kernel-check the theorem and summarize the assumption boundary."
+  ],
+  "expert_anchors": {
+    "goal_advancement": "Coverage and clarity of the true/false boundary for the family of local-to-global inferences.",
+    "hypothesis_quality": "Precision, falsifiability, and nontriviality of the alternative formulations and assumption sets.",
+    "research_depth": "Whether countermodels drive principled theorem repair and generalization rather than disconnected attempts.",
+    "evidence_quality": "Correct use of exact countermodels, domain declarations, Lean kernel checking, and separation of testing from proof.",
+    "self_correction": "Recognition of failed generalizations and disciplined repair without silently changing the target.",
+    "cross_perspective_uptake": "Whether a minority proposal supplies a countermodel, missing assumption, proof lemma, or alternate formalization used later.",
+    "novelty_utility": "Value of the resulting assumption map as a reusable logical pattern or formalization example.",
+    "artifact_reproducibility": "Lean source, toolchain metadata, counterexample code, exact witnesses, and unambiguous theorem statements."
+  },
+  "budget": {
+    "max_cycles": 8,
+    "max_wall_minutes": 240,
+    "cycle_timeout_seconds": 1800,
+    "execution_timeout_seconds": 600,
+    "human_interventions": 1
+  },
+  "tags": ["logic", "formal", "lean", "astrum"]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "client_formula_regression",
+  "application": "Analytical formula regression",
+  "demonstration": "general_client_assurance",
+  "objective": "Detect a symbolic regression before a formula reaches production.",
+  "claim": "The expanded cubic formula implemented by the application is algebraically identical to (x + y)^3.",
+  "expected_claim_verdict": "VALIDATED",
+  "artifact_kind": "symbolic_algebra",
+  "artifact_path": "artifacts/formula_regression.py",
+  "supported_oracles": ["local", "astrum"],
+  "preferred_validators": ["sympy", "wolfram_bridge"],
+  "required_evidence": ["residual", "operation_count", "sympy_version"],
+  "assumptions": [
+    "x and y are elements of a commutative characteristic-zero symbolic domain."
+  ],
+  "limitations": [
+    "This certifies the formula identity, not the correctness of upstream data."
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "client_capacity_policy_refutation",
+  "application": "Capacity and policy constraints",
+  "demonstration": "general_client_assurance",
+  "objective": "Reject an infeasible resource-allocation promise before deployment.",
+  "claim": "Two workloads requiring at least 6 and 5 units can simultaneously fit in a capacity of 10 units.",
+  "expected_claim_verdict": "REFUTED",
+  "artifact_kind": "logical_constraints",
+  "artifact_path": "artifacts/capacity_policy_refutation.py",
+  "supported_oracles": ["local", "astrum"],
+  "preferred_validators": ["z3", "lean4"],
+  "required_evidence": ["solver_result", "minimum_required", "available_capacity", "z3_version"],
+  "assumptions": [
+    "Allocations are integer-valued and both minimum requirements are mandatory."
+  ],
+  "limitations": [
+    "The certificate covers the stated static constraints, not stochastic demand."
+  ]
+}

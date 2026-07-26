@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "description": "Partial, noisy Bloch-vector observations. The preparation and unmeasured components are intentionally insufficient for immediate channel identification.",
+  "preparation": {
+    "label": "plus_x",
+    "bloch_vector": [1.0, 0.0, 0.0]
+  },
+  "observations": [
+    {"time": 0.0, "x": 1.000, "z": null, "sigma": 0.015},
+    {"time": 0.5, "x": 0.842, "z": null, "sigma": 0.020},
+    {"time": 1.0, "x": 0.704, "z": null, "sigma": 0.020},
+    {"time": 1.7, "x": 0.554, "z": null, "sigma": 0.025},
+    {"time": 2.5, "x": 0.411, "z": null, "sigma": 0.030}
+  ],
+  "frozen_seed": 314159,
+  "note": "The benchmark rewards recognizing observational degeneracy and designing an additional measurement, not guessing a hidden label."
+}

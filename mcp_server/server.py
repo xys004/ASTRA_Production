@@ -118,6 +118,39 @@ def astra_execute(code: str, oracle: str = "local", timeout: int = 180) -> str:
 
 
 @mcp.tool()
+def astra_client_validate(
+    case_id: str = "",
+    oracle: str = "auto",
+    timeout: int = 300,
+) -> str:
+    """
+    Run ASTRA's minimum application-facing assurance package.
+
+    The validator router sends formal invariants to pinned Lean 4, constraints
+    to Z3, symbolic formulas to SymPy, numerical models to SciPy, dimensional
+    checks to Pint, and project cases to their scientific package. Every result
+    includes an explicit claim verdict, artifact hash, assumptions, limitations,
+    structured evidence, provenance and a reproduction command.
+
+    Args:
+        case_id: one case ID, a comma-separated list, or empty for all six cases.
+        oracle: 'auto', 'local', 'astrum', or 'both'. Unsupported combinations
+                are skipped rather than silently rerouted.
+        timeout: per-evidence-bundle execution limit in seconds.
+    """
+    res = _call_astra(
+        {
+            "action": "client_validate",
+            "case_id": case_id,
+            "oracle": oracle,
+            "timeout": timeout,
+        },
+        timeout=min(1740, max(600, timeout * 6 + 60)),
+    )
+    return json.dumps(res, indent=2, ensure_ascii=False)
+
+
+@mcp.tool()
 def astra_cycle(intuition: str, oracle: str = "local", timeout: int = 1500,
                 exec_timeout: int = 0, objective: str = "") -> str:
     """

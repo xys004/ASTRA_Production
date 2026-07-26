@@ -1,0 +1,50 @@
+{
+  "id": "optimizer_failure_recovery",
+  "title": "Failure-driven repair of a scientific optimization strategy",
+  "domain": "scientific_computing",
+  "objective": "Develop and stress-test a compact optimization strategy for a family containing smooth, ill-conditioned, multimodal, and noisy objectives under bounded evaluation budgets. Begin with a defensible baseline, identify where and why it fails, introduce only evidence-motivated changes, and determine whether the repaired strategy improves robustness without hiding cost in extra evaluations or privileged initialization.",
+  "success_definition": "The result must include genuine failure cases, a causally motivated repair, equal-budget comparisons over multiple seeds, and an honest account of regimes where the repair does not help.",
+  "deliverables": [
+    "A frozen objective-family and initialization protocol.",
+    "Baseline failure evidence across multiple seeds.",
+    "At least one repair motivated by an observed failure mechanism.",
+    "Equal-evaluation-budget comparison with uncertainty and reproducible code."
+  ],
+  "preferred_validators": [
+    "SciPy optimize",
+    "NumPy",
+    "warpbubble optimization components when applicable",
+    "ASTRUM for independent seeds"
+  ],
+  "resources": [
+    "Optional warpbubble optimization package, resolved through ASTRA_WARPBUBBLE_OPT_ROOT"
+  ],
+  "linear_control_directions": [
+    "Define smooth, ill-conditioned, multimodal, and noisy objective functions.",
+    "Run a local gradient-based baseline under a fixed evaluation budget.",
+    "Run a derivative-free baseline under the same budget.",
+    "Measure sensitivity to initialization over frozen seeds.",
+    "Add a multistart strategy to the stronger baseline.",
+    "Add a simple noise-robust acceptance or averaging rule.",
+    "Compare all strategies at equal objective-evaluation counts.",
+    "Summarize robust gains, failure regimes, and computational cost."
+  ],
+  "expert_anchors": {
+    "goal_advancement": "How convincingly the work develops a more robust strategy from observed failures under equal budgets.",
+    "hypothesis_quality": "Specificity and testability of proposed failure mechanisms and repairs.",
+    "research_depth": "Whether the investigation forms a failure-observation-repair-retest chain rather than a flat algorithm comparison.",
+    "evidence_quality": "Fair evaluation counts, seeds, uncertainty, reachable failures, and avoidance of initialization or tuning leakage.",
+    "self_correction": "Ability to abandon or restrict a repair when evidence shows no gain or a new cost.",
+    "cross_perspective_uptake": "Use of a non-dominant model's failure mechanism, benchmark regime, or repair in subsequent tests.",
+    "novelty_utility": "Transferability of the resulting diagnostic and repair strategy to real scientific optimization.",
+    "artifact_reproducibility": "Frozen functions, budgets, seeds, code, environment, and complete per-run results."
+  },
+  "budget": {
+    "max_cycles": 8,
+    "max_wall_minutes": 300,
+    "cycle_timeout_seconds": 1800,
+    "execution_timeout_seconds": 900,
+    "human_interventions": 1
+  },
+  "tags": ["optimization", "scientific-computing", "astrum"]
+}

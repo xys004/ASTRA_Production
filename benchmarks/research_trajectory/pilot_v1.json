@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.0",
+  "id": "astra_research_trajectory_pilot_v1",
+  "status": "frozen_before_live_execution",
+  "frozen_date": "2026-07-25",
+  "question": "Under a single human objective and a fixed compute ceiling, does ASTRA's heterogeneous reflective loop produce deeper, broader, more useful, and more reproducible research trajectories than matched homogeneous, single-model, and non-reflective controls?",
+  "configurations": [
+    "full",
+    "homogeneous-proposers",
+    "codex-only",
+    "full-linear"
+  ],
+  "seeds": [11, 29, 47],
+  "cases": [
+    "gr_invariant_audit",
+    "warp_shape_pareto",
+    "lean_assumption_repair",
+    "growth_model_discrimination",
+    "quantum_channel_discrimination",
+    "optimizer_failure_recovery"
+  ],
+  "canary_cases": [
+    "gr_invariant_audit",
+    "growth_model_discrimination"
+  ],
+  "expert_weights": {
+    "goal_advancement": 0.18,
+    "hypothesis_quality": 0.13,
+    "research_depth": 0.16,
+    "evidence_quality": 0.16,
+    "self_correction": 0.10,
+    "cross_perspective_uptake": 0.10,
+    "novelty_utility": 0.09,
+    "artifact_reproducibility": 0.08
+  },
+  "primary_endpoints": [
+    "blind_research_quality_0_to_100",
+    "human_prompt_efficiency",
+    "autonomous_loop_yield",
+    "independent_evidence_rate",
+    "recovery_rate_after_negative_evidence"
+  ],
+  "reporting_rule": "Report quality, autonomy, reliability, and cost as a Pareto profile. Do not collapse the automatic process metrics and blinded expert score into one number.",
+  "minimum_cycles_before_resolution": 3,
+  "maximum_consecutive_operational_failures": 2,
+  "minimum_live_protocol": {
+    "expert_raters_per_completed_cell": 2,
+    "architecture_blinding": true,
+    "paired_case_seed_analysis": true,
+    "fallback_models_forbidden": true,
+    "human_interventions_per_cell": 1
+  }
+}

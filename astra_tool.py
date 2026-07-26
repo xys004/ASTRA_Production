@@ -16,6 +16,15 @@ Acciones:
       -> ejecuta el codigo via core.executor (respeta local/ASTRUM/auto) y
          devuelve {stdout, stderr, exit_code, engine, verdict, oracle_used}.
 
+  {"action":"review","objective":"...","conjecture":"...","code":"...",
+   "provider":"codex_cli"}
+      -> audita la estrategia del validador sin ejecutarlo.
+
+  {"action":"client_validate","case_id":"optional","oracle":"local|astrum|both|auto",
+   "timeout":300}
+      -> enruta y ejecuta la validacion minima orientada a clientes, devolviendo
+         paquetes de evidencia con hashes, supuestos, limites y reproducibilidad.
+
 Uso:  echo '{"action":"execute","code":"print(1)"}' | python astra_tool.py
 """
 import os
@@ -230,6 +239,104 @@ async def _do_execute(req: dict) -> dict:
     return res
 
 
+async def _do_review(req: dict) -> dict:
+    """Public subprocess boundary for adversarial validator-audit benchmarks."""
+    from core.llm_client import ASTRAIntelligence
+    from core.preflight import phase_provider_map
+
+    code = req.get("code", "")
+    if not code.strip():
+        return {"error": "code vacio"}
+    provider = (
+        req.get("provider")
+        or os.environ.get("ASTRA_REVIEWER_PROVIDER")
+        or phase_provider_map()["analyst"]
+    )
+    reviewer = ASTRAIntelligence(provider=str(provider))
+    review = await reviewer.review_validation_code(
+        shared_goal=str(req.get("objective") or req.get("conjecture") or ""),
+        conjecture=str(req.get("conjecture") or req.get("objective") or ""),
+        code=code,
+    )
+    warnings, models = _cli_meta([("reviewer", reviewer)])
+    out = {"review": review, "provider": provider}
+    if warnings:
+        out["warnings"] = warnings
+    if models:
+        out["cli_models"] = models
+    return out
+
+
+async def _do_client_validate(req: dict) -> dict:
+    """Run one or all deterministic client evidence cases through the router."""
+    from core.client_validation import (
+        load_client_validation_cases,
+        run_client_validation_case,
+        select_oracles,
+    )
+
+    cases = load_client_validation_cases(
+        include_optional=bool(req.get("include_optional", False))
+    )
+    case_id = str(req.get("case_id") or "").strip()
+    if case_id:
+        wanted = {item.strip() for item in case_id.split(",") if item.strip()}
+        cases = [case for case in cases if case.id in wanted]
+        missing = wanted - {case.id for case in cases}
+        if missing:
+            return {"error": f"casos de cliente desconocidos: {sorted(missing)}"}
+    oracle = str(req.get("oracle") or "auto").strip().lower()
+    timeout = int(req.get("timeout") or 300)
+    bundles = []
+    skipped = []
+    for case in cases:
+        oracles = select_oracles(case, oracle)
+        if not oracles:
+            skipped.append(case.id)
+            continue
+        for selected in oracles:
+            bundles.append(
+                await run_client_validation_case(
+                    case,
+                    oracle=selected,
+                    timeout=timeout,
+                )
+            )
+
+    grouped = {}
+    for bundle in bundles:
+        grouped.setdefault(bundle["case"]["id"], []).append(bundle)
+    passing_cases = sum(
+        bool(items)
+        and all(item["validation"]["status"] == "PASS" for item in items)
+        for items in grouped.values()
+    )
+    comparable = [items for items in grouped.values() if len(items) > 1]
+    agreements = [
+        len({item["validation"]["claim_verdict"] for item in items}) == 1
+        for items in comparable
+    ]
+    return {
+        "schema_version": "1.0",
+        "summary": {
+            "registered_cases": len(cases),
+            "executed_cases": len(grouped),
+            "bundles": len(bundles),
+            "passing_bundles": sum(
+                item["validation"]["status"] == "PASS" for item in bundles
+            ),
+            "passing_cases": passing_cases,
+            "cross_oracle_cases": len(comparable),
+            "cross_oracle_agreement": (
+                round(sum(agreements) / len(agreements), 6)
+                if agreements else None
+            ),
+            "skipped": skipped,
+        },
+        "bundles": bundles,
+    }
+
+
 # ============================================================================
 # ENSEMBLE MULTI-MODELO (conjetura y/o analisis con >1 proveedor por fase)
 # ----------------------------------------------------------------------------
@@ -338,8 +445,20 @@ async def _ensemble_conjecture(providers, axiomatic_base, intuition, phase_timeo
     surv = [(p, _clean_text(g), a) for p, a, g in zip(providers, ais, gens)]
     surv = [(p, t, a) for (p, t, a) in surv if t]
     if not surv:
+        failures = []
+        for provider, result in zip(providers, gens):
+            if isinstance(result, Exception):
+                detail = f"{type(result).__name__}: {result}"
+            elif isinstance(result, str):
+                detail = result.strip() or "respuesta vacia"
+            else:
+                detail = f"respuesta no textual: {type(result).__name__}"
+            failures.append(
+                f"{provider}={detail.replace(chr(10), ' ')[:500]}"
+            )
         return (
-            "API_ERROR: todas las conjeturas del ensemble fallaron",
+            "API_ERROR: todas las conjeturas del ensemble fallaron; "
+            + " | ".join(failures),
             used,
             {"proposals": [], "critiques": [], "synthesis_provider": synth_provider},
         )
@@ -436,6 +555,24 @@ async def _do_cycle(req: dict) -> dict:
         or req.get("shared_goal")
         or intuition
     ).strip()
+    validator_repair_vnext = (
+        os.environ.get("ASTRA_VALIDATOR_REPAIR_VNEXT", "0")
+        .strip()
+        .strip("'\"")
+        .lower()
+        in ("1", "true", "on", "yes")
+    )
+    validator_repair_strategy = (
+        os.environ.get("ASTRA_VALIDATOR_REPAIR_STRATEGY", "local-patch")
+        .strip()
+        .strip("'\"")
+        .lower()
+    )
+    validator_repair_vnext1 = (
+        validator_repair_vnext
+        and validator_repair_strategy
+        in ("local-patch", "local_patch", "vnext1", "vnext.1", "production")
+    )
 
     pmap = phase_provider_map()
     # Ensemble multi-modelo: ASTRA_<FASE>_PROVIDER puede ser lista (comas). El
@@ -540,7 +677,7 @@ async def _do_cycle(req: dict) -> dict:
         return await analyst.analyze_results(cj, ex, shared_goal=shared_goal)
 
     def _fail(msg, phase, conjecture_text=None):
-        out = {"error": msg, "phase": phase}
+        out = {"status": "TOOL_ERROR", "error": msg, "phase": phase}
         if conjecture_text:
             # SALVAVIDAS: si murio el traductor, devolver la conjetura ya pagada
             # para que el agente llamador la traduzca el mismo y use astra_execute.
@@ -548,13 +685,63 @@ async def _do_cycle(req: dict) -> dict:
         if timings:
             timings["total"] = round(time.monotonic() - t_start, 2)
             out["timings"] = timings
-        warnings, _ = _cli_meta(agents + ensemble_agents)
+        warnings, cli_models = _cli_meta(agents + ensemble_agents)
         if warnings:
             out["warnings"] = warnings
+        if cli_models:
+            out["cli_models"] = cli_models
         _progress("failed", phase=phase, timings=timings)
         return out
 
     review_history = []
+    preflight_history = []
+    local_repair_history = []
+    model_patch_history = []
+
+    async def _request_model_patch(
+        current_code,
+        translation_input,
+        instructions,
+        source,
+    ):
+        """Request and audit a bounded exact-edit patch from the code author."""
+        before_sha = hashlib.sha256(current_code.encode("utf-8")).hexdigest()
+        _progress(
+            "model_patch",
+            source=source,
+            patch=len(model_patch_history) + 1,
+            timings=timings,
+        )
+        t0 = time.monotonic()
+        patch_result = await trans.repair_validation_code(
+            translation_input,
+            current_code,
+            instructions,
+        )
+        _mark("translate_patch", t0)
+        patched_code = patch_result.get("code") or current_code
+        record = {
+            key: value
+            for key, value in patch_result.items()
+            if key != "code"
+        }
+        record.update(
+            {
+                "source": source,
+                "before_sha256": before_sha,
+                "after_sha256": hashlib.sha256(
+                    patched_code.encode("utf-8")
+                ).hexdigest(),
+            }
+        )
+        model_patch_history.append(record)
+        if patch_result.get("status") != "APPLIED":
+            return (
+                current_code,
+                "Bounded model patch was not applicable: "
+                f"{patch_result.get('reason') or patch_result.get('status')}",
+            )
+        return patched_code, None
 
     async def _review_or_revise(current_code, conjecture_text, translation_input):
         """Codex audits; Claude remains the sole generative code author."""
@@ -571,61 +758,163 @@ async def _do_cycle(req: dict) -> dict:
             }
             return current_code, review, None
         try:
+            if validator_repair_vnext1:
+                revision_env = "ASTRA_VNEXT_MODEL_PATCH_MAX_REVISIONS"
+                revision_default = "1"
+            elif validator_repair_vnext:
+                revision_env = "ASTRA_VNEXT_REVIEW_MAX_REVISIONS"
+                revision_default = "2"
+            else:
+                revision_env = "ASTRA_REVIEW_MAX_REVISIONS"
+                revision_default = "1"
             max_revisions = max(
                 0,
                 int(
-                    os.environ.get("ASTRA_REVIEW_MAX_REVISIONS", "1")
+                    os.environ.get(revision_env, revision_default)
                     .strip()
                     .strip("'\"")
                 ),
             )
         except ValueError:
-            max_revisions = 1
-
-        revisions = 0
-        while True:
-            _progress("review", revision=revisions, timings=timings)
-            t0 = time.monotonic()
-            review = await reviewer.review_validation_code(
-                shared_goal=shared_goal,
-                conjecture=conjecture_text,
-                code=current_code,
+            max_revisions = 1 if validator_repair_vnext1 else (
+                2 if validator_repair_vnext else 1
             )
+
+        model_revisions = 0
+        review_round = 0
+        seen_code = set()
+        while True:
+            code_sha = hashlib.sha256(current_code.encode("utf-8")).hexdigest()
+            _progress(
+                "review",
+                revision=model_revisions,
+                review_round=review_round,
+                timings=timings,
+            )
+            t0 = time.monotonic()
+            if validator_repair_vnext:
+                from core.validator_preflight import (
+                    audit_validation_code,
+                    preflight_as_review,
+                    repair_validation_code,
+                    smoke_validation_code,
+                )
+
+                preflight = audit_validation_code(current_code)
+                smoke = smoke_validation_code(current_code)
+                preflight_record = {
+                    **preflight,
+                    "smoke": smoke,
+                    "revision": model_revisions,
+                    "review_round": review_round,
+                    "code_sha256": code_sha,
+                }
+                preflight_history.append(preflight_record)
+                if (
+                    validator_repair_vnext1
+                    and preflight.get("status") != "APPROVED"
+                    and code_sha not in seen_code
+                ):
+                    seen_code.add(code_sha)
+                    local_result = repair_validation_code(current_code, preflight)
+                    repaired_code = local_result.get("code") or current_code
+                    if local_result.get("changed"):
+                        after_sha = hashlib.sha256(
+                            repaired_code.encode("utf-8")
+                        ).hexdigest()
+                        local_repair_history.append(
+                            {
+                                "source": "deterministic_local_patch",
+                                "review_round": review_round,
+                                "before_sha256": code_sha,
+                                "after_sha256": after_sha,
+                                "repairs": local_result.get("repairs") or [],
+                            }
+                        )
+                        current_code = repaired_code
+                        review_round += 1
+                        _mark("review", t0)
+                        continue
+                if preflight.get("status") != "APPROVED":
+                    review = preflight_as_review(preflight)
+                else:
+                    review = await reviewer.review_validation_code(
+                        shared_goal=shared_goal,
+                        conjecture=conjecture_text,
+                        code=current_code,
+                        static_context=smoke,
+                    )
+                    review["source"] = "model_reviewer"
+            else:
+                review = await reviewer.review_validation_code(
+                    shared_goal=shared_goal,
+                    conjecture=conjecture_text,
+                    code=current_code,
+                )
+                review["source"] = "model_reviewer"
             _mark("review", t0)
-            review_history.append(dict(review))
+            review_history.append(
+                {
+                    **dict(review),
+                    "revision": model_revisions,
+                    "review_round": review_round,
+                    "code_sha256": code_sha,
+                }
+            )
             status = str(review.get("status") or "").upper()
             if status == "APPROVED":
                 return current_code, review, None
             if status == "API_ERROR":
                 return current_code, review, review.get("reasoning") or "reviewer API error"
-            if revisions >= max_revisions:
+            if model_revisions >= max_revisions:
                 return (
                     current_code,
                     review,
                     "Independent reviewer did not approve the validation strategy "
-                    f"after {revisions} revision(s): {review.get('reasoning', '')}",
+                    f"after {model_revisions} model revision(s): "
+                    f"{review.get('reasoning', '')}",
                 )
 
-            revisions += 1
+            model_revisions += 1
             instructions = (
                 review.get("revision_instructions")
                 or review.get("reasoning")
                 or "Regenerate a falsifiable validator with independent checks."
             )
-            _progress("review_revision", revision=revisions, timings=timings)
-            t0 = time.monotonic()
-            current_code = await trans.translate_to_code(
-                translation_input,
-                is_correction=True,
-                previous_error=(
-                    "Independent Codex review returned "
-                    f"{status}. Revise the validation script without changing the "
-                    f"scientific claim. Instructions:\n{instructions}"
-                )[:3500],
+            _progress(
+                "review_revision",
+                revision=model_revisions,
+                timings=timings,
             )
-            _mark("translate", t0)
-            if isinstance(current_code, str) and current_code.startswith("API_ERROR:"):
-                return current_code, review, current_code
+            patch_instructions = (
+                "Independent Codex review returned "
+                f"{status}. Revise the validation script without changing the "
+                f"scientific claim. Instructions:\n{instructions}"
+            )[:3500]
+            if validator_repair_vnext1:
+                current_code, patch_error = await _request_model_patch(
+                    current_code,
+                    translation_input,
+                    patch_instructions,
+                    "model_reviewer",
+                )
+                if patch_error:
+                    return current_code, review, patch_error
+            else:
+                t0 = time.monotonic()
+                current_code = await trans.translate_to_code(
+                    translation_input,
+                    is_correction=True,
+                    previous_error=patch_instructions,
+                    previous_code=current_code,
+                )
+                _mark("translate", t0)
+                if (
+                    isinstance(current_code, str)
+                    and current_code.startswith("API_ERROR:")
+                ):
+                    return current_code, review, current_code
+            review_round += 1
 
     _progress("conjecture", timings=timings)
     t0 = time.monotonic()
@@ -688,6 +977,10 @@ async def _do_cycle(req: dict) -> dict:
         out = _fail(review_error, "reviewer", conjecture_text=conjecture)
         out["code"] = code
         out["code_review"] = code_review
+        out["code_review_history"] = review_history
+        out["validator_preflight_history"] = preflight_history
+        out["validator_local_repair_history"] = local_repair_history
+        out["validator_model_patch_history"] = model_patch_history
         out["deliberation"] = deliberation
         return out
     # exec_timeout opcional del request: calculos pesados legitimos (sweeps,
@@ -721,14 +1014,36 @@ async def _do_cycle(req: dict) -> dict:
         _progress("retry", n=retries, status=analysis.get("status"), timings=timings)
         if analysis.get("status") == "WEAK_PASS":
             reasons = "; ".join((exec_result.get("guard") or {}).get("reasons") or [])
-            t0 = time.monotonic()
-            code = await trans.translate_to_code(
-                translation_input, is_correction=True,
-                previous_error=("The script printed VERDICT: PASS but the deterministic "
-                                f"auditor rejected it: {reasons}. Rewrite it with >=3 "
-                                "independent CHECK legs (symbolic, random-numeric, limit "
-                                "case) and a real, reachable VERDICT: FAIL branch.")[:2000])
-            _mark("translate", t0)
+            correction = (
+                "The script printed VERDICT: PASS but the deterministic auditor "
+                f"rejected it: {reasons}. Add the missing independent CHECK legs "
+                "and a real, reachable VERDICT: FAIL branch without changing "
+                "sound validation code."
+            )[:2000]
+            if validator_repair_vnext1:
+                code, patch_error = await _request_model_patch(
+                    code,
+                    translation_input,
+                    correction,
+                    "post_execution_weak_pass",
+                )
+                if patch_error:
+                    out = _fail(
+                        patch_error,
+                        "translator_retry",
+                        conjecture_text=conjecture,
+                    )
+                    out["validator_model_patch_history"] = model_patch_history
+                    return out
+            else:
+                t0 = time.monotonic()
+                code = await trans.translate_to_code(
+                    translation_input,
+                    is_correction=True,
+                    previous_error=correction,
+                    previous_code=code,
+                )
+                _mark("translate", t0)
         else:
             fixed = try_autofix(code, exec_result.get("stderr") or "")
             if fixed:
@@ -743,13 +1058,30 @@ async def _do_cycle(req: dict) -> dict:
                     + "\n--- Codex analyst diagnosis ---\n"
                     + str(analysis.get("reasoning") or "")
                 ).strip()
-                t0 = time.monotonic()
-                code = await trans.translate_to_code(
-                    translation_input,
-                    is_correction=True,
-                    previous_error=err_ctx[:3000],
-                )
-                _mark("translate", t0)
+                if validator_repair_vnext1:
+                    code, patch_error = await _request_model_patch(
+                        code,
+                        translation_input,
+                        err_ctx[:3000],
+                        "post_execution_code_error",
+                    )
+                    if patch_error:
+                        out = _fail(
+                            patch_error,
+                            "translator_retry",
+                            conjecture_text=conjecture,
+                        )
+                        out["validator_model_patch_history"] = model_patch_history
+                        return out
+                else:
+                    t0 = time.monotonic()
+                    code = await trans.translate_to_code(
+                        translation_input,
+                        is_correction=True,
+                        previous_error=err_ctx[:3000],
+                        previous_code=code,
+                    )
+                    _mark("translate", t0)
         if isinstance(code, str) and code.startswith("API_ERROR:"):
             return _fail(code, "translator_retry", conjecture_text=conjecture)
         code, code_review, review_error = await _review_or_revise(
@@ -759,6 +1091,10 @@ async def _do_cycle(req: dict) -> dict:
             out = _fail(review_error, "reviewer_retry", conjecture_text=conjecture)
             out["code"] = code
             out["code_review"] = code_review
+            out["code_review_history"] = review_history
+            out["validator_preflight_history"] = preflight_history
+            out["validator_local_repair_history"] = local_repair_history
+            out["validator_model_patch_history"] = model_patch_history
             out["deliberation"] = deliberation
             return out
         t0 = time.monotonic()
@@ -827,6 +1163,29 @@ async def _do_cycle(req: dict) -> dict:
         "code": code,
         "code_review": code_review,
         "code_review_history": review_history,
+        "validator_preflight_history": preflight_history,
+        "validator_local_repair_history": local_repair_history,
+        "validator_model_patch_history": model_patch_history,
+        "validator_repair": {
+            "enabled": validator_repair_vnext,
+            "strategy": (
+                "local-patch-vnext.1"
+                if validator_repair_vnext1
+                else (
+                    "legacy-vnext.0"
+                    if validator_repair_vnext
+                    else "classic"
+                )
+            ),
+            "local_repairs": sum(
+                len(item.get("repairs") or [])
+                for item in local_repair_history
+            ),
+            "model_patches": sum(
+                item.get("status") == "APPLIED"
+                for item in model_patch_history
+            ),
+        },
         "execution": exec_result,
         "analysis": analysis,
         "navigation": navigation,
@@ -866,6 +1225,10 @@ def main() -> None:
     try:
         if action == "execute":
             out = asyncio.run(_do_execute(req))
+        elif action == "review":
+            out = asyncio.run(_do_review(req))
+        elif action == "client_validate":
+            out = asyncio.run(_do_client_validate(req))
         elif action == "cycle":
             out = asyncio.run(_do_cycle(req))
         elif action == "submit":

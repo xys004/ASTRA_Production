@@ -1,0 +1,19 @@
+{
+  "id": "client_grpython_zero_trace_formal",
+  "application": "Formal assurance for GR evidence aggregation",
+  "demonstration": "gr_python_flat_spacetime_assurance",
+  "objective": "Kernel-check the logical step that turns a pointwise-zero Ricci diagonal into a zero Ricci trace.",
+  "claim": "For a four-component real diagonal, if every component is zero then its finite sum is zero.",
+  "expected_claim_verdict": "VALIDATED",
+  "artifact_kind": "formal_proof",
+  "artifact_path": "artifacts/grpython_zero_trace.lean",
+  "supported_oracles": ["astrum"],
+  "preferred_validators": ["lean4"],
+  "required_evidence": ["kernel_checked", "lean_version", "mathlib_commit", "theorem_source_sha256"],
+  "assumptions": [
+    "The four diagonal components supplied by the scientific computation are represented as real numbers."
+  ],
+  "limitations": [
+    "Lean certifies the aggregation implication; GR_python and its symbolic algebra establish the physical tensor premises."
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "id": "client_grpython_flat_spacetime",
+  "application": "GR_python package assurance",
+  "demonstration": "gr_python_flat_spacetime_assurance",
+  "objective": "Exercise GR_python on a coordinate-nontrivial but physically flat metric.",
+  "claim": "Minkowski spacetime in spherical coordinates has nonzero connection coefficients but zero Riemann tensor, Ricci tensor and Ricci scalar.",
+  "expected_claim_verdict": "VALIDATED",
+  "artifact_kind": "project_package",
+  "artifact_path": "artifacts/grpython_flat_spacetime.py",
+  "supported_oracles": ["local"],
+  "preferred_validators": ["gr_python", "sympy", "wolfram_bridge"],
+  "required_evidence": ["nonzero_christoffel", "nonzero_riemann", "nonzero_ricci", "ricci_scalar", "gr_python_commit"],
+  "assumptions": [
+    "Coordinates are restricted to r>0 and 0<theta<pi to avoid spherical-coordinate singularities.",
+    "GR_python uses the tensor conventions documented by its public API."
+  ],
+  "limitations": [
+    "A zero-curvature reference validates the calculation path but is not a validation of every metric supported by GR_python."
+  ],
+  "adapter": "gr_python"
+}

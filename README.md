@@ -138,7 +138,7 @@ External CAS (optional, via WSL on Windows):
 # ASTRA_ENGINE: sage      # SageMath
 # ASTRA_ENGINE: maxima    # Maxima CAS
 # ASTRA_ENGINE: cadabra   # Cadabra (tensor algebra)
-# ASTRA_ENGINE: lean      # Lean 4 + Mathlib (formal proofs)
+# ASTRA_ENGINE: lean4     # Lean 4 + Mathlib (formal proofs)
 ```
 
 If an optional CAS is missing, the oracle returns a clear failure instead of misclassifying as validated.
@@ -184,7 +184,10 @@ Check whether the claim "for all positive real x and y, x + y >= 2 sqrt(x y)" ca
 
 ## Benchmark Suite
 
-ASTRA includes a golden benchmark suite for calibrating providers and engines.
+ASTRA includes a three-track Quality Benchmark for scientific truth,
+adversarial validator review, and local–ASTRUM reproducibility. The scientific
+seed suite is balanced between validation and refutation; false acceptance is
+reported separately as a release-veto metric.
 
 ```
 benchmarks/
@@ -201,8 +204,79 @@ python scripts\list_benchmarks.py
 Run the suite:
 
 ```powershell
-python scripts\run_benchmarks.py
+python scripts\run_quality_benchmarks.py --tier smoke --oracle both --jobs 4
+python scripts\run_quality_benchmarks.py --tier standard --oracle local
 ```
+
+Release evaluations can repeat the full architecture and its ablations:
+
+```powershell
+python scripts\run_quality_benchmarks.py --tier release --repeats 3 `
+  --config full,no-review,no-ensemble --oracle both --jobs 4 --cycle-jobs 1
+```
+
+See [QUALITY_BENCHMARKS.md](QUALITY_BENCHMARKS.md) for the metrics, proposed
+release gates, private-holdout protocol, external benchmark adapters, and the
+safe ASTRUM parallelization strategy. See
+[EXTERNAL_BENCHMARKS.md](EXTERNAL_BENCHMARKS.md) for the pinned SciCode,
+miniF2F, FrontierScience, and AInsteinBench protocols and evaluator readiness.
+
+The checkpointed public calibration compares the compact architecture with
+Codex-only, Claude-only, and agy-only baselines while preserving the same phase
+topology and native evaluators:
+
+```powershell
+python scripts\run_external_comparison.py
+```
+
+The tracked suite manifest is
+`benchmarks/external/comparison_calibration_v1.json`; live JSON and Markdown
+tables are written after every cell under
+`workspace/external_comparison_runs/`.
+The older `scripts/run_benchmarks.py` remains available only for
+historical-result compatibility.
+
+For an application-oriented client demonstration, ASTRA also ships a minimum
+validation package with six cases, deterministic validator routing, Lean 4
+formal assurance, a GR_python vertical example, and JSON evidence bundles:
+
+```powershell
+python scripts\run_client_validation.py --oracle both --timeout 300
+```
+
+The verified seed matrix currently passes 10/10 evidence bundles across six
+cases, with full claim-verdict agreement for the four local–ASTRUM pairs.
+See [CLIENT_VALIDATION.md](CLIENT_VALIDATION.md) for the evidence contract,
+formal-environment pinning, acceptance rule, and commercial scope.
+
+### Long-horizon research quality
+
+The terminal-task suites are complemented by **Research Trajectory Benchmark
+v1**. It starts each architecture from one human research objective and measures
+the resulting autonomous hypothesis–evidence–revision trajectory. The matched
+controls separate heterogeneous perspectives, specialist roles, and the causal
+effect of evidence-responsive loops. Automatic metrics cover observable
+process, reliability, and cost; architecture-blinded experts separately assess
+depth, novelty, usefulness, and causal cross-model uptake.
+
+Inspect the canary schedule without model calls:
+
+```powershell
+python scripts\run_research_trajectory_benchmarks.py --dry-run
+```
+
+See [RESEARCH_TRAJECTORY_BENCHMARK.md](RESEARCH_TRAJECTORY_BENCHMARK.md) for the
+six-program pilot, frozen budgets, graph schema, blinded scorecards, ASTRUM
+strategy, and interpretation rules.
+
+The production [Validator Repair vNext.1](VALIDATOR_REPAIR_VNEXT.md) applies
+safe deterministic fixes locally, compiles and inspects imports before model
+review, and limits Claude to one auditable exact-edit patch instead of a full
+validator regeneration. It preserves the distinction between scientific
+refutation and operational failure. `full-vnext0` remains available only to
+reproduce the first, null-result repair experiment.
+See [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md) for the tested release
+state, evidence gates, reproduction commands, and explicit limitations.
 
 ---
 

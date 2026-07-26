@@ -86,7 +86,7 @@ def _extract_json_object(text: str) -> Optional[dict]:
 def _fix_json_backslashes(text: str) -> str:
     """Escape lone backslashes (e.g. LaTeX \\mu) that are invalid inside JSON strings."""
     # Valid JSON escape characters after a backslash: " \ / b f n r t u
-    _VALID = set('"\\\/bfnrtu')
+    _VALID = set(r'"\/bfnrtu')
     out = []
     i = 0
     while i < len(text):
@@ -299,15 +299,41 @@ class ASTRAIntelligence:
             return "Simulated Conjecture: The Ricci scalar R vanishes for the proposed metric."
         return response
 
-    async def translate_to_code(self, conjecture: str, is_correction: bool = False, previous_error: str = None) -> str:
+    async def translate_to_code(
+        self,
+        conjecture: str,
+        is_correction: bool = False,
+        previous_error: str = None,
+        previous_code: str = None,
+    ) -> str:
         """Phase 3: Formal Translator"""
         logger.info(f"[{self.provider.upper()}] Translating to SymPy/Z3/QuTiP/SageMath...")
 
-        from agents.translator import FORMAL_TRANSLATOR_PROMPT
+        from agents.translator import (
+            FORMAL_TRANSLATOR_PROMPT,
+            FORMAL_TRANSLATOR_VNEXT_ADDENDUM,
+        )
         system_prompt = FORMAL_TRANSLATOR_PROMPT
+        vnext = (
+            os.environ.get("ASTRA_VALIDATOR_REPAIR_VNEXT", "0")
+            .strip()
+            .strip("'\"")
+            .lower()
+            in {"1", "true", "on", "yes"}
+        )
+        if vnext:
+            system_prompt += FORMAL_TRANSLATOR_VNEXT_ADDENDUM
         user_prompt = f"Conjecture:\n{conjecture}"
         if is_correction:
-            user_prompt += f"\n\nPrevious code failed with error:\n{previous_error}\nPlease correct it."
+            if vnext and previous_code:
+                user_prompt += (
+                    "\n\nCURRENT VALIDATION SCRIPT TO PATCH:\n"
+                    f"```text\n{previous_code[:16000]}\n```\n"
+                )
+            user_prompt += (
+                f"\n\nPrevious code failed with error:\n{previous_error}\n"
+                "Please correct it."
+            )
 
         response = await self._call_api(system_prompt, user_prompt)
 
@@ -334,29 +360,97 @@ class ASTRAIntelligence:
 
         return response
 
+    async def repair_validation_code(
+        self,
+        conjecture: str,
+        previous_code: str,
+        repair_instructions: str,
+    ) -> dict:
+        """Ask the code author for a bounded exact-edit patch, then apply it."""
+        from agents.translator import FORMAL_PATCH_REPAIR_PROMPT
+        from core.code_patching import apply_exact_edit_patch
+
+        if len(previous_code) > 24000:
+            return {
+                "status": "CANNOT_PATCH",
+                "reason": (
+                    "Validator exceeds the 24,000-character bounded-patch "
+                    "context. Split the conjecture into smaller validation "
+                    "obligations before retrying."
+                ),
+                "code": previous_code,
+                "edits": [],
+                "provider": self.provider,
+            }
+        logger.info(
+            "[%s] Requesting bounded validator patch...",
+            self.provider.upper(),
+        )
+        user_prompt = (
+            f"CONJECTURE AND SHARED OBJECTIVE:\n{conjecture[:5000]}\n\n"
+            f"ATOMIC REPAIR INSTRUCTIONS:\n{repair_instructions[:3500]}\n\n"
+            "CURRENT VALIDATION SCRIPT:\n"
+            f"```text\n{previous_code[:24000]}\n```"
+        )
+        response = await self._call_api(FORMAL_PATCH_REPAIR_PROMPT, user_prompt)
+        if isinstance(response, str) and response.startswith("API_ERROR:"):
+            return {
+                "status": "API_ERROR",
+                "reason": response,
+                "code": previous_code,
+                "edits": [],
+            }
+        parsed = _extract_json_object(response)
+        if not isinstance(parsed, dict):
+            parsed = _extract_json_object(_fix_json_backslashes(response))
+        result = apply_exact_edit_patch(previous_code, parsed)
+        result["provider"] = self.provider
+        return result
+
     async def review_validation_code(
         self,
         shared_goal: str,
         conjecture: str,
         code: str,
+        static_context: Optional[dict] = None,
     ) -> dict:
         """Independent pre-oracle audit of the translator's validation code."""
         logger.info(f"[{self.provider.upper()}] Reviewing validation-code coverage...")
 
-        from agents.reviewer import CODE_REVIEWER_PROMPT
+        from agents.reviewer import (
+            CODE_REVIEWER_PROMPT,
+            CODE_REVIEWER_VNEXT_PROMPT,
+        )
+        vnext = (
+            os.environ.get("ASTRA_VALIDATOR_REPAIR_VNEXT", "0")
+            .strip()
+            .strip("'\"")
+            .lower()
+            in {"1", "true", "on", "yes"}
+        )
 
         user_prompt = (
             f"SHARED FINAL OBJECTIVE:\n{shared_goal[:2000]}\n\n"
             f"CONSENSUS CONJECTURE:\n{conjecture[:5000]}\n\n"
             f"PROPOSED VALIDATION SCRIPT:\n```text\n{code[:14000]}\n```"
         )
-        response = await self._call_api(CODE_REVIEWER_PROMPT, user_prompt)
+        if static_context:
+            user_prompt += (
+                "\n\nDETERMINISTIC COMPILE/IMPORT SMOKE (facts, not model "
+                "speculation):\n"
+                f"{json.dumps(static_context, ensure_ascii=False)[:3000]}"
+            )
+        response = await self._call_api(
+            CODE_REVIEWER_VNEXT_PROMPT if vnext else CODE_REVIEWER_PROMPT,
+            user_prompt,
+        )
         if response == "SIMULATED_RESPONSE":
             return {
                 "status": "APPROVED",
                 "reasoning": "Simulated code review.",
                 "revision_instructions": "",
                 "coverage": [],
+                "defect_labels": [],
             }
         if isinstance(response, str) and response.startswith("API_ERROR:"):
             return {
@@ -364,6 +458,7 @@ class ASTRAIntelligence:
                 "reasoning": response,
                 "revision_instructions": "",
                 "coverage": [],
+                "defect_labels": [],
             }
 
         parsed = _extract_json_object(_fix_json_backslashes(response))
@@ -376,6 +471,7 @@ class ASTRAIntelligence:
                     "and failure paths are explicit."
                 ),
                 "coverage": [],
+                "defect_labels": [],
             }
 
         status = str(parsed.get("status") or "REVISE").upper()
@@ -384,11 +480,30 @@ class ASTRAIntelligence:
         coverage = parsed.get("coverage")
         if not isinstance(coverage, list):
             coverage = []
+        allowed_defects = {
+            "hardcoded_pass", "unreachable_failure", "self_comparison",
+            "sampling_as_proof", "wrong_domain", "missing_assumption",
+            "wrong_tolerance", "wrong_units", "unknown_as_pass",
+            "swallowed_exception", "missing_dependency", "engine_mismatch",
+        }
+        defect_labels = parsed.get("defect_labels")
+        if not isinstance(defect_labels, list):
+            defect_labels = []
+        defect_labels = [
+            str(item).strip().lower()
+            for item in defect_labels
+            if str(item).strip().lower() in allowed_defects
+        ]
+        runtime_checks = parsed.get("runtime_checks")
+        if not isinstance(runtime_checks, list):
+            runtime_checks = []
         return {
             "status": status,
             "reasoning": str(parsed.get("reasoning") or response)[:2000],
             "revision_instructions": str(parsed.get("revision_instructions") or "")[:3000],
             "coverage": [str(item)[:500] for item in coverage[:12]],
+            "defect_labels": defect_labels[:12],
+            "runtime_checks": [str(item)[:500] for item in runtime_checks[:12]],
         }
 
     async def navigate_research(

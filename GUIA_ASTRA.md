@@ -232,6 +232,11 @@ ASTRA_TRANSLATOR_MODELS=sonnet,default
 ASTRA_ANALYST_MODELS=sonnet,default
 # Reintentos del ciclo: autofix mecanico gratis primero, luego traductor.
 ASTRA_MAX_RETRIES=2
+# Reparación de validadores en producción: arreglos deterministas locales y,
+# como máximo, un parche exacto y acotado de Claude (no regenera todo el script).
+ASTRA_VALIDATOR_REPAIR_VNEXT=1
+ASTRA_VALIDATOR_REPAIR_STRATEGY=local-patch
+ASTRA_VNEXT_MODEL_PATCH_MAX_REVISIONS=1
 # Cache de ciclos (hash intuicion+providers+oraculo -> workspace/cycle_cache). 0=off.
 ASTRA_CYCLE_CACHE=1
 # Presupuesto POR llamada CLI (2026-07-15): una fase colgada muere sola

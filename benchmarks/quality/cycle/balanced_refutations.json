@@ -1,0 +1,114 @@
+[
+  {
+    "id": "quality_logic_sqrt_square_all_reals_false",
+    "track": "cycle",
+    "domain": "logic",
+    "difficulty": "baseline",
+    "expected": "REFUTED",
+    "tags": ["smoke"],
+    "objective": "Determine whether sqrt(x^2)=x for every real x.",
+    "intuition": "Test the universal real-domain claim sqrt(x^2)=x.",
+    "success_criteria": ["Find a negative counterexample.", "Explain that sqrt(x^2)=abs(x)."],
+    "failure_modes": ["Test only x>=0.", "Treat numerical samples as a universal proof."]
+  },
+  {
+    "id": "quality_gr_spherical_minkowski_zero_connection_false",
+    "track": "cycle",
+    "domain": "general_relativity",
+    "difficulty": "standard",
+    "expected": "REFUTED",
+    "objective": "Determine whether all Christoffel symbols of Minkowski spacetime vanish in spherical coordinates.",
+    "intuition": "Minkowski spacetime is flat, but the claim concerns connection coefficients in spherical coordinates.",
+    "success_criteria": ["Exhibit a nonzero spherical-coordinate Christoffel symbol.", "Distinguish zero curvature from zero connection."],
+    "failure_modes": ["Infer zero Christoffels from flatness.", "Silently switch to Cartesian coordinates."]
+  },
+  {
+    "id": "quality_gr_schwarzschild_ricci_nonzero_false",
+    "track": "cycle",
+    "domain": "general_relativity",
+    "difficulty": "standard",
+    "expected": "REFUTED",
+    "objective": "Test whether the Schwarzschild vacuum exterior has Ricci scalar R=2M/r^3 for r>2M.",
+    "intuition": "Validate or refute the stated nonzero Ricci scalar in the vacuum exterior.",
+    "success_criteria": ["Compute an exact Ricci scalar.", "Recover R=0 outside the source."],
+    "failure_modes": ["Confuse Riemann or Kretschmann curvature with Ricci scalar.", "Evaluate only one arbitrary point."]
+  },
+  {
+    "id": "quality_fluids_reynolds_density_squared_false",
+    "track": "cycle",
+    "domain": "fluid_mechanics",
+    "difficulty": "baseline",
+    "expected": "REFUTED",
+    "objective": "Check whether Reynolds number scales as rho^2 U L / mu.",
+    "intuition": "Test both dimensional consistency and the standard inertial-to-viscous force ratio.",
+    "success_criteria": ["Show the proposed expression is not dimensionless.", "Recover Re=rho U L/mu."],
+    "failure_modes": ["Accept a familiar-looking formula without checking units."]
+  },
+  {
+    "id": "quality_fluids_poiseuille_radius_cubed_false",
+    "track": "cycle",
+    "domain": "fluid_mechanics",
+    "difficulty": "standard",
+    "expected": "REFUTED",
+    "objective": "At fixed volumetric flow rate, determine whether Hagen-Poiseuille pressure drop scales as radius^-3.",
+    "intuition": "Use the laminar incompressible circular-pipe assumptions and hold volumetric flow rate fixed.",
+    "success_criteria": ["Recover radius^-4 scaling.", "State what quantity is held fixed."],
+    "failure_modes": ["Mix fixed mean velocity with fixed volumetric flow rate."]
+  },
+  {
+    "id": "quality_ode_harmonic_wrong_initial_solution_false",
+    "track": "cycle",
+    "domain": "ordinary_differential_equations",
+    "difficulty": "baseline",
+    "expected": "REFUTED",
+    "tags": ["smoke"],
+    "objective": "Test y(t)=sin(omega t) for y''+omega^2 y=0 with y(0)=1 and y'(0)=0.",
+    "intuition": "The proposed function solves the differential equation but may fail the initial conditions.",
+    "success_criteria": ["Check the ODE residual and both initial conditions separately.", "Refute using y(0)."],
+    "failure_modes": ["Validate from the ODE residual alone."]
+  },
+  {
+    "id": "quality_ode_logistic_stability_all_r_false",
+    "track": "cycle",
+    "domain": "ordinary_differential_equations",
+    "difficulty": "standard",
+    "expected": "REFUTED",
+    "objective": "Determine whether y=K is asymptotically stable for dy/dt=r y(1-y/K) for every nonzero real r and K>0.",
+    "intuition": "Test the stated universal stability claim over both positive and negative r.",
+    "success_criteria": ["Linearize at K.", "Show stability changes with the sign of r."],
+    "failure_modes": ["Assume r>0 without stating it."]
+  },
+  {
+    "id": "quality_quantum_nonunitary_trace_preservation_false",
+    "track": "cycle",
+    "domain": "quantum_mechanics",
+    "difficulty": "standard",
+    "expected": "REFUTED",
+    "objective": "Test whether rho -> A rho A-dagger preserves trace for every complex matrix A.",
+    "intuition": "The map is not assumed trace preserving or unitary.",
+    "success_criteria": ["Give a concrete A and density matrix counterexample.", "State a sufficient trace-preserving condition."],
+    "failure_modes": ["Assume A is unitary.", "Check only A=I."]
+  },
+  {
+    "id": "quality_symbolic_log_derivative_false",
+    "track": "cycle",
+    "domain": "symbolic_calculus",
+    "difficulty": "baseline",
+    "expected": "REFUTED",
+    "objective": "Determine whether d(log x)/dx = 1/(x+1) for all x>0.",
+    "intuition": "Use exact symbolic differentiation and a simple positive-domain counterexample.",
+    "success_criteria": ["Recover 1/x.", "Exhibit a positive x where the proposed derivative differs."],
+    "failure_modes": ["Compare the proposed expression to itself."]
+  },
+  {
+    "id": "quality_algebra_cancellation_without_nonzero_false",
+    "track": "cycle",
+    "domain": "algebra",
+    "difficulty": "standard",
+    "expected": "REFUTED",
+    "objective": "Determine whether a/b=c/b implies a=c for all real a,b,c.",
+    "intuition": "The statement quantifies over b=0 as well as nonzero b.",
+    "success_criteria": ["Identify the missing b!=0 assumption or undefined expressions.", "Do not prove a strengthened claim instead."],
+    "failure_modes": ["Add b!=0 silently and declare the original universal statement validated."]
+  }
+]

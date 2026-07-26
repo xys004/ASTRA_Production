@@ -39,19 +39,32 @@ async def execute_python_code(code: str, workspace_dir: str = "workspace", timeo
     else:
         timeout = int(timeout)
 
+    workspace_dir = os.path.abspath(workspace_dir)
+    os.makedirs(workspace_dir, exist_ok=True)
+    engine = detect_engine(code)
     mode = os.environ.get("ASTRA_ORACLE_MODE", "local").strip().lower()
     if mode == "auto":
-        mode = _decide_oracle(code)
+        mode = (
+            "remote"
+            if engine == "lean4" and os.environ.get("ASTRA_REMOTE_HOST", "").strip()
+            else _decide_oracle(code)
+        )
         logger.info("Oracle AUTO -> %s", mode)
+    if engine == "lean4":
+        from core.formal_validators import evaluate_lean4_source
+
+        lean_oracle = "astrum" if mode == "remote" else mode
+        logger.info("Oracle routing formal artifact to Lean 4: %s", lean_oracle)
+        return await evaluate_lean4_source(
+            code,
+            oracle=lean_oracle,
+            timeout=timeout,
+        )
     if mode == "remote":
         from core.remote_executor import execute_remote_code
         return await execute_remote_code(code, timeout=timeout)
 
-    workspace_dir = os.path.abspath(workspace_dir)
-    os.makedirs(workspace_dir, exist_ok=True)
-    engine = detect_engine(code)
-
-    if engine in {"sage", "maxima", "cadabra", "lean"}:
+    if engine in {"sage", "maxima", "cadabra"}:
         logger.info(f"Oracle routing script to external CAS: {engine}")
         return execute_external_cas(code, engine, workspace_dir, timeout)
 

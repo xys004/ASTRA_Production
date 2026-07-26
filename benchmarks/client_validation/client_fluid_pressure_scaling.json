@@ -1,0 +1,19 @@
+{
+  "id": "client_fluid_pressure_scaling",
+  "application": "Engineering units and scaling",
+  "demonstration": "general_client_assurance",
+  "objective": "Catch dimensional and scaling errors in a laminar pipe-flow calculation.",
+  "claim": "The Hagen-Poiseuille pressure drop has pressure dimensions and decreases by a factor of four when pipe radius doubles.",
+  "expected_claim_verdict": "VALIDATED",
+  "artifact_kind": "dimensional_analysis",
+  "artifact_path": "artifacts/fluid_pressure_scaling.py",
+  "supported_oracles": ["local", "astrum"],
+  "preferred_validators": ["pint", "wolfram_bridge"],
+  "required_evidence": ["pressure_pa", "double_radius_ratio", "dimensionality", "pint_version"],
+  "assumptions": [
+    "The flow is steady, incompressible, Newtonian and laminar in a circular pipe."
+  ],
+  "limitations": [
+    "The validator does not establish that a real installation remains in the laminar regime."
+  ]
+}

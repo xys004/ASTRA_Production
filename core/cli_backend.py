@@ -77,24 +77,22 @@ def _claude_bin() -> str:
 def _claude_argv(promptfile: str, model: str | None, _out: str, _ws: str) -> dict:
     # Prompt por STDIN (pipe), NO como argumento: los prompts de ASTRA superan el
     # limite de ~32KB de la linea de comandos de Windows y claude devolvia vacio.
-    # Claude Code is AGENTIC: without restricting tools it WRITES the script to a file
-    # (Write/Edit) and returns a PROSE summary (star insights, tables) instead of code
-    # -> downstream SyntaxError. Deny mutating/exec tools so every text-only ASTRA phase
-    # (conjecture/code/analysis) returns its answer on stdout.
-    # ("MultiEdit" removed: current claude CLI no longer has that tool name and prints
-    # a "matches no known tool" warning on every single call.)
-    deny = ["--disallowed-tools", "Write,Edit,NotebookEdit,Bash"]
+    # Claude Code is AGENTIC: every ASTRA phase supplies all allowed context through
+    # the prompt and expects text on stdout. An explicit deny-list proved insufficient
+    # on Windows because newer Claude releases can expose PowerShell under a tool name
+    # other than Bash. `--tools ""` is the CLI's supported hard disable for all tools.
+    tools = ["--tools", ""]
     # Without this, every claude -p call here loads the user's GLOBAL MCP config:
     # Gmail/Calendar/Drive, two npx filesystem servers that fail to connect (each a
     # potential multi-second-to-hung npx registry fetch), and -- critically -- a second,
     # RECURSIVE copy of this very astra MCP server, exposing astra_cycle/astra_execute
-    # back to the inner model (nothing in the disallowed-tools list above blocks MCP
-    # tools, and the conjecture/translator/analyst prompts never say "don't use tools").
+    # back to the inner model. Built-in tools are hard-disabled above, while this flag
+    # also prevents inherited MCP configuration and its startup overhead.
     # This is the root cause behind "astra_cycle a veces se cuelga": isolate the child
     # process from the user's MCP config entirely. Measured impact on a trivial call:
     # 23073 cache-creation tokens / $0.26 / 5.5s -> 3050 tokens / $0.065 / 3.0s.
     isolate = ["--strict-mcp-config"]
-    argv = [_claude_bin(), "-p", "--output-format", "json", *deny, *isolate]
+    argv = [_claude_bin(), "-p", "--output-format", "json", *tools, *isolate]
     if model:
         argv += ["--model", model]
     # stdin_file: _invoke_once conecta el promptfile directo al stdin del exe
@@ -153,7 +151,7 @@ def _agy_argv(promptfile: str, model: str | None, _out: str, _ws: str) -> list:
     # los prompts POR FASE de ASTRA quedan holgadamente por debajo.
     #
     # --mode plan = SOLO LECTURA (no escribe archivos ni ejecuta): garantiza que la fase
-    # responda TEXTO, la misma leccion que el --disallowed-tools de claude (que si no,
+    # responda TEXTO, la misma leccion que el --tools "" de Claude (que si no,
     # escribia el script a disco y devolvia prosa). El prompt debe ser una instruccion
     # directa (generar/traducir/analizar), no "explora mi repo".
     with open(promptfile, encoding="utf-8") as f:
