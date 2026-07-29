@@ -306,6 +306,7 @@ def investigation_new():
     state.last_python_code    = ""
     state.last_execution_result = {}
     state.last_analysis       = {}
+    state.last_cycle_result   = {}
     state.last_report         = {}
     with state._log_lock:
         state.logs.clear()
@@ -352,6 +353,7 @@ def investigation_load():
     state.last_python_code      = ""
     state.last_execution_result = {}
     state.last_analysis         = {}
+    state.last_cycle_result     = {}
     state.last_report           = {}
     with state._log_lock:
         state.logs.clear()

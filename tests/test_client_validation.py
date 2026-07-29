@@ -15,6 +15,7 @@ from core.formal_validators import (
     MATHLIB4_COMMIT,
     evaluate_lean4_source,
 )
+from astra_tool import _do_execute
 
 
 class ClientValidationTests(unittest.TestCase):
@@ -63,7 +64,7 @@ class ClientValidationTests(unittest.TestCase):
         )
         self.assertEqual(
             select_oracles(by_id["client_grpython_zero_trace_formal"], "both"),
-            ["astrum"],
+            ["local", "astrum"],
         )
 
     def test_engine_router_recognizes_explicit_lean4(self):
@@ -85,6 +86,74 @@ class ClientValidationTests(unittest.TestCase):
         )
         self.assertEqual(result["status"], "REJECTED")
         self.assertEqual(result["forbidden"], ["axiom"])
+
+    @patch("core.formal_validators.subprocess.run")
+    @patch("core.formal_validators.shutil.which")
+    def test_lean4_local_wsl_invokes_pinned_project(self, which, run):
+        which.return_value = r"C:\Windows\System32\wsl.exe"
+        run.return_value.returncode = 0
+        run.return_value.stdout = "kernel checked\n"
+        run.return_value.stderr = ""
+        env = {
+            "ASTRA_WSL_DISTRO": "Debian",
+            "ASTRA_LOCAL_LEAN4_WSL_ROOT": (
+                "/home/nelson/astra-benchmarks/mathlib4-v4.30.0"
+            ),
+            "ASTRA_LOCAL_LEAN4_WSL_LAKE_BIN": (
+                "/home/nelson/.elan/bin/lake"
+            ),
+        }
+        with patch.dict("os.environ", env, clear=True):
+            result = asyncio.run(
+                evaluate_lean4_source(
+                    "import Mathlib\nexample : True := by trivial",
+                    oracle="local",
+                )
+            )
+
+        self.assertEqual(result["status"], "PASS")
+        self.assertEqual(result["runtime"], "wsl")
+        command = run.call_args.args[0]
+        self.assertEqual(
+            command[:8],
+            [
+                "wsl",
+                "-d",
+                "Debian",
+                "--cd",
+                "/home/nelson/astra-benchmarks/mathlib4-v4.30.0",
+                "--",
+                "/home/nelson/.elan/bin/lake",
+                "env",
+            ],
+        )
+
+    def test_execute_maps_kernel_pass_to_formal_verdict(self):
+        raw = {
+            "status": "PASS",
+            "stdout": "",
+            "stderr": "",
+            "exit_code": 0,
+            "engine": "lean4",
+            "oracle": "local",
+        }
+        with patch(
+            "core.executor.execute_python_code",
+            new=AsyncMock(return_value=raw),
+        ):
+            result = asyncio.run(
+                _do_execute(
+                    {
+                        "code": (
+                            "# ASTRA_ENGINE: lean4\n"
+                            "import Mathlib\n"
+                            "example : True := by trivial"
+                        ),
+                        "oracle": "local",
+                    }
+                )
+            )
+        self.assertEqual(result["verdict"], "PASS")
 
     def test_formal_bundle_records_pinned_kernel_evidence(self):
         case = next(

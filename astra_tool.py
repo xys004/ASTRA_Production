@@ -39,6 +39,11 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from core.preflight import load_project_env
 load_project_env()  # carga .env (proveedores + config ASTRA_REMOTE_* para ASTRUM)
 
+from core.architecture_contract import (
+    CACHE_SCHEMA_VERSION,
+    production_manifest,
+)
+
 
 def _verdict(stdout: str) -> str:
     up = (stdout or "").upper()
@@ -233,7 +238,14 @@ async def _do_execute(req: dict) -> dict:
     timeout = int(req.get("timeout", 180))
 
     res = await execute_python_code(code, timeout=timeout)
-    res["verdict"] = _verdict(res.get("stdout", ""))
+    verdict = _verdict(res.get("stdout", ""))
+    if verdict == "NONE" and res.get("engine") == "lean4":
+        formal_status = str(res.get("status") or "").upper()
+        if formal_status == "PASS":
+            verdict = "PASS"
+        elif formal_status in {"FAIL", "REJECTED"}:
+            verdict = "FAIL"
+    res["verdict"] = verdict
     res["guard"] = assess_verdict(code, res)   # auditoria informativa del PASS
     res["oracle_used"] = os.environ.get("ASTRA_ORACLE_MODE", "local")
     return res
@@ -431,8 +443,53 @@ def _combine_verdicts(verdicts):
     return merged
 
 
-async def _ensemble_conjecture(providers, axiomatic_base, intuition, phase_timeout,
-                               synth_provider):
+def _cycle_cache_payload(req, shared_goal, providers_resolved):
+    """Return every non-secret input that can change a deliberative cycle.
+
+    Navigation is deliberately context-sensitive.  A repeated local direction
+    in a deeper research thread must not replay an earlier navigator decision
+    merely because the immediate intuition text happens to be identical.
+    """
+    runtime_keys = (
+        "ASTRA_ORACLE_MODE",
+        "ASTRA_ORACLE_TIMEOUT",
+        "ASTRA_CLI_TIMEOUT",
+        "ASTRA_CONJECTURE_TIMEOUT",
+        "ASTRA_SYNTH_TIMEOUT",
+        "ASTRA_TRANSLATOR_TIMEOUT",
+        "ASTRA_REVIEWER_TIMEOUT",
+        "ASTRA_ANALYST_TIMEOUT",
+        "ASTRA_NAVIGATOR_TIMEOUT",
+        "ASTRA_MAX_RETRIES",
+        "ASTRA_REVIEW_MAX_REVISIONS",
+        "ASTRA_VNEXT_REVIEW_MAX_REVISIONS",
+        "ASTRA_VNEXT_MODEL_PATCH_MAX_REVISIONS",
+    )
+    return {
+        "cache_schema_version": CACHE_SCHEMA_VERSION,
+        "intuition": req.get("intuition", ""),
+        "shared_goal": shared_goal,
+        "axiomatic_base": req.get("axiomatic_base", ""),
+        "thread_summary": req.get("thread_summary", ""),
+        "cycles_since_milestone": req.get("cycles_since_milestone", 1),
+        "exec_timeout": req.get("exec_timeout", 0),
+        "providers": providers_resolved,
+        "architecture": production_manifest(),
+        "runtime": {
+            key: str(os.environ.get(key, "") or "").strip().strip("'\"")
+            for key in runtime_keys
+        },
+    }
+
+
+async def _ensemble_conjecture(
+    providers,
+    axiomatic_base,
+    intuition,
+    phase_timeout,
+    synth_provider,
+    synth_models=None,
+):
     """Conjetura multi-modelo: propuestas en paralelo -> critica cruzada -> merge.
     Devuelve (conjetura_final, [(label, ASTRAIntelligence)] para _cli_meta)."""
     from core.llm_client import ASTRAIntelligence
@@ -484,7 +541,7 @@ async def _ensemble_conjecture(providers, axiomatic_base, intuition, phase_timeo
 
     crits = await asyncio.gather(*[_crit(i) for i in range(len(surv))],
                                  return_exceptions=True)
-    synth = ASTRAIntelligence(provider=synth_provider, cli_models=None,
+    synth = ASTRAIntelligence(provider=synth_provider, cli_models=synth_models,
                               cli_timeout=phase_timeout)
     used.append(("conjecture_merge:%s" % synth_provider, synth))
     blocks = []
@@ -602,11 +659,14 @@ async def _do_cycle(req: dict) -> dict:
                  not in ("0", "off", "false"))
     cache_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                              "workspace", "cycle_cache")
-    ckey = hashlib.sha256(json.dumps(
-        {"intuition": intuition, "shared_goal": shared_goal,
-         "ax": req.get("axiomatic_base", ""),
-         "providers": providers_resolved, "oracle": os.environ.get("ASTRA_ORACLE_MODE", "local")},
-        sort_keys=True).encode("utf-8")).hexdigest()[:24]
+    cache_payload = _cycle_cache_payload(
+        req,
+        shared_goal,
+        providers_resolved,
+    )
+    ckey = hashlib.sha256(
+        json.dumps(cache_payload, sort_keys=True).encode("utf-8")
+    ).hexdigest()[:24]
     cpath = os.path.join(cache_dir, ckey + ".json")
     if use_cache and os.path.exists(cpath):
         try:
@@ -928,7 +988,8 @@ async def _do_cycle(req: dict) -> dict:
     if len(conj_providers) > 1:
         conjecture, _cu, deliberation = await _ensemble_conjecture(
             conj_providers, req.get("axiomatic_base", ""), goal_directed_intuition,
-            _phase_timeout("CONJECTURE"), synth_provider)
+            _phase_timeout("CONJECTURE"), synth_provider,
+            _phase_models("SYNTH"))
         ensemble_agents.extend(_cu)
     else:
         conjecture = await conj.generate_conjecture(
@@ -1129,7 +1190,9 @@ async def _do_cycle(req: dict) -> dict:
         _progress("navigate", timings=timings)
         t0 = time.monotonic()
         try:
-            cycles_since_milestone = int(req.get("cycles_since_milestone") or 1)
+            cycles_since_milestone = int(
+                req.get("cycles_since_milestone", 1)
+            )
         except (TypeError, ValueError):
             cycles_since_milestone = 1
         thread_summary = req.get("thread_summary") or (
@@ -1191,6 +1254,8 @@ async def _do_cycle(req: dict) -> dict:
         "navigation": navigation,
         "oracle_used": os.environ.get("ASTRA_ORACLE_MODE", "local"),
         "providers": providers_resolved,
+        "architecture": production_manifest(),
+        "cache_key": ckey,
     }
     if est:
         out["est_runtime"] = est

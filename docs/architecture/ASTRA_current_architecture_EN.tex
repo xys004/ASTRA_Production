@@ -56,7 +56,7 @@ Model output never replaces execution. Conversely, successful execution is not s
 
 \section{Current architecture}
 
-ASTRA runs as a local application with a browser interface. A Flask server exposes the interface and control API, while an asynchronous orchestrator maintains the state machine in the background. Agents communicate with LLM providers through a common client layer, and the oracle routes generated code to the appropriate computation engine.
+ASTRA runs as a local application with a browser interface. A Flask server exposes the interface and control API, while an asynchronous orchestrator maintains the state machine in the background. Agents communicate with LLM providers through a common client layer, and the oracle routes generated code to the appropriate computation engine. The browser interface, MCP server, and subprocess tool invoke the same canonical cycle; they do not maintain parallel scientific implementations.
 
 \begin{figure}[htbp]
 \centering
@@ -70,9 +70,10 @@ ASTRA runs as a local application with a browser interface. A Flask server expos
   arr/.style={-{Stealth[length=2.2mm]},thick}
 ]
 \node[ui] (input) {Browser interface\\intuition or document};
-\node[agent,below=of input] (conj) {Conjecture agent\\falsifiable hypothesis};
-\node[agent,below=of conj] (trans) {Formal translator\\executable code};
-\node[oracle,below=of trans] (exec) {Validation oracle\\local or remote};
+\node[agent,below=of input] (conj) {Codex + AGY\\proposals and critique};
+\node[agent,below=of conj] (trans) {Codex synthesis\\Claude validator};
+\node[agent,below=of trans] (review) {Deterministic preflight\\Codex review};
+\node[oracle,below=of review] (exec) {Validation oracle\\local or remote};
 \node[agent,right=18mm of exec] (analyst) {Result analyst\\structured verdict};
 \node[gate,above=13mm of analyst] (status) {Status};
 \node[ui,above right=8mm and 17mm of status] (human) {Human approval\\axiomatic base};
@@ -80,7 +81,8 @@ ASTRA runs as a local application with a browser interface. A Flask server expos
 
 \draw[arr] (input)--(conj);
 \draw[arr] (conj)--(trans);
-\draw[arr] (trans)--(exec);
+\draw[arr] (trans)--(review);
+\draw[arr] (review)--(exec);
 \draw[arr] (exec)--(analyst);
 \draw[arr] (analyst)--(status);
 \draw[arr] (status)--node[above,sloped]{validated}(human);
@@ -101,11 +103,11 @@ The user may enter a claim directly or upload PDF/TXT material. The application 
   \item \textbf{Research Loop}: decomposes a macro-level question into a sequence of related conjectures and preserves alternative branches.
 \end{itemize}
 
-The interface displays status, the current conjecture, generated script, oracle output, axiomatic base, reports, and event log. It also lets the user stop execution, approve or reject results, and configure providers for each role.
+The interface displays status, the current conjecture, generated script, oracle output, axiomatic base, reports, and event log. It also lets the user stop execution, approve or reject results, and configure providers for each role. The cycle cache includes the shared objective, axiomatic base, reflective trajectory summary, distance from the last milestone, and non-secret model/control configuration. A repeated direction in a changed scientific context therefore cannot replay a stale navigation decision.
 
 \subsection{Conjecture agent}
 
-The first agent receives the intuition and accumulated context. It must produce a specific, falsifiable statement with variables, assumptions, domain, and success criterion. In iterative mode it also uses established theorems and previous refutations to avoid reopening closed paths.
+Codex GPT-5.6 Sol and AGY receive the same final objective, current direction, and accumulated context. They propose in parallel, each adversarially critiques its rival proposal, and Codex synthesizes one falsifiable conjecture with variables, assumptions, domain, and success criterion. In iterative mode they also use established theorems and previous refutations to avoid reopening closed paths.
 
 \subsection{Formal translator}
 
@@ -113,9 +115,13 @@ The translator converts the conjecture into a self-contained validation script. 
 
 The translator does not issue the scientific verdict. It constructs the experiment by which the claim can be decided.
 
+\subsection{Deterministic preflight and independent review}
+
+Before execution, deterministic checks detect patterns that could produce a false validation, import defects, and known operational failures. Codex then compares Claude's script with both the shared objective and the exact conjecture. When a defect is locally repairable, Claude receives bounded instructions and returns an exact-replacement patch; Codex does not become the validator author. Reviewer rejection or an inapplicable patch yields an abstention or tool error, never scientific evidence.
+
 \subsection{Validation oracle}
 
-The oracle executes the program and captures return code, standard output, errors, and engine metadata. Python provides the common foundation, with libraries including SymPy, Z3, NumPy, SciPy, mpmath, EinsteinPy, Pint, fluids, and QuTiP. ASTRA can also route jobs to SageMath, Maxima, or Cadabra when available.
+The oracle executes the program and captures return code, standard output, errors, and engine metadata. Python provides the common foundation, with libraries including SymPy, Z3, NumPy, SciPy, mpmath, EinsteinPy, Pint, fluids, and QuTiP. ASTRA can also route jobs to SageMath, Maxima, or Cadabra when available. On Windows, \texttt{ASTRA\_WSL\_DISTRO} pins the intended WSL2 distribution so that execution does not silently move when the machine's default distribution changes. The production workstation uses Debian/WSL2 for SageMath, Maxima, Cadabra, and the local Lean/Mathlib environment.
 
 Execution may be:
 
@@ -204,7 +210,7 @@ This mechanism allows ASTRA to reuse validated solvers, metrics, optimizers, ene
 
 \subsection{Lean 4 and Mathlib}
 
-Lean 4 is integrated as an optional engine through the marker \texttt{\# ASTRA\_ENGINE: lean}. The translator may generate a file importing Mathlib; ASTRA passes it to a native compiler or one installed in WSL. Acceptance by the Lean kernel provides mechanical verification suitable for formal logic, discrete mathematics, algebra, and theorems that can be represented in the proof assistant's language.
+Lean 4 is integrated as an optional engine through the marker \texttt{\# ASTRA\_ENGINE: lean}. The translator may generate a file importing Mathlib; ASTRA passes it either to a pinned native project, to the pinned Debian/WSL2 project, or to the configured ASTRUM formal route. The production local route fixes Lean 4.30.0 and the Mathlib commit beginning \texttt{c5ea00351c28}. Acceptance by the Lean kernel provides mechanical verification suitable for formal logic, discrete mathematics, algebra, and theorems that can be represented in the proof assistant's language.
 
 Lean does not replace numerical physics calculations or prove that a formalization faithfully represents a physical system. Its guarantee applies to the formal statement and imported axioms. If the compiler rejects a proof, ASTRA classifies the event as a code error and may request a correction; rejection must never be turned into a refutation of the theorem.
 
@@ -216,7 +222,7 @@ Mathematica can act as a second independent validator: the agent runs a test thr
 
 \section{Providers, engines, and deployment}
 
-The conjecture, translation, analysis, and navigation roles may be assigned independently to supported providers, including Gemini/Vertex AI, Anthropic, OpenAI, DeepSeek, xAI, Qwen, Mistral, and Groq. Subscription-authenticated clients may also be used through their command-line interfaces. A shared layer normalizes calls, errors, and model selection. Separating providers by phase makes it possible to choose creativity, mathematical ability, coding reliability, or cost according to the role.
+Roles may be reassigned for controlled ablations, but the compact production contract is explicit: Codex CLI with \texttt{gpt-5.6-sol} at \texttt{xhigh} effort proposes, synthesizes, reviews, and analyzes; AGY with \texttt{gemini-3.1-pro-high} at \texttt{high} effort co-proposes, critiques, and navigates; Claude Code with \texttt{claude-opus-4-8} writes and repairs code. The \texttt{scripts/audit\_architecture.py} command verifies this map, the binaries, epistemic gates, local scientific engines, and configured formal routes without reading or printing secrets. \texttt{ASTRA\_REQUIRED\_LOCAL\_ENGINES} makes missing production engines a blocking audit failure. The idempotent \path{scripts/bootstrap_wsl_scientific_stack.ps1} script recreates the pinned Debian stack. Other supported providers are reserved for controlled comparisons.
 
 The desktop installation creates a Python environment and launches the interface at \url{http://127.0.0.1:5050}. Credentials and oracle parameters remain in local configuration and must not be committed to the repository. ASTRA stores sessions and reports in the application's workspace.
 

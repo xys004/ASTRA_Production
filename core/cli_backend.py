@@ -158,7 +158,28 @@ def _agy_argv(promptfile: str, model: str | None, _out: str, _ws: str) -> list:
         prompt = f.read()
     abin = (os.environ.get("ASTRA_AGY_BIN") or "").strip().strip("'\"") \
         or shutil.which("agy") or "agy"
-    argv = [abin, "--print", prompt, "--mode", "plan"]
+    # Antigravity exposes an explicit reasoning-effort control in addition to
+    # the model name.  Production defaults to the highest supported level so
+    # `gemini-3.1-pro-high` is not accidentally invoked with a weaker session
+    # effort.  Keep the accepted set closed: a typo must not become an opaque
+    # CLI failure several minutes into a cycle.
+    effort = (
+        os.environ.get("ASTRA_AGY_EFFORT", "high")
+        .strip()
+        .strip("'\"")
+        .lower()
+    )
+    if effort not in {"low", "medium", "high"}:
+        effort = "high"
+    argv = [
+        abin,
+        "--print",
+        prompt,
+        "--mode",
+        "plan",
+        "--effort",
+        effort,
+    ]
     if model:
         argv += ["--model", model]
     return argv

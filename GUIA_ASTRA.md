@@ -303,7 +303,50 @@ $PY   = "$CORE\venv\Scripts\python.exe"
 
 ---
 
-## 10. Filosofía (por qué está hecho así)
+## 10. Planificación bayesiana numérica e híbrida
+
+ASTRA incluye un planificador opcional de optimización bayesiana con proceso
+gaussiano. No reemplaza el trabajo analítico y simbólico ni constituye un
+verificador. Su función es elegir evaluaciones numéricas informativas cuando
+cada simulación o cálculo resulta costoso.
+
+La secuencia recomendada es:
+
+1. derivar simbólicamente restricciones, identidades o una parametrización
+   reducida;
+2. explorar el espacio continuo restante con un presupuesto fijo;
+3. ejecutar los candidatos mediante el oráculo local o ASTRUM;
+4. registrar por separado mediciones válidas y fallos operativos;
+5. revalidar el mejor candidato con motores independientes, prueba formal cuando
+   corresponda y aprobación humana.
+
+Piloto reproducible con presupuesto idéntico para GP, búsqueda aleatoria y
+grilla:
+
+```powershell
+.\venv\Scripts\python.exe scripts\run_bayesian_optimization_pilot.py
+```
+
+La especificación, los límites y la API reutilizable están documentados en
+`BAYESIAN_OPTIMIZATION.md`. Para código, árboles de prueba o razonamiento
+simbólico abierto se deben usar estrategias de búsqueda apropiadas; no se debe
+forzar un GP sobre todo el trabajo de ASTRA.
+
+Cuando está disponible el proyecto separado `hollow_core_energy_conditions`,
+puede ejecutarse una prueba real de búsqueda local de contraejemplos sobre su
+familia analítica de capas de Israel:
+
+```powershell
+.\venv\Scripts\python.exe scripts\run_hollow_core_bayesian_benchmark.py
+```
+
+El adaptador carga el evaluador fuente solo en lectura, preserva la eliminación
+analítica del lapse y registra los signos estrictos de densidad y NEC por
+separado de las tolerancias numéricas del proyecto.
+
+---
+
+## 11. Filosofía (por qué está hecho así)
 
 - **Sin API de pago:** los CLIs oficiales corren con tus mensualidades; el razonamiento caro lo pagan tus suscripciones.
 - **Verificador objetivo:** tres LLMs pueden coincidir en algo elegante y *falso*. Solo el cómputo real (sympy que cierra, unidades que cuadran, simulación que corre en ASTRUM) convierte esto en ciencia. Por eso el veredicto se ancla al `exit_code` + `VERDICT:` del script, no a la opinión de un modelo.

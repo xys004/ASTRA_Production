@@ -12,6 +12,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -46,7 +47,110 @@ def _unavailable(detail: str, oracle: str) -> dict[str, Any]:
     }
 
 
+def _evaluate_lean4_local_wsl(
+    source: str,
+    timeout: int,
+    *,
+    project: str,
+    lake: str,
+) -> dict[str, Any]:
+    distro = os.environ.get("ASTRA_WSL_DISTRO", "").strip().strip("'\"")
+    if sys.platform != "win32" or shutil.which("wsl") is None:
+        return _unavailable(
+            "The configured WSL Lean 4 environment requires wsl.exe on Windows.",
+            "local",
+        )
+
+    workspace = ROOT / "workspace" / "formal"
+    workspace.mkdir(parents=True, exist_ok=True)
+    handle = tempfile.NamedTemporaryFile(
+        mode="w",
+        suffix=".lean",
+        prefix="astra_client_",
+        dir=workspace,
+        encoding="utf-8",
+        delete=False,
+    )
+    path = Path(handle.name)
+    try:
+        with handle:
+            handle.write(source)
+        from core.engine_router import _win_to_wsl_path
+
+        command = ["wsl"]
+        if distro:
+            command.extend(["-d", distro])
+        command.extend(
+            [
+                "--cd",
+                project,
+                "--",
+                lake,
+                "env",
+                "lean",
+                _win_to_wsl_path(str(path)),
+            ]
+        )
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        return {
+            "status": "PASS" if result.returncode == 0 else "FAIL",
+            "stdout": result.stdout[-8000:],
+            "stderr": result.stderr[-8000:],
+            "exit_code": result.returncode,
+            "engine": "lean4",
+            "oracle": "local",
+            "runtime": "wsl",
+            "wsl_distro": distro or "default",
+            "lean_version": LEAN4_VERSION,
+            "mathlib_commit": MATHLIB4_COMMIT,
+        }
+    except subprocess.TimeoutExpired:
+        return {
+            "status": "TIMEOUT",
+            "stdout": "",
+            "stderr": f"Lean 4 compilation exceeded {timeout} seconds.",
+            "exit_code": 124,
+            "engine": "lean4",
+            "oracle": "local",
+            "runtime": "wsl",
+            "wsl_distro": distro or "default",
+            "lean_version": LEAN4_VERSION,
+            "mathlib_commit": MATHLIB4_COMMIT,
+        }
+    finally:
+        path.unlink(missing_ok=True)
+
+
 def _evaluate_lean4_local(source: str, timeout: int) -> dict[str, Any]:
+    wsl_project = (
+        os.environ.get("ASTRA_LOCAL_LEAN4_WSL_ROOT", "")
+        .strip()
+        .strip("'\"")
+    )
+    wsl_lake = (
+        os.environ.get("ASTRA_LOCAL_LEAN4_WSL_LAKE_BIN", "")
+        .strip()
+        .strip("'\"")
+    )
+    if wsl_project or wsl_lake:
+        if not wsl_project or not wsl_lake:
+            return _unavailable(
+                "Both ASTRA_LOCAL_LEAN4_WSL_ROOT and "
+                "ASTRA_LOCAL_LEAN4_WSL_LAKE_BIN are required.",
+                "local",
+            )
+        return _evaluate_lean4_local_wsl(
+            source,
+            timeout,
+            project=wsl_project,
+            lake=wsl_lake,
+        )
+
     project_raw = os.environ.get("ASTRA_LOCAL_LEAN4_ROOT", "").strip()
     if not project_raw:
         return _unavailable(
@@ -272,7 +376,12 @@ async def evaluate_lean4_source(
     if normalized not in {"auto", "local", "astrum"}:
         raise ValueError(f"Unsupported Lean 4 oracle: {oracle}")
     if normalized == "auto":
-        normalized = "astrum" if os.environ.get("ASTRA_REMOTE_HOST", "").strip() else "local"
+        local_result = _evaluate_lean4_local(source, timeout)
+        if local_result.get("status") != "UNAVAILABLE":
+            return local_result
+        if os.environ.get("ASTRA_REMOTE_HOST", "").strip():
+            return await _evaluate_lean4_remote(source, timeout)
+        return local_result
     if normalized == "astrum":
         return await _evaluate_lean4_remote(source, timeout)
     return _evaluate_lean4_local(source, timeout)

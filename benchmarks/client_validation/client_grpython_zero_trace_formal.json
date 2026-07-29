@@ -7,7 +7,7 @@
   "expected_claim_verdict": "VALIDATED",
   "artifact_kind": "formal_proof",
   "artifact_path": "artifacts/grpython_zero_trace.lean",
-  "supported_oracles": ["astrum"],
+  "supported_oracles": ["local", "astrum"],
   "preferred_validators": ["lean4"],
   "required_evidence": ["kernel_checked", "lean_version", "mathlib_commit", "theorem_source_sha256"],
   "assumptions": [

@@ -32,8 +32,19 @@ The production role map is:
 | Role | Backend |
 |---|---|
 | Primary conjecture, synthesis, code review, final analysis | Codex CLI — `gpt-5.6-sol`, `xhigh` |
-| Co-conjecture, cross-critique, research navigation | Antigravity `agy` CLI — `gemini-3.1-pro-high` |
+| Co-conjecture, cross-critique, research navigation | Antigravity `agy` CLI — `gemini-3.1-pro-high`, effort `high` |
 | Formal translation and code revision | Claude Code CLI — `claude-opus-4-8` |
+
+The browser UI, MCP server, and subprocess CLI all dispatch the same canonical
+guarded cycle. Run the non-secret architecture contract whenever providers,
+models, or orchestration are changed:
+
+```powershell
+.\venv\Scripts\python.exe scripts\audit_architecture.py
+```
+
+The audit fails closed on production role/model drift and reports optional
+project integrations separately.
 
 ASTRA is designed for theoretical physics, GR, quantum systems, fluid mechanics, symbolic calculus, differential equations, and mathematical model checking.
 
@@ -132,7 +143,8 @@ Python (always available):
 | `fluids`, `pint` | Fluid mechanics and dimensional consistency |
 | `qutip` | Quantum systems, density matrices |
 
-External CAS (optional, via WSL on Windows):
+External CAS (optional, via WSL on Windows). Set `ASTRA_WSL_DISTRO` to pin
+the intended distribution instead of depending on the machine's WSL default:
 
 ```python
 # ASTRA_ENGINE: sage      # SageMath
@@ -142,6 +154,22 @@ External CAS (optional, via WSL on Windows):
 ```
 
 If an optional CAS is missing, the oracle returns a clear failure instead of misclassifying as validated.
+Z3 runs as a local Python module. Lean 4 uses either a pinned local
+`ASTRA_LOCAL_LEAN4_ROOT`/`ASTRA_LOCAL_LAKE_BIN` environment, a pinned
+`ASTRA_LOCAL_LEAN4_WSL_ROOT`/`ASTRA_LOCAL_LEAN4_WSL_LAKE_BIN` environment, or
+the configured ASTRUM formal route; merely having an unrelated Lean binary is
+not treated as a kernel-ready Mathlib environment.
+
+The production workstation pins Debian/WSL2 and requires Z3, SageMath, Maxima,
+Cadabra, and the local Lean 4 route. Recreate that versioned scientific stack
+idempotently with:
+
+```powershell
+.\scripts\bootstrap_wsl_scientific_stack.ps1
+```
+
+`ASTRA_REQUIRED_LOCAL_ENGINES` makes the architecture audit fail closed if one
+of those configured engines disappears.
 
 ASTRA can also validate through any installed Python package, including project-specific
 research libraries. A generated script may import the package normally, compute independent
@@ -151,6 +179,31 @@ For Wolfram Language and Mathematica notebooks, an agent can use the optional
 [`mathematica-agent-bridge`](https://github.com/xys004/mathematica-agent-bridge) alongside
 ASTRA. This lets the agent write and execute Wolfram Language, compare expressions,
 inspect notebooks, and use Mathematica as an independent cross-validation oracle.
+
+### Bayesian experiment planning
+
+ASTRA includes an optional Gaussian-process planner for expensive numerical or
+hybrid symbolic-numerical searches. Symbolic analysis should first derive exact
+constraints or reduce the parameter space; the planner then selects informative
+numerical evaluations under a fixed budget. GP predictions never replace oracle,
+formal, independent, or human validation.
+
+Run the equal-budget symbolic-reduction pilot:
+
+```powershell
+.\venv\Scripts\python.exe scripts\run_bayesian_optimization_pilot.py
+```
+
+See [BAYESIAN_OPTIMIZATION.md](BAYESIAN_OPTIMIZATION.md) for the reusable API,
+scientific acceptance boundary, ASTRUM batch strategy, and cases where a GP is
+not appropriate.
+
+When the separate `hollow_core_energy_conditions` project is available, run
+the real analytical-project counterexample benchmark:
+
+```powershell
+.\venv\Scripts\python.exe scripts\run_hollow_core_bayesian_benchmark.py
+```
 
 ---
 

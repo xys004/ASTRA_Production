@@ -175,7 +175,7 @@ def _is_api_error(text: str) -> bool:
 # Core execution engine (shared by single-cycle and research modes)
 # ═══════════════════════════════════════════════════════════════════
 
-async def _execute_one_cycle(intuition: str) -> dict:
+async def _execute_one_cycle_legacy(intuition: str) -> dict:
     """
     Run phases 2–5 (including the theorem approval gate) for a single intuition.
     Increments cycle_count, updates state, writes report, saves state.
@@ -381,6 +381,138 @@ async def _execute_one_cycle(intuition: str) -> dict:
     return {"conjecture": conjecture, "status": final_status, "analysis": final_analysis}
 
 
+async def _execute_one_cycle(intuition: str) -> dict:
+    """Run the canonical MCP/CLI cycle and adapt its trace to the desktop UI.
+
+    The legacy implementation above remains temporarily as a readable migration
+    reference, but it is not dispatched.  All active surfaces now share
+    ``astra_tool._do_cycle`` so deterministic preflight, bounded repair, verdict
+    guards, provenance and cache semantics cannot drift by interface.
+    """
+    state.cycle_count += 1
+    state.investigation_cycle_count += 1
+    state.current_cycle = state.cycle_count
+    state.current_phase = "Canonical deliberative pipeline"
+    state.status = "RUNNING"
+    state.add_log("--- STARTING NEW EPISTEMOLOGICAL LOOP ITERATION ---")
+    state.add_log(
+        f"Cycle #{state.current_cycle} started through the shared MCP/GUI core."
+    )
+
+    session = getattr(state, "research_session", None)
+    shared_goal = (
+        getattr(session, "macro_question", None)
+        if session is not None
+        else None
+    ) or intuition
+
+    if _stop_requested():
+        analysis = {
+            "status": "STOPPED",
+            "reasoning": "Stopped before conjecture generation.",
+        }
+        _write_cycle_report("STOPPED", intuition, analysis)
+        state.save_state()
+        return {
+            "conjecture": "",
+            "status": "STOPPED",
+            "analysis": analysis,
+            "navigation": {},
+        }
+
+    from astra_tool import _do_cycle
+
+    request = {
+        "action": "cycle",
+        "intuition": intuition,
+        "objective": shared_goal,
+        "axiomatic_base": state.axiomatic_base,
+        "oracle": os.environ.get("ASTRA_ORACLE_MODE", "local"),
+    }
+    if session is not None:
+        request["thread_summary"] = session.thread_summary()
+        request["cycles_since_milestone"] = session.cycles_since_milestone
+
+    cycle = await _do_cycle(request)
+    pipeline_status = str(cycle.get("status") or "UNKNOWN").upper()
+    conjecture = str(cycle.get("conjecture") or "")
+    analysis = cycle.get("analysis")
+    if not isinstance(analysis, dict):
+        analysis = {
+            "status": pipeline_status,
+            "reasoning": cycle.get("error") or "Cycle returned no analysis.",
+        }
+    execution = cycle.get("execution")
+    if not isinstance(execution, dict):
+        execution = {}
+
+    state.current_conjecture = conjecture
+    state.last_python_code = str(cycle.get("code") or "")
+    state.last_execution_result = execution
+    state.last_analysis = analysis
+    state.last_cycle_result = cycle
+    state.add_log(
+        "Canonical pipeline finished: "
+        f"{pipeline_status}; cache={bool(cycle.get('cached'))}; "
+        f"oracle={cycle.get('oracle_used', 'unknown')}."
+    )
+
+    final_status = pipeline_status
+    if state.stop_requested:
+        final_status = "STOPPED"
+        analysis = {
+            "status": "STOPPED",
+            "reasoning": "Stop was requested while the canonical cycle was running.",
+        }
+    elif pipeline_status == "REFUTED":
+        state.add_log("Hypothesis refuted. Feeding back to the axiomatic base...")
+        state.axiomatic_base += (
+            f"\n[REFUTED]: {conjecture}\n"
+            f"Reasoning: {analysis.get('reasoning')}"
+        )
+    elif pipeline_status == "VALIDATED":
+        state.add_log(
+            "Hypothesis survived the guarded validation cycle. "
+            "Waiting for human theorem approval."
+        )
+        state.status = "WAITING_APPROVAL"
+        state.current_phase = "Human Approval"
+        while (
+            not state.approve_theorem_requested
+            and not state.reject_theorem_requested
+        ):
+            if state.stop_requested:
+                state.reject_theorem_requested = True
+                state.add_log(
+                    "Stop requested during approval. Treating theorem as rejected."
+                )
+                break
+            await asyncio.sleep(1)
+
+        if state.approve_theorem_requested:
+            state.add_log("Theorem APPROVED by user. Adding to Axiomatic Base.")
+            state.axiomatic_base += f"\n[ESTABLISHED THEOREM]: {conjecture}"
+            final_status = "VALIDATED_APPROVED"
+        else:
+            state.add_log("Theorem REJECTED by user. Discarding.")
+            final_status = "VALIDATED_REJECTED"
+        state.approve_theorem_requested = False
+        state.reject_theorem_requested = False
+    elif pipeline_status in {"TOOL_ERROR", "API_ERROR"}:
+        state.add_log(
+            f"[{pipeline_status}] Cycle stopped in phase "
+            f"{cycle.get('phase', 'unknown')}: "
+            f"{str(cycle.get('error') or analysis.get('reasoning') or '')[:180]}"
+        )
+
+    cycle["pipeline_status"] = pipeline_status
+    cycle["status"] = final_status
+    cycle["analysis"] = analysis
+    _write_cycle_report(final_status, intuition, analysis)
+    state.save_state()
+    return cycle
+
+
 # ═══════════════════════════════════════════════════════════════════
 # Single-cycle mode (original behaviour, unchanged for the UI)
 # ═══════════════════════════════════════════════════════════════════
@@ -452,8 +584,11 @@ async def _run_research_loop() -> None:
         if result["status"] in ("STOPPED", "INCOMPLETE"):
             break
 
-        if result["status"] == "API_ERROR":
-            state.add_log("[API_ERROR] Cycle aborted due to API error. Retrying same direction after pause.")
+        if result["status"] in ("API_ERROR", "TOOL_ERROR"):
+            state.add_log(
+                f"[{result['status']}] Cycle aborted before a scientific verdict. "
+                "Retrying the same direction after a pause."
+            )
             await asyncio.sleep(5)
             continue
 
@@ -469,7 +604,7 @@ async def _run_research_loop() -> None:
         elif nav_status.startswith("REFUTED"):
             nav_status = "REFUTED"
 
-        nav = await phase_nav_navigate(
+        nav = result.get("navigation") or await phase_nav_navigate(
             session=session,
             last_conjecture=result["conjecture"],
             last_status=nav_status,

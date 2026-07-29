@@ -26,14 +26,55 @@ def _win_to_wsl_path(path: str) -> str:
     return normalized
 
 
+def _wsl_prefix() -> list[str]:
+    distro = os.environ.get("ASTRA_WSL_DISTRO", "").strip().strip("'\"")
+    prefix = ["wsl"]
+    if distro:
+        prefix.extend(["-d", distro])
+    prefix.append("--")
+    return prefix
+
+
 def _wsl_which(command: str) -> bool:
     if not _is_windows() or shutil.which("wsl") is None:
         return False
     try:
-        result = subprocess.run(["wsl", "which", command], capture_output=True, text=True, timeout=10)
+        result = subprocess.run(
+            [*_wsl_prefix(), "which", command],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
         return result.returncode == 0 and bool(result.stdout.strip())
     except Exception:
         return False
+
+
+def _wsl_test(flag: str, path: str) -> bool:
+    if not _is_windows() or shutil.which("wsl") is None or not path:
+        return False
+    try:
+        result = subprocess.run(
+            [*_wsl_prefix(), "test", flag, path],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
+
+
+def _configured_wsl_lean4() -> str | None:
+    root = os.environ.get("ASTRA_LOCAL_LEAN4_WSL_ROOT", "").strip().strip("'\"")
+    lake = (
+        os.environ.get("ASTRA_LOCAL_LEAN4_WSL_LAKE_BIN", "")
+        .strip()
+        .strip("'\"")
+    )
+    if _wsl_test("-d", root) and _wsl_test("-x", lake):
+        return " ".join([*_wsl_prefix(), lake, "@", root])
+    return None
 
 
 def _native_or_wsl(command: str) -> str | None:
@@ -41,7 +82,7 @@ def _native_or_wsl(command: str) -> str | None:
     if native:
         return native
     if _wsl_which(command):
-        return f"wsl {command}"
+        return " ".join([*_wsl_prefix(), command])
     return None
 
 
@@ -50,7 +91,11 @@ def available_cas() -> dict[str, str | None]:
         "sage": _native_or_wsl("sage"),
         "maxima": _native_or_wsl("maxima"),
         "cadabra": _native_or_wsl("cadabra2"),
-        "lean4": _native_or_wsl("lake") or _native_or_wsl("lean"),
+        "lean4": (
+            _configured_wsl_lean4()
+            or _native_or_wsl("lake")
+            or _native_or_wsl("lean")
+        ),
     }
 
 
@@ -100,8 +145,13 @@ def _command_for(engine: str, filepath: str) -> list[str] | None:
     if _is_windows() and _wsl_which(command):
         wsl_path = _win_to_wsl_path(filepath)
         if engine == "maxima":
-            return ["wsl", "maxima", "--very-quiet", f"--batch={wsl_path}"]
-        return ["wsl", command, wsl_path]
+            return [
+                *_wsl_prefix(),
+                "maxima",
+                "--very-quiet",
+                f"--batch={wsl_path}",
+            ]
+        return [*_wsl_prefix(), command, wsl_path]
 
     return None
 

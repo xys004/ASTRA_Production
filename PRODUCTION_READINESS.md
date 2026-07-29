@@ -1,9 +1,12 @@
 # ASTRA Production Readiness
 
-Status date: 2026-07-26
+Status date: 2026-07-29
 
 Tracked evidence:
 [docs/evidence/PRODUCTION_SNAPSHOT_20260726.md](docs/evidence/PRODUCTION_SNAPSHOT_20260726.md)
+
+Bayesian-planning pilot:
+[benchmarks/bayesian_optimization/PILOT_V1_RESULT.md](benchmarks/bayesian_optimization/PILOT_V1_RESULT.md)
 
 ## Release state
 
@@ -22,8 +25,13 @@ misreported as scientific evidence.
 
 ## Verified gates
 
-- Production Python 3.9 environment: 68/68 automated tests passed.
-- Client-oriented local evidence suite: 5/5 supported cases passed.
+- Production Python 3.9 environment: 91/91 automated tests passed.
+- Compact three-agent architecture contract: PASS. The browser UI, MCP and
+  subprocess CLI share the same guarded cycle; required roles, primary models,
+  Codex `xhigh`, AGY `high`, independent review, navigation and validator
+  repair are checked fail-closed by `scripts/audit_architecture.py`.
+- Client-oriented local evidence suite: 6/6 supported cases passed, including
+  the pinned Lean 4/Mathlib formal case.
 - Cross-oracle client replication: 8/8 evidence bundles passed across four
   paired local--ASTRUM cases, with 100% claim-verdict agreement.
 - Four-worker execution smoke: 8/8 grade-A local--ASTRUM runs, 100% verdict
@@ -35,9 +43,28 @@ misreported as scientific evidence.
   separation for heterogeneous ASTRA (0.7459 versus 0.5958), while both arms
   passed 2/4 cases. This validates the diversity manipulation, not a quality
   advantage.
-- Covered local validators: Z3, SciPy, Pint, SymPy, and GR_python.
-- Lean 4 routing, placeholder rejection, and evidence-bundle behavior are
-  covered by automated tests.
+- Covered local validators: Z3, SciPy, Pint, SymPy, GR_python, SageMath,
+  Maxima, Cadabra, and Lean 4 with Mathlib.
+- Current workstation routing audit: Z3 4.16.0 is available as a local Python
+  solver; Debian/WSL2 provides SageMath 9.2, Maxima 5.44.0 and Cadabra
+  2.3.6.8; Lean 4.30.0 kernel-checks against pinned Mathlib commit
+  `c5ea00351…`. These five local routes are required by the production
+  architecture audit. ASTRUM remains an independent formal route.
+- Lean 4 routing, placeholder rejection, kernel execution, and evidence-bundle
+  behavior are covered by automated tests and a local kernel-checked smoke.
+- Hybrid Bayesian-planning pilot: exact symbolic reduction passed; all three
+  equal-budget methods completed 25 evaluations and passed independent final
+  replay. On this frozen synthetic proxy, GP expected improvement reached
+  `0.01036579328`, versus `0.05512174007` for seeded random search and
+  `0.06333529406` for the uniform grid. This is planner evidence, not a
+  scientific-quality or general-superiority claim.
+- Real hollow-core analytical-project benchmark: the exact first-mass
+  elimination passed, all 75 equal-budget method evaluations were operationally
+  valid, and every final source/high-precision replay passed. No local
+  counterexample improved the shared analytical incumbent. The GP's best
+  distinct challenger was 5.87 times closer than random search and 6.83 times
+  closer than the grid, but this is local allocation evidence rather than a
+  new physical construction or an optimality theorem.
 - `git diff --check` reports no whitespace errors.
 - No high-confidence private-key/API-token patterns were found outside ignored
   runtime environments and workspaces.
@@ -57,6 +84,10 @@ workspace/quality_benchmark_runs/quality_20260726_064413.json
 workspace/quality_benchmark_runs/quality_20260726_064413.md
 workspace/research_trajectory_runs/research_trajectory_20260726_062455/checkpoint.json
 workspace/research_trajectory_runs/research_trajectory_20260726_062455/checkpoint.md
+workspace/bayesian_optimization_runs/bayesian_pilot_20260729_144552.json
+workspace/bayesian_optimization_runs/bayesian_pilot_20260729_144552.md
+workspace/hollow_core_bayesian_runs/hollow_core_bayesian_20260729_150046.json
+workspace/hollow_core_bayesian_runs/hollow_core_bayesian_20260729_150046.md
 ```
 
 ## What vNext.1 improves
@@ -95,11 +126,21 @@ workspace/research_trajectory_runs/research_trajectory_20260726_062455/checkpoin
 - The quick repair gate measures only exact deterministic source patterns. It
   is not evidence of scientific-quality improvement; the frozen long-horizon
   canary remains the appropriate conversion test.
+- The Bayesian pilot uses one synthetic two-dimensional proxy after exact
+  symbolic reduction. Its favorable equal-budget result does not establish
+  performance on physics workloads, high-dimensional spaces, proof search, or
+  other objective families.
+- The hollow-core Bayesian benchmark is confined to `1e-3` compactness
+  perturbations around one sign-indefinite, zero-exterior-ADM Israel-shell
+  incumbent. Its negative result is not a global bound and does not remove the
+  incumbent's strictly negative outer shell.
 - A refused patch is an intentional abstention, not a scientific failure.
 
 ## Reproduction
 
 ```powershell
+.\venv\Scripts\python.exe scripts\audit_architecture.py
+
 .\venv\Scripts\python.exe -m unittest discover -s tests -p "test_*.py"
 
 .\venv\Scripts\python.exe scripts\run_client_validation.py `

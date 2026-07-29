@@ -78,6 +78,13 @@ Prepare ASTRUM without administrator privileges:
 python scripts\run_client_validation.py --prepare-lean4 --timeout 3600
 ```
 
+Prepare the pinned local Debian/WSL2 scientific stack, including Lean 4,
+Mathlib, Maxima and Cadabra:
+
+```powershell
+.\scripts\bootstrap_wsl_scientific_stack.ps1
+```
+
 ## Running the package
 
 List routes without executing:
@@ -149,6 +156,11 @@ Selected evidence:
 
 The raw report is
 `workspace/client_validation_runs/client_validation_20260724_102428.json`.
+
+On 29 July 2026 the complete local matrix passed 6/6 cases. The pinned formal
+artifact was kernel-checked through Debian/WSL2 in 70.697 seconds; Z3, SciPy,
+Pint, SymPy and GR_python also passed. The report is
+`workspace/client_validation_runs/client_validation_20260729_172953.json`.
 
 ## Acceptance rule
 
