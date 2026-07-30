@@ -387,6 +387,23 @@ async def run(args: argparse.Namespace) -> int:
     configurations = _parse_configs(args.config)
     oracles = _oracles(args.oracle)
     repeats = args.repeats if args.repeats is not None else (3 if args.tier == "release" else 1)
+    from core.runtime_resources import (
+        detect_compute_capacity,
+        recommended_parallelism,
+    )
+
+    capacity = detect_compute_capacity()
+    parallelism = recommended_parallelism(capacity)
+    jobs = (
+        max(1, args.jobs)
+        if args.jobs is not None
+        else parallelism["local_scientific_workers"]
+    )
+    cycle_jobs = (
+        max(1, args.cycle_jobs)
+        if args.cycle_jobs is not None
+        else parallelism["deliberative_cycles"]
+    )
 
     if args.list:
         print(json.dumps({
@@ -415,15 +432,15 @@ async def run(args: argparse.Namespace) -> int:
     print("ASTRA Quality Benchmark v1")
     print(
         f"tier={args.tier} cases={len(selected)} scheduled_runs={len(matrix)} "
-        f"repeats={repeats} jobs={args.jobs} cycle_jobs={args.cycle_jobs}"
+        f"repeats={repeats} jobs={jobs} cycle_jobs={cycle_jobs}"
     )
     if args.dry_run:
         for case, config, oracle, repeat in matrix:
             print(f"{case.track:17} {case.id:52} {config:12} {oracle:7} r{repeat}")
         return 0
 
-    overall_sem = asyncio.Semaphore(max(1, args.jobs))
-    cycle_sem = asyncio.Semaphore(max(1, args.cycle_jobs))
+    overall_sem = asyncio.Semaphore(jobs)
+    cycle_sem = asyncio.Semaphore(cycle_jobs)
 
     async def scheduled(item):
         case, configuration, oracle, repeat = item
@@ -470,8 +487,10 @@ async def run(args: argparse.Namespace) -> int:
             "configurations": configurations,
             "oracles": oracles,
             "repeats": repeats,
-            "jobs": args.jobs,
-            "cycle_jobs": args.cycle_jobs,
+            "jobs": jobs,
+            "cycle_jobs": cycle_jobs,
+            "capacity": capacity,
+            "parallelism": parallelism,
             "audit_mode": args.audit_mode,
         },
         "manifest": _manifest(),
@@ -513,8 +532,16 @@ def parser() -> argparse.ArgumentParser:
     )
     result.add_argument("--oracle", choices=["local", "astrum", "auto", "both"], default="local")
     result.add_argument("--repeats", type=int)
-    result.add_argument("--jobs", type=int, default=4)
-    result.add_argument("--cycle-jobs", type=int, default=1)
+    result.add_argument(
+        "--jobs",
+        type=int,
+        help="Parallel local cases (default: auto-detected safe worker count)",
+    )
+    result.add_argument(
+        "--cycle-jobs",
+        type=int,
+        help="Parallel full cycles (default: 1 shared model-account slot)",
+    )
     result.add_argument("--cycle-timeout", type=int, default=2400)
     result.add_argument("--audit-mode", choices=["live", "guard"], default="live")
     result.add_argument("--list", action="store_true")

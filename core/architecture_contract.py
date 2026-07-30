@@ -39,6 +39,17 @@ def _enabled(env: Mapping[str, str], key: str, default: str = "1") -> bool:
     return _value(env, key, default).lower() not in {"0", "off", "false", "no"}
 
 
+def _integer(
+    env: Mapping[str, str],
+    key: str,
+    default: int,
+) -> int:
+    try:
+        return int(_value(env, key, str(default)))
+    except ValueError:
+        return default
+
+
 def production_manifest(
     env: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
@@ -157,6 +168,11 @@ def production_manifest(
             "required_local_engines": _csv(
                 source,
                 "ASTRA_REQUIRED_LOCAL_ENGINES",
+            ),
+            "max_concurrent_cycles": _integer(
+                source,
+                "ASTRA_MAX_CONCURRENT_CYCLES",
+                1,
             ),
         },
         "topology": [
@@ -284,6 +300,12 @@ def audit_production_architecture(
         manifest["controls"]["validator_repair_vnext"],
         manifest["controls"]["validator_repair_vnext"],
         True,
+    )
+    add(
+        "deliberative_cycle_serialization",
+        manifest["controls"]["max_concurrent_cycles"] == 1,
+        manifest["controls"]["max_concurrent_cycles"],
+        1,
     )
 
     if check_binaries:

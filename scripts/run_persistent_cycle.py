@@ -64,6 +64,7 @@ def main() -> int:
     if not isinstance(request, dict):
         raise ValueError("The request must be a JSON object")
     request["action"] = "cycle"
+    request["persistent_cycle"] = True
     if not str(request.get("intuition", "")).strip():
         raise ValueError("The cycle request requires a non-empty intuition")
 

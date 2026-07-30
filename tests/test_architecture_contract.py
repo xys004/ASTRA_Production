@@ -50,6 +50,16 @@ class ArchitectureContractTests(unittest.TestCase):
         self.assertEqual(audit["status"], "FAIL")
         self.assertIn("agy_effort", audit["required_failures"])
 
+    def test_parallel_full_cycles_fail_shared_account_contract(self):
+        env = self.canonical_environment()
+        env["ASTRA_MAX_CONCURRENT_CYCLES"] = "2"
+        audit = audit_production_architecture(env, check_binaries=False)
+        self.assertEqual(audit["status"], "FAIL")
+        self.assertIn(
+            "deliberative_cycle_serialization",
+            audit["required_failures"],
+        )
+
     def test_weaker_phase_override_fails_effective_model_contract(self):
         env = self.canonical_environment()
         env["ASTRA_TRANSLATOR_MODELS"] = "sonnet"

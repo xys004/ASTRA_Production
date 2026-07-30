@@ -25,6 +25,13 @@ Acciones:
       -> enruta y ejecuta la validacion minima orientada a clientes, devolviendo
          paquetes de evidencia con hashes, supuestos, limites y reproducibilidad.
 
+  {"action":"cycle_submit","intuition":"...","max_seconds":7200}
+      -> encola un ciclo deliberativo completo y persistente; consultar con
+         {"action":"job","job_id":"cycle_..."}.
+
+  {"action":"capacity"}
+      -> informa cores/threads visibles y la politica segura de paralelismo.
+
 Uso:  echo '{"action":"execute","code":"print(1)"}' | python astra_tool.py
 """
 import os
@@ -43,6 +50,8 @@ from core.architecture_contract import (
     CACHE_SCHEMA_VERSION,
     production_manifest,
 )
+
+_ACTIVE_CYCLE_CHECKPOINT = None
 
 
 def _verdict(stdout: str) -> str:
@@ -76,8 +85,12 @@ def _progress(stage, **extra):
                         os.remove(fp)
                 except OSError:
                     pass
+        checkpoint = _ACTIVE_CYCLE_CHECKPOINT
+        payload = {"pid": os.getpid(), "stage": stage, "ts": time.time(), **extra}
+        if checkpoint:
+            payload["checkpoint"] = checkpoint
         with open(p, "w", encoding="utf-8") as f:
-            json.dump({"pid": os.getpid(), "stage": stage, "ts": time.time(), **extra}, f)
+            json.dump(payload, f)
     except Exception:
         pass                             # la observabilidad nunca tumba el ciclo
 
@@ -140,6 +153,105 @@ def _do_submit(req: dict) -> dict:
             "max_seconds": max_s}
 
 
+def _do_submit_cycle(req: dict) -> dict:
+    """Launch a complete deliberative cycle outside the synchronous MCP wall."""
+    import subprocess
+    import uuid
+
+    intuition = str(req.get("intuition") or "").strip()
+    if not intuition:
+        return {"error": "intuition vacia"}
+    try:
+        max_s = max(300, int(req.get("max_seconds") or 7200))
+    except (TypeError, ValueError):
+        max_s = 7200
+
+    job_id = time.strftime("cycle_%Y%m%d_%H%M%S_") + uuid.uuid4().hex[:4]
+    jobdir = os.path.join(_jobs_root(), job_id)
+    os.makedirs(jobdir, exist_ok=True)
+    request = {
+        key: value
+        for key, value in req.items()
+        if key not in {"action", "max_seconds"}
+    }
+    request["wait_for_cycle_slot_seconds"] = max_s
+    request["persistent_cycle"] = True
+    with open(os.path.join(jobdir, "request.json"), "w", encoding="utf-8") as f:
+        json.dump(request, f, ensure_ascii=False, indent=2)
+    meta = {
+        "id": job_id,
+        "kind": "deliberative_cycle",
+        "status": "queued",
+        "oracle": str(req.get("oracle") or "local").strip().lower(),
+        "max_seconds": max_s,
+        "created_ts": time.time(),
+        "ts": time.time(),
+    }
+    with open(os.path.join(jobdir, "job.json"), "w", encoding="utf-8") as f:
+        json.dump(meta, f)
+
+    runner = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "astra_cycle_job_runner.py",
+    )
+    flags = 0x00000008 | 0x00000200
+    runner_err = open(os.path.join(jobdir, "runner.err"), "w")
+    kwargs = {
+        "stdin": subprocess.DEVNULL,
+        "stdout": subprocess.DEVNULL,
+        "stderr": runner_err,
+        "cwd": os.path.dirname(runner),
+        "close_fds": True,
+    }
+    try:
+        try:
+            process = subprocess.Popen(
+                [sys.executable, runner, jobdir],
+                creationflags=flags | 0x01000000,
+                **kwargs,
+            )
+        except OSError:
+            process = subprocess.Popen(
+                [sys.executable, runner, jobdir],
+                creationflags=flags,
+                **kwargs,
+            )
+    finally:
+        runner_err.close()
+    return {
+        "job_id": job_id,
+        "kind": "deliberative_cycle",
+        "runner_pid": process.pid,
+        "oracle": meta["oracle"],
+        "max_seconds": max_s,
+        "poll_with": "astra_job",
+    }
+
+
+def _do_capacity() -> dict:
+    from core.runtime_resources import (
+        detect_compute_capacity,
+        recommended_parallelism,
+    )
+
+    capacity = detect_compute_capacity()
+    return {
+        "capacity": capacity,
+        "parallelism": recommended_parallelism(capacity),
+        "already_parallel": [
+            "independent conjecture proposals",
+            "cross-critiques",
+            "independent evidence analyses",
+        ],
+        "kept_serial": [
+            "consensus synthesis after proposals",
+            "validator authoring after conjecture",
+            "review after validator authoring",
+            "oracle execution after approval",
+        ],
+    }
+
+
 def _job_summary(jobdir: str, tail_chars: int = 0):
     try:
         with open(os.path.join(jobdir, "job.json"), encoding="utf-8") as f:
@@ -178,8 +290,9 @@ def _do_job(req: dict) -> dict:
                 m = _job_summary(d)
                 if m:
                     jobs.append({k: m.get(k) for k in
-                                 ("id", "status", "oracle", "verdict",
-                                  "elapsed_s", "heartbeat_age_s")})
+                                 ("id", "kind", "status", "oracle", "verdict",
+                                  "scientific_status", "phase", "elapsed_s",
+                                  "heartbeat_age_s")})
         return {"jobs": jobs}
     jobdir = os.path.join(root, job_id)
     if not os.path.isdir(jobdir):
@@ -363,12 +476,10 @@ async def _do_client_validate(req: dict) -> dict:
 #     CONSERVADOR: gana el veredicto mas prudente (REFUTED > CODE_ERROR >
 #     WEAK_PASS > VALIDATED). El guard determinista (pint/sympy) sigue mandando.
 # OJO LATENCIA: un ciclo ensemble encadena ~8 llamadas CLI (2 conjeturas + 2
-# criticas + 1 merge + codigo + 2 analisis); aun con las paralelas, supera de
-# largo el presupuesto SINCRONO del MCP (~800-900s). Correrlo por _do_cycle DIRECTO
-# fuera del MCP (sin muro de timeout):
-#   echo '{"action":"cycle","intuition":"...","oracle":"local"}' | python astra_tool.py
-# o subir los presupuestos del MCP. NO sirve astra_submit: solo ejecuta CODIGO,
-# no ciclos. Un solo proveedor por fase => camino lineal clasico, sin coste extra.
+# criticas + 1 merge + codigo + 2 analisis). Las ramas independientes corren en
+# paralelo, pero las dependencias siguen siendo seriales. Para auditorias largas
+# usar cycle_submit/astra_cycle_submit; astra_submit queda reservado a codigo ya
+# escrito. Un solo proveedor por fase => camino lineal clasico, sin coste extra.
 # ============================================================================
 
 _CRITIQUE_SYSTEM = (
@@ -489,11 +600,17 @@ async def _ensemble_conjecture(
     phase_timeout,
     synth_provider,
     synth_models=None,
+    timeout_for_phase=None,
 ):
     """Conjetura multi-modelo: propuestas en paralelo -> critica cruzada -> merge.
     Devuelve (conjetura_final, [(label, ASTRAIntelligence)] para _cli_meta)."""
     from core.llm_client import ASTRAIntelligence
-    ais = [ASTRAIntelligence(provider=p, cli_models=None, cli_timeout=phase_timeout)
+    current_timeout = (
+        timeout_for_phase("CONJECTURE")
+        if timeout_for_phase
+        else phase_timeout
+    )
+    ais = [ASTRAIntelligence(provider=p, cli_models=None, cli_timeout=current_timeout)
            for p in providers]
     gens = await asyncio.gather(
         *[a.generate_conjecture(axiomatic_base=axiomatic_base, intuition=intuition)
@@ -532,6 +649,8 @@ async def _ensemble_conjecture(
 
     async def _crit(i):
         p_i, t_i, a_i = surv[i]
+        if timeout_for_phase:
+            a_i.cli_timeout = timeout_for_phase("CONJECTURE")
         rivals = "\n\n".join("=== RIVAL %s (%s) ===\n%s" % (chr(65 + j), surv[j][0], surv[j][1])
                              for j in range(len(surv)) if j != i)
         return await a_i._call_api(
@@ -541,8 +660,13 @@ async def _ensemble_conjecture(
 
     crits = await asyncio.gather(*[_crit(i) for i in range(len(surv))],
                                  return_exceptions=True)
+    synth_timeout = (
+        timeout_for_phase("SYNTH")
+        if timeout_for_phase
+        else phase_timeout
+    )
     synth = ASTRAIntelligence(provider=synth_provider, cli_models=synth_models,
-                              cli_timeout=phase_timeout)
+                              cli_timeout=synth_timeout)
     used.append(("conjecture_merge:%s" % synth_provider, synth))
     blocks = []
     for i, (p, t, _a) in enumerate(surv):
@@ -589,8 +713,9 @@ async def _ensemble_analysis(providers, shared_goal, conjecture, exec_result, ph
     return _combine_verdicts(verdicts), used
 
 
-async def _do_cycle(req: dict) -> dict:
+async def _do_cycle_impl(req: dict) -> dict:
     """Goal-driven multi-model cycle with deliberation, review and navigation."""
+    from core.cycle_budget import CycleBudget
     from core.preflight import phase_provider_map
     from core.llm_client import ASTRAIntelligence
     from core.executor import execute_python_code
@@ -680,11 +805,65 @@ async def _do_cycle(req: dict) -> dict:
     # --- Observabilidad: cronometro por fase + hitos al archivo de progreso.
     t_start = time.monotonic()
     timings = {}
+    cycle_wall = (
+        None
+        if req.get("persistent_cycle")
+        else req.get("cycle_timeout_seconds") or 1500
+    )
+    budget = CycleBudget(
+        cycle_wall,
+        return_buffer_seconds=req.get("cycle_return_buffer_seconds") or 60,
+    )
+    checkpoint_dir = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "workspace",
+        "cycle_checkpoints",
+    )
+    checkpoint_path = os.path.join(
+        checkpoint_dir,
+        f"{ckey}_{os.getpid()}.json",
+    )
+    global _ACTIVE_CYCLE_CHECKPOINT
+    _ACTIVE_CYCLE_CHECKPOINT = checkpoint_path
+    checkpoint_state = {
+        "schema_version": "1.0",
+        "pid": os.getpid(),
+        "cache_key": ckey,
+        "shared_goal": shared_goal,
+        "intuition": intuition,
+        "providers": providers_resolved,
+        "created_ts": time.time(),
+    }
+
+    def _save_cycle_checkpoint(stage, **artifacts):
+        checkpoint_state.update(artifacts)
+        checkpoint_state.update(
+            {
+                "stage": stage,
+                "updated_ts": time.time(),
+                "timings": dict(timings),
+                "budget": budget.snapshot(),
+            }
+        )
+        try:
+            os.makedirs(checkpoint_dir, exist_ok=True)
+            temporary = checkpoint_path + ".tmp"
+            with open(temporary, "w", encoding="utf-8") as stream:
+                json.dump(checkpoint_state, stream, ensure_ascii=False, indent=2)
+            os.replace(temporary, checkpoint_path)
+        except Exception:
+            pass
+        return checkpoint_path
 
     def _mark(name, t0):
         timings[name] = round(timings.get(name, 0.0) + (time.monotonic() - t0), 2)
 
-    _progress("start", oracle=os.environ.get("ASTRA_ORACLE_MODE", "local"))
+    _save_cycle_checkpoint("start")
+    _progress(
+        "start",
+        oracle=os.environ.get("ASTRA_ORACLE_MODE", "local"),
+        budget=budget.snapshot(),
+    )
 
     def _phase_models(phase):
         # Escalera de modelos POR FASE (ASTRA_TRANSLATOR_MODELS='sonnet,default');
@@ -693,15 +872,31 @@ async def _do_cycle(req: dict) -> dict:
              or os.environ.get(f"ASTRA_{phase}_MODEL") or "")
         return v.strip().strip("'\"") or None
 
-    def _phase_timeout(phase):
+    def _configured_phase_timeout(phase):
         # Presupuesto por llamada especifico de la fase (p.ej. el TRADUCTOR
         # genera scripts de fisica largos: ASTRA_TRANSLATOR_TIMEOUT=480);
         # sin variable, cli_backend usa ASTRA_CLI_TIMEOUT (240).
         v = (os.environ.get(f"ASTRA_{phase}_TIMEOUT") or "").strip().strip("'\"")
         try:
-            return int(v) if v else None
+            if v:
+                return int(v)
+            return int(
+                str(os.environ.get("ASTRA_CLI_TIMEOUT", "240"))
+                .strip()
+                .strip("'\"")
+            )
         except ValueError:
-            return None
+            return 240
+
+    def _phase_timeout(phase):
+        return budget.phase_timeout(
+            _configured_phase_timeout(phase),
+            default_seconds=240,
+        )
+
+    def _prepare_agent(agent, phase):
+        agent.cli_timeout = _phase_timeout(phase)
+        return agent.cli_timeout
 
     conj = ASTRAIntelligence(provider=pmap["conjecture"],
                              cli_models=_phase_models("CONJECTURE"),
@@ -734,10 +929,30 @@ async def _do_cycle(req: dict) -> dict:
             )
             ensemble_agents.extend(used)
             return a
+        _prepare_agent(analyst, "ANALYST")
         return await analyst.analyze_results(cj, ex, shared_goal=shared_goal)
 
     def _fail(msg, phase, conjecture_text=None):
-        out = {"status": "TOOL_ERROR", "error": msg, "phase": phase}
+        deadline_limited = (
+            budget.total_seconds is not None
+            and (
+                "timeout tras" in str(msg).lower()
+                or "time budget" in str(msg).lower()
+                or not budget.can_start()
+            )
+        )
+        out = {
+            "status": "PARTIAL" if deadline_limited else "TOOL_ERROR",
+            "error": msg,
+            "phase": phase,
+            "budget": budget.snapshot(),
+            "checkpoint": checkpoint_path,
+            "resume_available": True,
+            "resume_hint": (
+                "Submit the same request with astra_cycle_submit for a persistent "
+                "cycle, or use the checkpoint's conjecture/code with astra_execute."
+            ),
+        }
         if conjecture_text:
             # SALVAVIDAS: si murio el traductor, devolver la conjetura ya pagada
             # para que el agente llamador la traduzca el mismo y use astra_execute.
@@ -750,6 +965,11 @@ async def _do_cycle(req: dict) -> dict:
             out["warnings"] = warnings
         if cli_models:
             out["cli_models"] = cli_models
+        _save_cycle_checkpoint(
+            "partial" if deadline_limited else "failed",
+            error=str(msg),
+            failed_phase=phase,
+        )
         _progress("failed", phase=phase, timings=timings)
         return out
 
@@ -771,8 +991,10 @@ async def _do_cycle(req: dict) -> dict:
             source=source,
             patch=len(model_patch_history) + 1,
             timings=timings,
+            budget=budget.snapshot(),
         )
         t0 = time.monotonic()
+        _prepare_agent(trans, "TRANSLATOR")
         patch_result = await trans.repair_validation_code(
             translation_input,
             current_code,
@@ -898,6 +1120,7 @@ async def _do_cycle(req: dict) -> dict:
                 if preflight.get("status") != "APPROVED":
                     review = preflight_as_review(preflight)
                 else:
+                    _prepare_agent(reviewer, "REVIEWER")
                     review = await reviewer.review_validation_code(
                         shared_goal=shared_goal,
                         conjecture=conjecture_text,
@@ -906,6 +1129,7 @@ async def _do_cycle(req: dict) -> dict:
                     )
                     review["source"] = "model_reviewer"
             else:
+                _prepare_agent(reviewer, "REVIEWER")
                 review = await reviewer.review_validation_code(
                     shared_goal=shared_goal,
                     conjecture=conjecture_text,
@@ -962,6 +1186,7 @@ async def _do_cycle(req: dict) -> dict:
                     return current_code, review, patch_error
             else:
                 t0 = time.monotonic()
+                _prepare_agent(trans, "TRANSLATOR")
                 current_code = await trans.translate_to_code(
                     translation_input,
                     is_correction=True,
@@ -989,9 +1214,12 @@ async def _do_cycle(req: dict) -> dict:
         conjecture, _cu, deliberation = await _ensemble_conjecture(
             conj_providers, req.get("axiomatic_base", ""), goal_directed_intuition,
             _phase_timeout("CONJECTURE"), synth_provider,
-            _phase_models("SYNTH"))
+            _phase_models("SYNTH"),
+            timeout_for_phase=_phase_timeout,
+        )
         ensemble_agents.extend(_cu)
     else:
+        _prepare_agent(conj, "CONJECTURE")
         conjecture = await conj.generate_conjecture(
             axiomatic_base=req.get("axiomatic_base", ""), intuition=goal_directed_intuition)
         deliberation = {
@@ -1002,6 +1230,11 @@ async def _do_cycle(req: dict) -> dict:
     _mark("conjecture", t0)
     if isinstance(conjecture, str) and conjecture.startswith("API_ERROR:"):
         return _fail(conjecture, "conjecture")
+    _save_cycle_checkpoint(
+        "conjecture_complete",
+        conjecture=conjecture,
+        deliberation=deliberation,
+    )
 
     translation_input = (
         "SHARED FINAL OBJECTIVE:\n"
@@ -1009,6 +1242,7 @@ async def _do_cycle(req: dict) -> dict:
     )
     _progress("translate", timings=timings)
     t0 = time.monotonic()
+    _prepare_agent(trans, "TRANSLATOR")
     code = await trans.translate_to_code(translation_input)
     _mark("translate", t0)
     if isinstance(code, str) and code.startswith("API_ERROR:") and "timeout tras" in code:
@@ -1016,10 +1250,9 @@ async def _do_cycle(req: dict) -> dict:
         # pidiendo script MINIMO antes de rendirse — verificar los claims
         # decisivos, no transcribir el formalismo completo.
         _progress("translate_retry_minimal", timings=timings)
-        # El reintento pide un script MINIMO (<150 lineas): medido ~350s para
-        # ~190 lineas => 360s bastan y el peor caso del ciclo cabe en la pared
-        # del cliente (240+720+360+180+analisis < 1800).
-        trans.cli_timeout = min(trans.cli_timeout or 360, 360)
+        # El reintento pide un script MINIMO (<150 lineas); su timeout tambien
+        # se recorta contra el presupuesto global restante.
+        trans.cli_timeout = min(_phase_timeout("TRANSLATOR"), 360)
         t0 = time.monotonic()
         code = await trans.translate_to_code(
             translation_input, is_correction=True,
@@ -1031,6 +1264,12 @@ async def _do_cycle(req: dict) -> dict:
         _mark("translate", t0)
     if isinstance(code, str) and code.startswith("API_ERROR:"):
         return _fail(code, "translator", conjecture_text=conjecture)
+    _save_cycle_checkpoint(
+        "translation_complete",
+        conjecture=conjecture,
+        deliberation=deliberation,
+        code=code,
+    )
     code, code_review, review_error = await _review_or_revise(
         code, conjecture, translation_input
     )
@@ -1043,7 +1282,25 @@ async def _do_cycle(req: dict) -> dict:
         out["validator_local_repair_history"] = local_repair_history
         out["validator_model_patch_history"] = model_patch_history
         out["deliberation"] = deliberation
+        _save_cycle_checkpoint(
+            out["status"].lower(),
+            code=code,
+            code_review=code_review,
+            code_review_history=review_history,
+            validator_preflight_history=preflight_history,
+            validator_local_repair_history=local_repair_history,
+            validator_model_patch_history=model_patch_history,
+        )
         return out
+    _save_cycle_checkpoint(
+        "review_complete",
+        code=code,
+        code_review=code_review,
+        code_review_history=review_history,
+        validator_preflight_history=preflight_history,
+        validator_local_repair_history=local_repair_history,
+        validator_model_patch_history=model_patch_history,
+    )
     # exec_timeout opcional del request: calculos pesados legitimos (sweeps,
     # GPU en ASTRUM) pueden necesitar mas que el ASTRA_ORACLE_TIMEOUT del .env.
     try:
@@ -1051,19 +1308,46 @@ async def _do_cycle(req: dict) -> dict:
     except (TypeError, ValueError):
         exec_t = None
 
-    _progress("execute", timings=timings)
+    requested_exec_t = exec_t
+    if requested_exec_t is None:
+        try:
+            requested_exec_t = int(
+                str(os.environ.get("ASTRA_ORACLE_TIMEOUT", "180"))
+                .strip()
+                .strip("'\"")
+            )
+        except ValueError:
+            requested_exec_t = 180
+    effective_exec_t = budget.phase_timeout(
+        requested_exec_t,
+        default_seconds=180,
+    )
+    _progress(
+        "execute",
+        timings=timings,
+        budget=budget.snapshot(),
+        timeout=effective_exec_t,
+    )
     t0 = time.monotonic()
-    exec_result = await execute_python_code(code, timeout=exec_t)
+    exec_result = await execute_python_code(code, timeout=effective_exec_t)
     _mark("execute", t0)
     exec_result["validation_code"] = code
     exec_result["code_review"] = code_review
     exec_result["verdict"] = _verdict(exec_result.get("stdout", ""))
     exec_result["guard"] = assess_verdict(code, exec_result)
+    _save_cycle_checkpoint(
+        "execution_complete",
+        execution=exec_result,
+    )
     _progress("analyze", timings=timings)
     t0 = time.monotonic()
     analysis = await _run_analysis(conjecture, exec_result)
     _mark("analyze", t0)
     analysis = _apply_guard(analysis, exec_result)
+    _save_cycle_checkpoint(
+        "analysis_complete",
+        analysis=analysis,
+    )
 
     # Reintentos: primero arreglos MECANICOS deterministas (gratis), luego el
     # traductor corrige (error matematico) o refuerza (WEAK_PASS del auditor).
@@ -1098,6 +1382,7 @@ async def _do_cycle(req: dict) -> dict:
                     return out
             else:
                 t0 = time.monotonic()
+                _prepare_agent(trans, "TRANSLATOR")
                 code = await trans.translate_to_code(
                     translation_input,
                     is_correction=True,
@@ -1136,6 +1421,7 @@ async def _do_cycle(req: dict) -> dict:
                         return out
                 else:
                     t0 = time.monotonic()
+                    _prepare_agent(trans, "TRANSLATOR")
                     code = await trans.translate_to_code(
                         translation_input,
                         is_correction=True,
@@ -1157,9 +1443,22 @@ async def _do_cycle(req: dict) -> dict:
             out["validator_local_repair_history"] = local_repair_history
             out["validator_model_patch_history"] = model_patch_history
             out["deliberation"] = deliberation
+            _save_cycle_checkpoint(
+                out["status"].lower(),
+                code=code,
+                code_review=code_review,
+                code_review_history=review_history,
+                validator_preflight_history=preflight_history,
+                validator_local_repair_history=local_repair_history,
+                validator_model_patch_history=model_patch_history,
+            )
             return out
         t0 = time.monotonic()
-        exec_result = await execute_python_code(code, timeout=exec_t)
+        effective_exec_t = budget.phase_timeout(
+            requested_exec_t,
+            default_seconds=180,
+        )
+        exec_result = await execute_python_code(code, timeout=effective_exec_t)
         _mark("execute", t0)
         exec_result["validation_code"] = code
         exec_result["code_review"] = code_review
@@ -1202,6 +1501,7 @@ async def _do_cycle(req: dict) -> dict:
             f"oracle verdict: {exec_result.get('verdict')}; "
             f"analyst status: {analysis.get('status')}."
         )
+        _prepare_agent(navigator, "NAVIGATOR")
         navigation = await navigator.navigate_research(
             macro_question=shared_goal,
             axiomatic_base=req.get("axiomatic_base", ""),
@@ -1267,7 +1567,10 @@ async def _do_cycle(req: dict) -> dict:
     if est == "long" and not exec_t:
         out.setdefault("warnings", []).append(
             "El traductor estima computo LARGO (>10 min): considera correrlo como "
-            "job asincrono (astra_submit) o repetir el ciclo con exec_timeout mayor.")
+            "ciclo persistente (astra_cycle_submit), o usa astra_submit para "
+            "solo la ejecucion pesada.")
+    out["budget"] = budget.snapshot()
+    out["checkpoint"] = checkpoint_path
     if use_cache and out.get("status") in ("VALIDATED", "REFUTED"):
         try:
             os.makedirs(cache_dir, exist_ok=True)
@@ -1275,8 +1578,72 @@ async def _do_cycle(req: dict) -> dict:
                 json.dump(out, f)
         except Exception:
             pass
+    _save_cycle_checkpoint("done", result=out)
     _progress("done", status=out.get("status"), timings=timings)
     return out
+
+
+async def _do_cycle(req: dict) -> dict:
+    """Admit one full cycle per configured model-account slot.
+
+    Independent branches inside a cycle remain parallel.  Separate complete
+    cycles are serialized by default because they share the same Codex, Claude
+    and AGY subscriptions and otherwise make each other's latency unpredictable.
+    """
+    from pathlib import Path
+
+    from core.runtime_resources import (
+        acquire_cycle_slot,
+        detect_compute_capacity,
+        recommended_parallelism,
+    )
+
+    capacity = detect_compute_capacity()
+    plan = recommended_parallelism(capacity)
+    max_slots = max(1, int(plan["deliberative_cycles"]))
+    try:
+        wait_seconds = max(0, int(req.get("wait_for_cycle_slot_seconds") or 0))
+    except (TypeError, ValueError):
+        wait_seconds = 0
+    wait_started = time.monotonic()
+    active = []
+    slot = None
+    while slot is None:
+        slot, active = acquire_cycle_slot(Path(__file__).resolve().parent, max_slots)
+        if slot is not None:
+            break
+        if time.monotonic() - wait_started >= wait_seconds:
+            return {
+                "status": "BUSY",
+                "error": (
+                    "Another full ASTRA deliberative cycle is already using the "
+                    "shared model-account set."
+                ),
+                "active_cycles": active,
+                "capacity": capacity,
+                "parallelism": plan,
+                "retry_hint": (
+                    "Poll the active cycle, retry later, or use astra_cycle_submit "
+                    "to queue a persistent cycle."
+                ),
+            }
+        _progress(
+            "queued",
+            active_cycles=active,
+            waited_s=round(time.monotonic() - wait_started, 1),
+        )
+        await asyncio.sleep(min(5, max(1, wait_seconds)))
+
+    try:
+        result = await _do_cycle_impl(req)
+        if isinstance(result, dict):
+            result.setdefault("capacity", capacity)
+            result.setdefault("parallelism", plan)
+        return result
+    finally:
+        slot.release()
+        global _ACTIVE_CYCLE_CHECKPOINT
+        _ACTIVE_CYCLE_CHECKPOINT = None
 
 
 def main() -> None:
@@ -1298,8 +1665,12 @@ def main() -> None:
             out = asyncio.run(_do_cycle(req))
         elif action == "submit":
             out = _do_submit(req)
+        elif action == "cycle_submit":
+            out = _do_submit_cycle(req)
         elif action == "job":
             out = _do_job(req)
+        elif action == "capacity":
+            out = _do_capacity()
         else:
             out = {"error": f"accion desconocida: {action}"}
     except Exception as e:

@@ -10,12 +10,14 @@ Bayesian-planning pilot:
 
 ## Release state
 
-ASTRA Production enables Validator Repair vNext.1:
+ASTRA Production enables Validator Repair vNext.1 and deadline-aware cycle
+orchestration:
 
 ```text
 ASTRA_VALIDATOR_REPAIR_VNEXT=1
 ASTRA_VALIDATOR_REPAIR_STRATEGY=local-patch
 ASTRA_VNEXT_MODEL_PATCH_MAX_REVISIONS=1
+ASTRA_MAX_CONCURRENT_CYCLES=1
 ```
 
 The release changes repair cost and auditability, not the scientific acceptance
@@ -25,7 +27,14 @@ misreported as scientific evidence.
 
 ## Verified gates
 
-- Production Python 3.9 environment: 91/91 automated tests passed.
+- Production Python 3.9 environment: 99/99 automated tests passed.
+- Synchronous cycles clamp every phase to the remaining global budget, reserve
+  response time, and persist phase checkpoints. Long cycles can run detached
+  through `astra_cycle_submit`; a cross-process slot prevents full cycles from
+  contending for the same model subscriptions.
+- Runtime capacity detection reports 8 estimated physical cores and 16 logical
+  CPUs on the production workstation. The default plan uses four independent
+  local scientific workers while keeping one deliberative cycle in flight.
 - Compact three-agent architecture contract: PASS. The browser UI, MCP and
   subprocess CLI share the same guarded cycle; required roles, primary models,
   Codex `xhigh`, AGY `high`, independent review, navigation and validator

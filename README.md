@@ -128,6 +128,26 @@ Switch to **Research Loop** in the sidebar. Enter a **macro research question** 
 - **New** (topbar) — saves the current investigation and resets ASTRA for a fresh start.
 - **History** — browse, reload, or delete past investigations.
 
+### Runtime budgets, checkpoints, and parallelism
+
+Synchronous `astra_cycle` calls are deadline-aware. Every model/oracle phase is
+clamped to the remaining whole-cycle budget, with a final response buffer. If a
+complex audit cannot finish inside the client wall, ASTRA returns `PARTIAL`
+with the completed conjecture/code, timings, and a checkpoint under
+`workspace/cycle_checkpoints/` instead of being killed without a result.
+
+Use `astra_cycle_submit` for a complete long audit and poll its `job_id` with
+`astra_job`. The persistent route survives the calling task and waits for the
+shared deliberative-cycle slot. `astra_capacity` reports the CPUs visible to the
+process and the selected worker policy.
+
+ASTRA already runs independent proposals, cross-critiques, and evidence
+analyses concurrently. Complete cycles are serialized by default because they
+share the same Codex, Claude, and AGY subscriptions. Independent local
+validators and benchmark cases use an auto-detected safe worker count
+(`ASTRA_LOCAL_WORKERS` overrides it); dependent scientific phases remain
+ordered.
+
 ---
 
 ## Validation Engines

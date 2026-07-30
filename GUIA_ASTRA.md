@@ -138,10 +138,12 @@ navega) y ASTRA su **verificador con GPU**.
 | Herramienta | Firma | Para qué |
 |-------------|-------|----------|
 | `astra_execute` | `(code, oracle="local", timeout=180)` | corre TU código y devuelve stdout + veredicto. `timeout` ahora se respeta de verdad (fix 2026-07-15: antes el env lo pisaba) |
-| `astra_cycle` | `(intuition, oracle="local", timeout=1500, exec_timeout=0)` | pipeline completo. **Un ciclo de física pesada tarda 10-25 min y es NORMAL** (traducción medida: 350-700s) — sondear con `astra_probe`, no matar. Si el traductor agota su presupuesto, la respuesta incluye la `conjecture` ya pagada: tradúcela tú y usa `astra_execute` |
+| `astra_cycle` | `(intuition, oracle="local", timeout=1500, exec_timeout=0)` | ciclo completo síncrono. Cada fase se recorta contra el presupuesto total y ASTRA reserva tiempo para devolver `PARTIAL` + checkpoint, en vez de morir por el timeout externo |
+| `astra_cycle_submit` | `(intuition, oracle="local", max_seconds=7200, exec_timeout=0)` | **vía recomendada para auditorías complejas**: encola un ciclo deliberativo persistente, espera el slot compartido y sobrevive al cliente. Sondear con `astra_job` |
 | `astra_probe` | `()` | **SONDA**: ¿qué hace ASTRA ahora? — fase en vuelo + heartbeat + ciclos recientes, leído de `workspace\progress\`. Gratis e instantánea; sondear cada ~60s antes de asumir cuelgue |
 | `astra_submit` | `(code, oracle="local", max_seconds=86400)` | **JOB ASÍNCRONO** para cómputo >10 min: retorna `job_id` al instante y el trabajo corre desacoplado (sobrevive al cliente y sus reinicios). Local o ASTRUM (`astrum`: el runner sostiene el SSH — laptop despierta) |
-| `astra_job` | `(job_id="")` | Sondea un job: status, heartbeat, **tail EN VIVO del stdout** (python local), y el resultado final (verdict/exit/duración). Sin `job_id`: lista los 10 recientes |
+| `astra_job` | `(job_id="")` | Sondea trabajos de código o ciclos completos: status, fase, heartbeat, salida y resultado final. Sin `job_id`: lista los 10 recientes |
+| `astra_capacity` | `()` | detecta cores/threads visibles y muestra la política segura de paralelismo |
 | `astra_status` | `()` | ¿ASTRUM está vivo? |
 
 **Política de duraciones** (el traductor ya la estima con `# ASTRA_EST_RUNTIME: short|medium|long` y el ciclo la reporta en `est_runtime`):
@@ -150,7 +152,7 @@ navega) y ASTRA su **verificador con GPU**.
 |---|---|---|
 | short | < 2-3 min | defaults (`astra_execute` / `astra_cycle` tal cual) |
 | medium | 3-10 min | `astra_execute(timeout=N)` o `astra_cycle(exec_timeout=N)` explícitos |
-| long | > 10 min (muro síncrono del cliente MCP ≈15 min) | **`astra_submit` + `astra_job`** — sin muros; para sweeps, cotiza con corrida piloto: 1 punto medido × N puntos |
+| long | > 10 min | ciclo completo: **`astra_cycle_submit` + `astra_job`**; sólo cómputo escrito: **`astra_submit` + `astra_job`** |
 
 **Devuelven JSON** con `stdout`, `exit_code`, `verdict` (PASS/FAIL/NONE), `oracle_used`, etc.
 El script debe terminar imprimiendo `VERDICT: PASS` o `VERDICT: FAIL`.
@@ -237,6 +239,10 @@ ASTRA_MAX_RETRIES=2
 ASTRA_VALIDATOR_REPAIR_VNEXT=1
 ASTRA_VALIDATOR_REPAIR_STRATEGY=local-patch
 ASTRA_VNEXT_MODEL_PATCH_MAX_REVISIONS=1
+# Un solo ciclo completo comparte las cuentas Codex/Claude/AGY. Los validadores
+# y benchmarks locales independientes usan la capacidad detectada.
+ASTRA_MAX_CONCURRENT_CYCLES=1
+# ASTRA_LOCAL_WORKERS=4
 # Cache de ciclos (hash intuicion+providers+oraculo -> workspace/cycle_cache). 0=off.
 ASTRA_CYCLE_CACHE=1
 # Presupuesto POR llamada CLI (2026-07-15): una fase colgada muere sola
@@ -247,7 +253,8 @@ ASTRA_CYCLE_CACHE=1
 ASTRA_CLI_TIMEOUT=240
 # El TRADUCTOR es la fase lenta por naturaleza — MEDIDO: sonnet ~354s para
 # ~194 lineas desde tarea compacta; conjeturas grandes de Opus -> mas.
-# Presupuestos: 240 (conj) + 720 (trad) + 360 (retry minimo) + exec < 1800 (pared Codex).
+# El presupuesto efectivo de cada llamada se recorta contra el tiempo restante
+# del ciclo síncrono. Los ciclos largos deben ir por astra_cycle_submit.
 ASTRA_TRANSLATOR_TIMEOUT=720
 # Perplexity (API OpenAI-compatible; no existe CLI oficial de suscripcion):
 # PERPLEXITY_API_KEY=pplx-...
@@ -291,7 +298,8 @@ $PY   = "$CORE\venv\Scripts\python.exe"
 | `warnings` en el resultado del ciclo | Una fase la respondió un modelo fallback por cuota (`cli_models` dice cuál). La calidad puede variar respecto al modelo principal. |
 | Status `WEAK_PASS` | El script imprimió PASS pero el **auditor determinista** (AST, `core/verdict_guard.py`) lo rechazó: sin rama FAIL alcanzable, cero comparaciones, o CHECKs en FAIL. El ciclo ya reintenta reforzarlo solo (`ASTRA_MAX_RETRIES`); si persiste, trátalo como "no verificado". |
 | El mismo prompt vuelve al instante con `cached: true` | Cache de ciclos (`workspace/cycle_cache/`). Es correcto: misma intuición+providers+oráculo ⇒ misma matemática. Bórralo o `ASTRA_CYCLE_CACHE=0` para forzar recomputo. |
-| Timeout del ciclo sin saber qué fase colgó | Ya no pasa (2026-07-15): cada llamada CLI muere sola a los `ASTRA_CLI_TIMEOUT` s → `API_ERROR` + fase; el resultado trae `timings` (segundos por fase); y si el timeout externo aun mata el proceso, el error del MCP incluye `last_progress` (fase culpable + edad) leído de `workspace\progress\cycle_<pid>.json`. |
+| El ciclo agota el límite durante traducción/reparación | Corregido 2026-07-29: ASTRA descuenta el tiempo consumido, recorta cada fase y reserva 60 s para devolver `PARTIAL`, la conjetura/código disponible y un checkpoint. Para terminar una auditoría compleja usa `astra_cycle_submit` y sondea `astra_job`. |
+| Dos auditorías completas se vuelven muy lentas | ASTRA serializa los ciclos completos entre procesos (`ASTRA_MAX_CONCURRENT_CYCLES=1`) porque comparten las cuentas Codex/Claude/AGY. El segundo ciclo persistente espera en cola; los trabajos locales independientes sí se paralelizan. |
 | Tailscale `NoState` con servicio Running (ASTRUM inalcanzable, `Connection closed by UNKNOWN port 65535`) | Causa vista 2026-07-15: la GUI `tailscale-ipn.exe` no estaba corriendo y sin *unattended mode* el demonio espera el perfil para siempre. Fix: arrancar la GUI o mejor `tailscale set --unattended=true` (**ya aplicado** — sobrevive sin GUI). Reiniciar solo el servicio NO basta. |
 | ASTRUM no responde | Tailscale caído o nodo apagado → usa **Oráculo: Local** mientras tanto. |
 | `cannot import name 'BinaryRelation'` (sympy) | sympy 1.14 corrupto → reinstala `sympy<1.14` (§3.1). |
