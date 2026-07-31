@@ -31,7 +31,7 @@ measurement or software package.
 
 ## Minimum application set
 
-Six cases are tracked under `benchmarks/client_validation/`:
+Seven cases are tracked under `benchmarks/client_validation/`:
 
 | Case | Application | Expected claim |
 |---|---|---|
@@ -39,11 +39,18 @@ Six cases are tracked under `benchmarks/client_validation/`:
 | `client_control_response` | Numerical control model | VALIDATED |
 | `client_fluid_pressure_scaling` | Units and engineering scaling | VALIDATED |
 | `client_formula_regression` | Symbolic regression | VALIDATED |
+| `client_quantum_transport_eom_open_system` | QuantumTransportEOM package assurance | VALIDATED |
 | `client_grpython_flat_spacetime` | GR_python package assurance | VALIDATED |
 | `client_grpython_zero_trace_formal` | Formal aggregation invariant | VALIDATED |
 
 The negative capacity case is deliberate. A useful assurance system must reject
 a false client promise, not only approve true examples.
+
+The QuantumTransportEOM case exercises the installed package through its public
+`MatrixDevice`, `LeadSelfEnergy` and `MatrixTransportView` APIs. It compares
+against the analytic resonant-level Lorentzian, checks equilibrium
+fluctuation-dissipation and zero current, and verifies left/right current
+conservation under finite bias.
 
 ## GR_python vertical demonstration
 
@@ -161,6 +168,11 @@ On 29 July 2026 the complete local matrix passed 6/6 cases. The pinned formal
 artifact was kernel-checked through Debian/WSL2 in 70.697 seconds; Z3, SciPy,
 Pint, SymPy and GR_python also passed. The report is
 `workspace/client_validation_runs/client_validation_20260729_172953.json`.
+
+On 30 July 2026 `client_quantum_transport_eom_open_system` was added as the
+seventh registered case. Its first local evidence bundle passed through the
+project-package adapter and is stored in
+`workspace/client_validation_runs/client_validation_20260730_001852.json`.
 
 ## Acceptance rule
 

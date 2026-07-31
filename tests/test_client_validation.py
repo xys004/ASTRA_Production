@@ -23,9 +23,9 @@ class ClientValidationTests(unittest.TestCase):
     def setUpClass(cls):
         cls.cases = load_client_validation_cases()
 
-    def test_minimum_suite_has_six_unique_application_cases(self):
-        self.assertEqual(len(self.cases), 6)
-        self.assertEqual(len({case.id for case in self.cases}), 6)
+    def test_minimum_suite_has_seven_unique_application_cases(self):
+        self.assertEqual(len(self.cases), 7)
+        self.assertEqual(len({case.id for case in self.cases}), 7)
         verdicts = {case.expected_claim_verdict for case in self.cases}
         self.assertIn("VALIDATED", verdicts)
         self.assertIn("REFUTED", verdicts)
@@ -47,6 +47,12 @@ class ClientValidationTests(unittest.TestCase):
             route_validator(by_id["client_grpython_flat_spacetime"]).primary,
             "project_python",
         )
+        self.assertEqual(
+            route_validator(
+                by_id["client_quantum_transport_eom_open_system"]
+            ).primary,
+            "project_python",
+        )
         self.assertIn(
             "wolfram_bridge",
             route_validator(by_id["client_formula_regression"]).alternatives,
@@ -65,6 +71,13 @@ class ClientValidationTests(unittest.TestCase):
         self.assertEqual(
             select_oracles(by_id["client_grpython_zero_trace_formal"], "both"),
             ["local", "astrum"],
+        )
+        self.assertEqual(
+            select_oracles(
+                by_id["client_quantum_transport_eom_open_system"],
+                "both",
+            ),
+            ["local"],
         )
 
     def test_engine_router_recognizes_explicit_lean4(self):

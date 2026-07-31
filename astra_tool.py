@@ -310,15 +310,36 @@ def _do_job(req: dict) -> dict:
 
 
 def _cli_meta(agents):
-    """Junta los avisos de cuota (escalera de cli_backend) y que modelo CLI
-    respondio cada fase, para exponerlos en el JSON del ciclo."""
-    warnings, models = [], {}
+    """Junta los avisos de cuota (escalera de cli_backend), que modelo CLI
+    respondio cada fase y el coste proxy acumulado (solo el CLI de claude lo
+    reporta; codex/agy devuelven 0), para exponerlos en el JSON del ciclo."""
+    warnings, models, costs = [], {}, {}
     for name, ag in agents:
         warnings.extend(getattr(ag, "cli_warnings", []) or [])
         m = getattr(ag, "cli_last_model", None)
         if m:
             models[name] = m
-    return warnings, models
+        c = getattr(ag, "cli_cost_usd", 0.0) or 0.0
+        if c:
+            costs[name] = round(c, 4)
+    return warnings, models, costs
+
+
+def _escalate_agent_models(agent):
+    """Escalada POR CALIDAD de la escalera de modelos de un agente.
+
+    La escalera de cli_backend solo DESCIENDE por errores de cuota. Esta sube
+    por calidad: si el verdict_guard rechazo el resultado del peldano actual
+    (WEAK_PASS / CODE_ERROR), el reintento debe arrancar en el peldano
+    siguiente (mas capaz), no repetir con el mismo modelo que ya fallo.
+    Muta agent.cli_models quitando el primer peldano. Devuelve el nuevo peldano
+    inicial, o None si no habia adonde escalar (escalera de un solo tramo)."""
+    raw = (getattr(agent, "cli_models", None) or "").strip().strip("'\"")
+    rungs = [t.strip() for t in raw.split(",") if t.strip()]
+    if len(rungs) < 2:
+        return None
+    agent.cli_models = ",".join(rungs[1:])
+    return rungs[1]
 
 
 def _apply_guard(analysis: dict, exec_result: dict) -> dict:
@@ -383,7 +404,7 @@ async def _do_review(req: dict) -> dict:
         conjecture=str(req.get("conjecture") or req.get("objective") or ""),
         code=code,
     )
-    warnings, models = _cli_meta([("reviewer", reviewer)])
+    warnings, models, _costs = _cli_meta([("reviewer", reviewer)])
     out = {"review": review, "provider": provider}
     if warnings:
         out["warnings"] = warnings
@@ -960,11 +981,14 @@ async def _do_cycle_impl(req: dict) -> dict:
         if timings:
             timings["total"] = round(time.monotonic() - t_start, 2)
             out["timings"] = timings
-        warnings, cli_models = _cli_meta(agents + ensemble_agents)
+        warnings, cli_models, cli_costs = _cli_meta(agents + ensemble_agents)
         if warnings:
             out["warnings"] = warnings
         if cli_models:
             out["cli_models"] = cli_models
+        if cli_costs:
+            out["cli_cost_usd"] = {**cli_costs,
+                                   "total": round(sum(cli_costs.values()), 4)}
         _save_cycle_checkpoint(
             "partial" if deadline_limited else "failed",
             error=str(msg),
@@ -1354,9 +1378,21 @@ async def _do_cycle_impl(req: dict) -> dict:
     retries = 0
     autofixes = 0
     max_retries = max(0, int(os.environ.get("ASTRA_MAX_RETRIES", "2").strip().strip("'\"")))
+    quality_escalations = []
     while analysis.get("status") in ("CODE_ERROR", "WEAK_PASS") and retries < max_retries:
         retries += 1
         _progress("retry", n=retries, status=analysis.get("status"), timings=timings)
+        # Escalada por CALIDAD (2026-07-31): el guard rechazo lo que produjo el
+        # peldano actual del traductor -> el retry (y el model-patch de vnext,
+        # que usa el mismo agente) arranca en el peldano superior. Sin esto, con
+        # la escalera invertida ('sonnet,opus') el retry repetia con sonnet y
+        # Opus no se pagaba nunca, ni siquiera cuando hacia falta.
+        new_rung = _escalate_agent_models(trans)
+        if new_rung:
+            quality_escalations.append(
+                {"retry": retries, "status": analysis.get("status"),
+                 "translator_now": new_rung})
+            _progress("quality_escalation", model=new_rung, timings=timings)
         if analysis.get("status") == "WEAK_PASS":
             reasons = "; ".join((exec_result.get("guard") or {}).get("reasons") or [])
             correction = (
@@ -1559,11 +1595,18 @@ async def _do_cycle_impl(req: dict) -> dict:
     }
     if est:
         out["est_runtime"] = est
-    warnings, cli_models = _cli_meta(agents + ensemble_agents)
+    warnings, cli_models, cli_costs = _cli_meta(agents + ensemble_agents)
     if warnings:
         out["warnings"] = warnings      # avisos de cuota/fallback de los CLIs
     if cli_models:
         out["cli_models"] = cli_models  # modelo que realmente respondio cada fase
+    if cli_costs:
+        # coste proxy por agente (USD segun el CLI de claude; codex/agy no lo
+        # reportan y van a 0). Telemetria para la auditoria de cuota, NO cargo real.
+        out["cli_cost_usd"] = {**cli_costs,
+                               "total": round(sum(cli_costs.values()), 4)}
+    if quality_escalations:
+        out["quality_escalations"] = quality_escalations
     if est == "long" and not exec_t:
         out.setdefault("warnings", []).append(
             "El traductor estima computo LARGO (>10 min): considera correrlo como "

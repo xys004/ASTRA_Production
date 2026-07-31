@@ -1,0 +1,31 @@
+{
+  "id": "client_quantum_transport_eom_open_system",
+  "application": "QuantumTransportEOM package assurance",
+  "demonstration": "quantum_transport_eom_open_system_assurance",
+  "objective": "Exercise QuantumTransportEOM through its public open-system API against analytic and conservation identities.",
+  "claim": "QuantumTransportEOM v0.3.0 reproduces the resonant-level Lorentzian, equilibrium FDT and zero current, and steady-state current conservation.",
+  "expected_claim_verdict": "VALIDATED",
+  "artifact_kind": "project_package",
+  "artifact_path": "artifacts/quantum_transport_eom_open_system.py",
+  "supported_oracles": ["local"],
+  "preferred_validators": ["quantum_transport_eom", "numpy", "independent_analytic_reference"],
+  "required_evidence": [
+    "package_version",
+    "quantum_transport_commit",
+    "lorentzian_max_abs_error",
+    "equilibrium_current_abs",
+    "current_conservation_error",
+    "fdt_max_abs_error",
+    "module_path"
+  ],
+  "assumptions": [
+    "The tested devices are noninteracting and use wide-band lead self-energies.",
+    "The supplied energy grids resolve the resonances and truncate negligible spectral tails.",
+    "QuantumTransportEOM public conventions are e=hbar=k_B=1."
+  ],
+  "limitations": [
+    "This case validates a high-value open-system slice, not every symbolic, interacting, parallel or GPU path.",
+    "The case is local until the same package and Python runtime are provisioned on ASTRUM."
+  ],
+  "adapter": "quantum_transport_eom"
+}

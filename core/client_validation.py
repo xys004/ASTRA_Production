@@ -6,6 +6,7 @@ import json
 import os
 import platform
 import re
+import sys
 import subprocess
 import time
 from contextlib import contextmanager
@@ -194,18 +195,74 @@ def _git_commit(path: Path) -> str:
 def _resolve_adapter(name: str) -> dict[str, Any]:
     if not name:
         return {}
-    if name != "gr_python":
-        return {"name": name, "ready": False, "error": "Unknown project adapter"}
-    configured = os.environ.get("ASTRA_GR_PYTHON_ROOT", "").strip()
-    path = Path(configured).expanduser() if configured else ROOT.parent / "gr" / "GR_python"
-    path = path.resolve()
-    return {
-        "name": "gr_python",
-        "ready": path.is_dir(),
-        "path": str(path),
-        "git_commit": _git_commit(path) if path.is_dir() else "",
-        "env_var": "ASTRA_GR_PYTHON_ROOT",
-    }
+    if name == "gr_python":
+        configured = os.environ.get("ASTRA_GR_PYTHON_ROOT", "").strip()
+        path = Path(configured).expanduser() if configured else ROOT.parent / "gr" / "GR_python"
+        path = path.resolve()
+        return {
+            "name": "gr_python",
+            "ready": path.is_dir(),
+            "path": str(path),
+            "git_commit": _git_commit(path) if path.is_dir() else "",
+            "env_var": "ASTRA_GR_PYTHON_ROOT",
+        }
+    if name == "quantum_transport_eom":
+        configured = os.environ.get(
+            "ASTRA_QUANTUM_TRANSPORT_EOM_ROOT", ""
+        ).strip()
+        path = (
+            Path(configured).expanduser()
+            if configured
+            else ROOT.parent / "quantum" / "QuantumTransportEOM"
+        ).resolve()
+        configured_python = os.environ.get(
+            "ASTRA_QUANTUM_TRANSPORT_EOM_PYTHON", ""
+        ).strip()
+        python_candidates = []
+        if configured_python:
+            python_candidates.append(
+                Path(configured_python).expanduser()
+            )
+        if sys.version_info >= (3, 10):
+            python_candidates.append(Path(sys.executable))
+        local_app_data = os.environ.get("LOCALAPPDATA", "").strip()
+        if local_app_data:
+            python_root = Path(local_app_data) / "Programs" / "Python"
+            if python_root.is_dir():
+                python_candidates.extend(
+                    sorted(
+                        python_root.glob("Python3*/python.exe"),
+                        reverse=True,
+                    )
+                )
+        python_path = next(
+            (
+                candidate.resolve()
+                for candidate in python_candidates
+                if candidate.is_file()
+            ),
+            None,
+        )
+        ready = (
+            path.is_dir()
+            and (path / "src" / "quantum_transport").is_dir()
+            and python_path is not None
+        )
+        return {
+            "name": "quantum_transport_eom",
+            "ready": ready,
+            "path": str(path),
+            "python": str(python_path) if python_path else "",
+            "git_commit": _git_commit(path) if path.is_dir() else "",
+            "env_var": "ASTRA_QUANTUM_TRANSPORT_EOM_ROOT",
+            "python_env_var": "ASTRA_QUANTUM_TRANSPORT_EOM_PYTHON",
+            "error": (
+                ""
+                if ready
+                else "QuantumTransportEOM or a Python >=3.10 interpreter is unavailable"
+            ),
+        }
+    return {"name": name, "ready": False, "error": "Unknown project adapter"}
 
 
 @contextmanager
@@ -213,6 +270,12 @@ def _execution_environment(oracle: str, adapter: dict[str, Any]) -> Iterator[Non
     updates = {"ASTRA_ORACLE_MODE": "remote" if oracle == "astrum" else "local"}
     if adapter.get("name") == "gr_python" and adapter.get("ready"):
         updates["ASTRA_GR_PYTHON_ROOT"] = adapter["path"]
+    if (
+        adapter.get("name") == "quantum_transport_eom"
+        and adapter.get("ready")
+    ):
+        updates["ASTRA_QUANTUM_TRANSPORT_EOM_ROOT"] = adapter["path"]
+        updates["ASTRA_QUANTUM_TRANSPORT_EOM_PYTHON"] = adapter["python"]
     previous = {key: os.environ.get(key) for key in updates}
     try:
         os.environ.update(updates)

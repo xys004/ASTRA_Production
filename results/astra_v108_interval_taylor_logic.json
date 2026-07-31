@@ -1,0 +1,21 @@
+{
+  "claimed_remainder_upper": "1.190271363573932E-8",
+  "computed_remainder_upper": "1.190271363573932E-8",
+  "cubic_bounds": [
+    "0.27194186380950186",
+    "0.2719418638336532"
+  ],
+  "engine": "SymPy_exact_recurrence_plus_Decimal80",
+  "epsilon_radius": "0.001",
+  "evidence_internal_pass": true,
+  "fifth_norm_upper": "0.01190271363573932",
+  "inverse_recurrence_degrees_checked": 6,
+  "normalized_bounds": [
+    "0.27194185190678822426068",
+    "0.27194187573636683573932"
+  ],
+  "schema": "astra-interval-Taylor-remainder/v108",
+  "script_sha256": "3cc4691976e6fbd493d2579a3f6490ca5381a10dc3224ff50f341d10e939eec0",
+  "sqrt_recurrence_degrees_checked": 6,
+  "zero_excluded": true
+}

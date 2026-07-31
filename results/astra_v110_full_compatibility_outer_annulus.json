@@ -1,0 +1,16 @@
+{
+  "ball_boundary_margin": "2.65429942474520589E-7",
+  "ball_radius": "0.001",
+  "critical_radius_upper": "0.00015474483081189546697939544780936546400611733802992398879407576759381533943219682",
+  "cutoff_margin": "2.14935597929755050E-11",
+  "engine": "Decimal80_reverse_triangle",
+  "evidence_internal_pass": true,
+  "inequality": "||q(e)||>=|e|*(m*e^2-L) for q=e*q1+N",
+  "inner_ball_root_exclusion_certified": false,
+  "linear_norm_upper": "6.511909432267611E-9",
+  "nonlinear_normalized_lower": "0.2719418519067882",
+  "outer_annulus_root_free": true,
+  "outer_cutoff": "0.000155",
+  "schema": "astra-full-compatibility-outer-annulus/v110",
+  "script_sha256": "9aeae017b09158f7aec211fcc1708efcbef68cca56e55a9f66e7cc296e97ede8"
+}
