@@ -11,9 +11,11 @@ from typing import Any
 
 OPERATIONAL_STATUSES = {
     "API_ERROR",
+    "BUSY",
     "ERROR",
     "INSPECTION_ERROR",
     "NO_VERDICT",
+    "PARTIAL",
     "TIMEOUT",
     "TOOL_ERROR",
 }

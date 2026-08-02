@@ -13,7 +13,12 @@ Return ONLY one valid JSON object:
 }
 
 AUDIT RULES:
-1. Compare the script with BOTH the shared final objective and the exact conjecture.
+1. The exact conjecture defines the scientific claims of THIS cycle. The shared
+   final objective is directional context for relevance and contradictions; it is
+   not a requirement to complete the entire multi-cycle research program in one
+   validator. Audit every claim the conjecture presents as supported or refuted.
+   Claims explicitly marked unresolved, deferred, or outside the current cycle do
+   not require implementation, but the script's PASS must not silently cover them.
 2. Reject self-confirming validators: hard-coded PASS, unreachable FAIL paths, checks
    that merely restate the same computation, or numerical sampling presented as proof
    of a universal statement.

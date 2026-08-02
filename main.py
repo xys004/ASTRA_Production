@@ -25,6 +25,17 @@ navigator_llm   = ASTRAIntelligence(provider=_nav_provider)
 
 MAX_CODE_RETRIES = 3
 
+# These statuses describe an interrupted or unavailable pipeline, not a
+# scientific outcome.  In Research Loop mode they must retry the same direction
+# without invoking the Navigator, recording a branch, or advancing heartbeats.
+RETRYABLE_OPERATIONAL_STATUSES = {
+    "API_ERROR",
+    "TOOL_ERROR",
+    "PARTIAL",
+    "BUSY",
+    "TIMEOUT",
+}
+
 
 def _reload_llm_clients() -> None:
     """Re-read provider env vars and recreate LLM clients. Called before each cycle."""
@@ -498,7 +509,7 @@ async def _execute_one_cycle(intuition: str) -> dict:
             final_status = "VALIDATED_REJECTED"
         state.approve_theorem_requested = False
         state.reject_theorem_requested = False
-    elif pipeline_status in {"TOOL_ERROR", "API_ERROR"}:
+    elif pipeline_status in RETRYABLE_OPERATIONAL_STATUSES:
         state.add_log(
             f"[{pipeline_status}] Cycle stopped in phase "
             f"{cycle.get('phase', 'unknown')}: "
@@ -584,7 +595,7 @@ async def _run_research_loop() -> None:
         if result["status"] in ("STOPPED", "INCOMPLETE"):
             break
 
-        if result["status"] in ("API_ERROR", "TOOL_ERROR"):
+        if result["status"] in RETRYABLE_OPERATIONAL_STATUSES:
             state.add_log(
                 f"[{result['status']}] Cycle aborted before a scientific verdict. "
                 "Retrying the same direction after a pause."
@@ -610,6 +621,13 @@ async def _run_research_loop() -> None:
             last_status=nav_status,
             last_reasoning=analysis.get("reasoning", ""),
         )
+
+        # When ASTRA_NAVIGATE_AFTER_CYCLE=0 the GUI Research Loop performs the
+        # navigation here.  Persist it back into the canonical cycle result so
+        # reports, resumed sessions and cost/timing audits do not lose the trace.
+        result["navigation"] = nav
+        state.last_cycle_result = result
+        state.save_state()
 
         state.navigator_proposal = nav
         session.add_branches(nav.get("parallel_branches", []))

@@ -1,10 +1,24 @@
 import unittest
 
 from core.quality_benchmarks import load_quality_cases, select_quality_cases
-from core.quality_metrics import summarize_records, wilson_interval
+from core.quality_metrics import OPERATIONAL_STATUSES, summarize_records, wilson_interval
+from scripts.run_quality_benchmarks import _configuration_env
 
 
 class QualityBenchmarkTests(unittest.TestCase):
+    def test_interrupted_cycle_states_are_operational(self):
+        self.assertIn("PARTIAL", OPERATIONAL_STATUSES)
+        self.assertIn("BUSY", OPERATIONAL_STATUSES)
+
+    def test_quota_optimized_quality_profile_uses_exact_model_ladder(self):
+        env = _configuration_env("quota-optimized")
+        self.assertEqual(env["ASTRA_CONJECTURE_PROVIDER"], "codex_cli")
+        self.assertEqual(
+            env["ASTRA_TRANSLATOR_MODELS"],
+            "sonnet,claude-opus-4-8",
+        )
+        self.assertEqual(env["ASTRA_VNEXT_MODEL_PATCH_MAX_REVISIONS"], "2")
+
     def test_suite_ids_are_unique_and_tracks_are_present(self):
         cases = load_quality_cases()
         self.assertEqual(len(cases), len({case.id for case in cases}))

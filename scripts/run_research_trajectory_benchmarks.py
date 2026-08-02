@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import json
 import os
 import platform
@@ -50,6 +51,17 @@ OUTPUT_ROOT = ROOT / "workspace" / "research_trajectory_runs"
 ASTRA_TOOL = ROOT / "astra_tool.py"
 CONFIGURATIONS = {
     "full": {"architecture": "full", "policy": "reflective"},
+    # Explicit profile for the 2026-07-31 quota optimization.  It is opt-in so
+    # the frozen public pilot remains unchanged while paired canaries can compare
+    # the exact production optimization against ``full``.
+    "quota-optimized": {
+        "architecture": "no-ensemble",
+        "policy": "reflective",
+        "environment": {
+            "ASTRA_TRANSLATOR_MODELS": "sonnet,claude-opus-4-8",
+            "ASTRA_VNEXT_MODEL_PATCH_MAX_REVISIONS": "2",
+        },
+    },
     "full-vnext": {
         "architecture": "full",
         "policy": "reflective",
@@ -94,6 +106,48 @@ def _csv(raw: str) -> list[str]:
 
 def _now() -> str:
     return dt.datetime.now(dt.timezone.utc).astimezone().isoformat()
+
+
+def _frozen_resource_context(program: ResearchProgram) -> str:
+    """Embed declared benchmark resources for tool-disabled model phases.
+
+    The CLIs are intentionally denied filesystem tools, so a path alone is not
+    evidence available to the conjecturer or translator.  Every architecture
+    receives the same bounded, hashed resource bytes through its prompt.
+    """
+    if not program.resources:
+        return ""
+    blocks = [
+        "FROZEN RESOURCE CONTENTS (authoritative benchmark inputs):",
+        "Use these exact values. Do not attempt to inspect files with tools.",
+    ]
+    root = ROOT.resolve()
+    for resource in program.resources:
+        path = (ROOT / resource).resolve()
+        try:
+            path.relative_to(root)
+        except ValueError as exc:
+            raise ValueError(
+                f"Frozen resource escapes ASTRA root: {resource}"
+            ) from exc
+        payload = path.read_bytes()
+        if len(payload) > 16000:
+            raise ValueError(
+                f"Frozen resource exceeds 16,000-byte prompt limit: {resource}"
+            )
+        digest = hashlib.sha256(payload).hexdigest()
+        text = payload.decode("utf-8")
+        blocks.extend(
+            [
+                "",
+                f"RESOURCE: {resource}",
+                f"SHA256: {digest}",
+                "```text",
+                text.rstrip(),
+                "```",
+            ]
+        )
+    return "\n".join(blocks)
 
 
 def _git_commit() -> str:
@@ -300,9 +354,13 @@ def _run_cycle(
     )
     if strict_primary_models:
         env = _strict_primary_environment(env)
+    shared_objective = program.research_brief()
+    resource_context = _frozen_resource_context(program)
+    if resource_context:
+        shared_objective += "\n\n" + resource_context
     request = {
         "action": "cycle",
-        "objective": program.research_brief(),
+        "objective": shared_objective,
         "intuition": direction,
         "axiomatic_base": _axiomatic_memory(record),
         "thread_summary": _thread_summary(record),

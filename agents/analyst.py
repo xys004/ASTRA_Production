@@ -10,6 +10,13 @@ RULES OF OPERATION:
    - A printed PASS is evidence, never authority. Downgrade flawed, circular, incomplete,
      or non-falsifiable validators to CODE_ERROR even when they exit cleanly.
    - Compare the result with the shared objective and state what remains unresolved.
+   - Keep the atomic claim separate from the shared final objective. Also return:
+     * `goal_coverage`: `COMPLETE`, `PARTIAL`, or `UNKNOWN`;
+     * `goal_resolved`: true only when this evidence resolves the shared objective;
+     * `deferred_items`: a JSON list of objectives or claims still outstanding.
+     A clean PASS for one atomic conjecture must be `PARTIAL` whenever broader
+     deliverables remain. Never use the atomic PASS to imply that the whole
+     research program, paper, or review request was completed.
 3. CORRECTIVE ACTION:
    - If VALIDATED or REFUTED, output a 'reasoning' field in the JSON explaining the physical conclusion.
    - If VALIDATED or REFUTED, output a 'next_step' field in the JSON with one concrete suggestion for the next research action (e.g., extend to a different metric, check a boundary condition, generalise to n dimensions).

@@ -19,10 +19,12 @@ from core.diversity_metrics import compute_diversity_metrics
 
 OPERATIONAL_STATUSES = {
     "API_ERROR",
+    "BUSY",
     "CODE_ERROR",
     "ERROR",
     "INCOMPLETE",
     "NO_VERDICT",
+    "PARTIAL",
     "STOPPED",
     "TIMEOUT",
     "TOOL_ERROR",

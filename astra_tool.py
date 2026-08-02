@@ -63,6 +63,102 @@ def _verdict(stdout: str) -> str:
     return "NONE"
 
 
+_DEFERRED_SECTION_RE = re.compile(
+    r"(?ims)^\s*\[Deferred(?:\s+Items|\s+Claims)?\]\s*:?\s*"
+    r"(.*?)(?=^\s*\[[^\]]+\]\s*:?|\Z)"
+)
+
+
+def _normalize_deferred_items(value) -> list:
+    """Return a bounded, de-duplicated list of explicitly deferred work."""
+    if isinstance(value, str):
+        candidates = re.split(r"(?:\r?\n\s*[-*]\s+)|(?:;\s+)", value)
+    elif isinstance(value, (list, tuple, set)):
+        candidates = list(value)
+    else:
+        candidates = []
+    items = []
+    seen = set()
+    for candidate in candidates:
+        item = re.sub(r"^\s*[-*]\s*", "", str(candidate or "")).strip()
+        item = re.sub(r"\s+", " ", item)
+        if not item:
+            continue
+        key = item.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        items.append(item[:1000])
+        if len(items) >= 20:
+            break
+    return items
+
+
+def _extract_deferred_items(conjecture: str) -> list:
+    items = []
+    for match in _DEFERRED_SECTION_RE.finditer(str(conjecture or "")):
+        items.extend(_normalize_deferred_items(match.group(1)))
+    return _normalize_deferred_items(items)
+
+
+def _goal_coverage(
+    shared_goal: str,
+    intuition: str,
+    conjecture: str,
+    analysis: dict,
+    navigation: dict,
+) -> dict:
+    """Separate an atomic scientific verdict from whole-goal completion.
+
+    ASTRA deliberately validates one bounded conjecture per cycle.  A PASS or
+    FAIL for that conjecture is not automatically a verdict on a broader paper,
+    research programme, or multi-deliverable objective.
+    """
+    analysis = analysis if isinstance(analysis, dict) else {}
+    navigation = navigation if isinstance(navigation, dict) else {}
+    deferred = _normalize_deferred_items(
+        [
+            *_extract_deferred_items(conjecture),
+            *_normalize_deferred_items(analysis.get("deferred_items")),
+        ]
+    )
+    declared = str(analysis.get("goal_coverage") or "").strip().upper()
+    analyst_resolved = analysis.get("goal_resolved") is True
+    navigator_resolved = navigation.get("macro_resolved") is True
+    normalize = lambda value: re.sub(r"\s+", " ", str(value or "")).strip().casefold()
+    same_goal = bool(normalize(shared_goal)) and normalize(shared_goal) == normalize(intuition)
+
+    if deferred:
+        status = "partial"
+        reason = "The atomic cycle explicitly deferred broader claims or deliverables."
+    elif declared == "PARTIAL":
+        status = "partial"
+        reason = "The evidence analyst marked whole-goal coverage as partial."
+    elif declared == "COMPLETE" or analyst_resolved or navigator_resolved:
+        status = "complete"
+        reason = "The cycle explicitly resolved the shared objective."
+    elif same_goal:
+        status = "complete"
+        reason = "The request and shared objective are the same bounded claim."
+    else:
+        status = "partial"
+        reason = "The cycle decided an atomic direction inside a broader objective."
+
+    atomic_status = str(analysis.get("status") or "UNKNOWN").upper()
+    scientific_status = atomic_status
+    if status != "complete" and atomic_status in {"VALIDATED", "REFUTED"}:
+        scientific_status = f"ATOMIC_{atomic_status}"
+    return {
+        "status": status,
+        "scope": "full_goal" if status == "complete" else "atomic",
+        "goal_resolved": status == "complete",
+        "reason": reason,
+        "deferred_items": deferred,
+        "atomic_status": atomic_status,
+        "scientific_status": scientific_status,
+    }
+
+
 def _progress_path(pid=None):
     root = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(root, "workspace", "progress", f"cycle_{pid or os.getpid()}.json")
@@ -337,6 +433,23 @@ def _escalate_agent_models(agent):
     raw = (getattr(agent, "cli_models", None) or "").strip().strip("'\"")
     rungs = [t.strip() for t in raw.split(",") if t.strip()]
     if len(rungs) < 2:
+        return None
+    # Phase ladders used for quality escalation are normally ordered from the
+    # cheaper model to the stronger model.  Refuse an obvious downgrade when a
+    # user supplied a quota-fallback ladder in the opposite direction.
+    def _known_rank(model):
+        name = model.lower()
+        if "opus" in name:
+            return 30
+        if "sonnet" in name:
+            return 20
+        if "haiku" in name:
+            return 10
+        return 0
+
+    current_rank = _known_rank(rungs[0])
+    next_rank = _known_rank(rungs[1])
+    if current_rank and next_rank and next_rank <= current_rank:
         return None
     agent.cli_models = ",".join(rungs[1:])
     return rungs[1]
@@ -941,6 +1054,26 @@ async def _do_cycle_impl(req: dict) -> dict:
         ("analyst", analyst),
         ("navigator", navigator),
     ]
+    quality_escalations = []
+
+    def _escalate_for_quality(stage, status):
+        new_rung = _escalate_agent_models(trans)
+        if not new_rung:
+            return None
+        record = {
+            "stage": stage,
+            "status": status,
+            "translator_now": new_rung,
+        }
+        quality_escalations.append(record)
+        _progress(
+            "quality_escalation",
+            quality_stage=stage,
+            status=status,
+            model=new_rung,
+            timings=timings,
+        )
+        return new_rung
 
     async def _run_analysis(cj, ex):
         # Un solo analista => camino lineal clasico. >=2 => consenso conservador.
@@ -989,6 +1122,8 @@ async def _do_cycle_impl(req: dict) -> dict:
         if cli_costs:
             out["cli_cost_usd"] = {**cli_costs,
                                    "total": round(sum(cli_costs.values()), 4)}
+        if quality_escalations:
+            out["quality_escalations"] = list(quality_escalations)
         _save_cycle_checkpoint(
             "partial" if deadline_limited else "failed",
             error=str(msg),
@@ -1199,7 +1334,22 @@ async def _do_cycle_impl(req: dict) -> dict:
                 f"{status}. Revise the validation script without changing the "
                 f"scientific claim. Instructions:\n{instructions}"
             )[:3500]
-            if validator_repair_vnext1:
+            _escalate_for_quality("pre_oracle_review", status)
+            defect_labels = {
+                str(item).lower()
+                for item in (review.get("defect_labels") or [])
+            }
+            requires_regeneration = (
+                status == "REJECT"
+                or "syntax_error" in defect_labels
+                or current_code.strip().lower()
+                in {
+                    "write operation completed",
+                    "file written successfully",
+                    "operation completed",
+                }
+            )
+            if validator_repair_vnext1 and not requires_regeneration:
                 current_code, patch_error = await _request_model_patch(
                     current_code,
                     translation_input,
@@ -1207,7 +1357,31 @@ async def _do_cycle_impl(req: dict) -> dict:
                     "model_reviewer",
                 )
                 if patch_error:
-                    return current_code, review, patch_error
+                    # The bounded patch guard may correctly reject a model reply
+                    # that rewrites too much source.  That is a strategy signal,
+                    # not a terminal tool failure: regenerate once with the
+                    # already quality-escalated author, then re-run preflight and
+                    # independent review inside the same revision budget.
+                    _progress(
+                        "review_regeneration",
+                        reason=patch_error[:500],
+                        revision=model_revisions,
+                        timings=timings,
+                    )
+                    t0 = time.monotonic()
+                    _prepare_agent(trans, "TRANSLATOR")
+                    current_code = await trans.translate_to_code(
+                        translation_input,
+                        is_correction=True,
+                        previous_error=patch_instructions,
+                        previous_code=current_code,
+                    )
+                    _mark("translate", t0)
+                    if (
+                        isinstance(current_code, str)
+                        and current_code.startswith("API_ERROR:")
+                    ):
+                        return current_code, review, current_code
             else:
                 t0 = time.monotonic()
                 _prepare_agent(trans, "TRANSLATOR")
@@ -1230,8 +1404,11 @@ async def _do_cycle_impl(req: dict) -> dict:
     goal_directed_intuition = (
         "SHARED FINAL OBJECTIVE:\n"
         f"{shared_goal}\n\nCURRENT RESEARCH DIRECTION:\n{intuition}\n\n"
-        "Develop evidence for both proof and refutation. State explicitly if the "
-        "direction cannot decide the objective."
+        "For this single cycle, select exactly one bounded, high-information "
+        "falsifiable proposition that advances the direction and can be checked "
+        "by a compact validator. Develop evidence for both proof and refutation. "
+        "Do not combine all program deliverables into one conjecture; state "
+        "explicitly what remains deferred or cannot yet be decided."
     )
     deliberation = {}
     if len(conj_providers) > 1:
@@ -1378,7 +1555,6 @@ async def _do_cycle_impl(req: dict) -> dict:
     retries = 0
     autofixes = 0
     max_retries = max(0, int(os.environ.get("ASTRA_MAX_RETRIES", "2").strip().strip("'\"")))
-    quality_escalations = []
     while analysis.get("status") in ("CODE_ERROR", "WEAK_PASS") and retries < max_retries:
         retries += 1
         _progress("retry", n=retries, status=analysis.get("status"), timings=timings)
@@ -1387,12 +1563,12 @@ async def _do_cycle_impl(req: dict) -> dict:
         # que usa el mismo agente) arranca en el peldano superior. Sin esto, con
         # la escalera invertida ('sonnet,opus') el retry repetia con sonnet y
         # Opus no se pagaba nunca, ni siquiera cuando hacia falta.
-        new_rung = _escalate_agent_models(trans)
+        new_rung = _escalate_for_quality(
+            "post_oracle_retry",
+            analysis.get("status"),
+        )
         if new_rung:
-            quality_escalations.append(
-                {"retry": retries, "status": analysis.get("status"),
-                 "translator_now": new_rung})
-            _progress("quality_escalation", model=new_rung, timings=timings)
+            quality_escalations[-1]["retry"] = retries
         if analysis.get("status") == "WEAK_PASS":
             reasons = "; ".join((exec_result.get("guard") or {}).get("reasons") or [])
             correction = (
@@ -1549,9 +1725,25 @@ async def _do_cycle_impl(req: dict) -> dict:
         )
         _mark("navigate", t0)
 
+    coverage = _goal_coverage(
+        shared_goal,
+        intuition,
+        conjecture,
+        analysis,
+        navigation,
+    )
+    analysis["goal_coverage"] = coverage["status"].upper()
+    analysis["goal_resolved"] = coverage["goal_resolved"]
+    analysis["deferred_items"] = coverage["deferred_items"]
+
     timings["total"] = round(time.monotonic() - t_start, 2)
     out = {
         "status": analysis.get("status"),
+        "atomic_status": coverage["atomic_status"],
+        "scientific_status": coverage["scientific_status"],
+        "oracle_verdict": exec_result.get("verdict") or "NONE",
+        "goal_coverage": coverage,
+        "deferred_claims": coverage["deferred_items"],
         "shared_goal": shared_goal,
         "retried": retried,
         "retries": retries,

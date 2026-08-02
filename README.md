@@ -141,6 +141,13 @@ Use `astra_cycle_submit` for a complete long audit and poll its `job_id` with
 shared deliberative-cycle slot. `astra_capacity` reports the CPUs visible to the
 process and the selected worker policy.
 
+ASTRA separates four meanings that must not be conflated: `job.status` reports
+operational completion, `oracle_verdict` reports executable PASS/FAIL,
+`atomic_status` reports the bounded conjecture verdict, and `goal_coverage`
+reports whether the shared objective itself is complete. When a cycle explicitly
+defers broader work, `scientific_status` is `ATOMIC_VALIDATED` or
+`ATOMIC_REFUTED`, never whole-goal `VALIDATED`/`REFUTED`.
+
 ASTRA already runs independent proposals, cross-critiques, and evidence
 analyses concurrently. Complete cycles are serialized by default because they
 share the same Codex, Claude, and AGY subscriptions. Independent local
@@ -375,7 +382,9 @@ Status values:
 
 | Status | Meaning |
 |---|---|
-| `VALIDATED` | Hypothesis confirmed by the oracle — awaits human approval |
+| `VALIDATED` | The bounded hypothesis was confirmed and the shared objective is fully covered — awaits human approval |
+| `ATOMIC_VALIDATED` | The current bounded conjecture passed, but the broader objective still has deferred work |
+| `ATOMIC_REFUTED` | The current bounded conjecture failed; this does not by itself refute the broader objective |
 | `REFUTED` | Hypothesis disproved — reasoning added to Axiomatic Base |
 | `CODE_ERROR` | Validation script failed after retries |
 | `API_ERROR` | Provider quota or network error — cycle skipped, retried |

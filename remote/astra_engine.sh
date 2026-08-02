@@ -21,6 +21,7 @@ declare -A ENGINES=(
   [cadabra-py]="$H/miniforge3/envs/cadabra/bin/python" # cadabra2 desde Python
   [maxima]="/usr/bin/maxima"
   [lean]="$H/astra-worker/lean_verify.sh"             # Lean4 + mathlib4 compilado
+  [pkgs]="$H/miniforge3/envs/pkgs/bin/python"         # paquetes propios de Nelson
 )
 declare -A DESC=(
   [oracle]="numérico/simbólico general + GPU (sympy, z3, qutip, torch, cupy, jax)"
@@ -30,11 +31,12 @@ declare -A DESC=(
   [cadabra-py]="cadabra2 vía API de Python"
   [maxima]="CAS clásico"
   [lean]="verificación formal contra mathlib4 (solo lectura, sin lake)"
+  [pkgs]="paquetes propios: GR_python, grthermo, TELAR, protoespacio, metric-engine, warp_nn, pyWarpFactory, QuantumTransportEOM, natario, mobius"
 )
 
 if [ "${1:-list}" = "list" ]; then
   echo "Motores disponibles en $(hostname):"
-  for k in oracle sci sage cadabra cadabra-py maxima lean; do
+  for k in oracle sci sage cadabra cadabra-py maxima lean pkgs; do
     b="${ENGINES[$k]}"
     if [ -x "$b" ]; then s="OK "; else s="NO "; fi
     printf "  [%s] %-11s %s\n" "$s" "$k" "${DESC[$k]}"

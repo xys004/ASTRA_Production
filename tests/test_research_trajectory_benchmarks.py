@@ -7,6 +7,7 @@ from core.research_programs import (
     suite_fingerprint,
 )
 from core.research_trajectory_metrics import (
+    OPERATIONAL_STATUSES,
     blank_expert_scorecard,
     build_research_graph,
     compute_trajectory_metrics,
@@ -14,6 +15,7 @@ from core.research_trajectory_metrics import (
 )
 from scripts.run_research_trajectory_benchmarks import (
     CONFIGURATIONS,
+    _frozen_resource_context,
     _last_json,
     _new_record,
     _next_direction,
@@ -63,6 +65,34 @@ def evidence_result(status, conjecture, next_direction, branches=None):
 
 
 class ResearchTrajectoryBenchmarkTests(unittest.TestCase):
+    def test_interrupted_cycle_states_are_operational(self):
+        self.assertIn("PARTIAL", OPERATIONAL_STATUSES)
+        self.assertIn("BUSY", OPERATIONAL_STATUSES)
+
+    def test_quota_optimized_profile_matches_production_experiment(self):
+        profile = CONFIGURATIONS["quota-optimized"]
+        self.assertEqual(profile["architecture"], "no-ensemble")
+        self.assertEqual(profile["policy"], "reflective")
+        self.assertEqual(
+            profile["environment"]["ASTRA_TRANSLATOR_MODELS"],
+            "sonnet,claude-opus-4-8",
+        )
+        self.assertEqual(
+            profile["environment"]["ASTRA_VNEXT_MODEL_PATCH_MAX_REVISIONS"],
+            "2",
+        )
+
+    def test_frozen_resources_are_embedded_with_hash_for_tool_disabled_models(self):
+        _suite, programs = load_research_suite()
+        program = next(
+            item for item in programs if item.id == "growth_model_discrimination"
+        )
+        context = _frozen_resource_context(program)
+        self.assertIn("growth_observations.csv", context)
+        self.assertIn("SHA256:", context)
+        self.assertIn("time,value,reported_sigma", context)
+        self.assertIn("Do not attempt to inspect files with tools", context)
+
     def test_vnext1_configuration_is_versioned_and_bounded(self):
         current = CONFIGURATIONS["full-vnext1"]["environment"]
         legacy = CONFIGURATIONS["full-vnext0"]["environment"]

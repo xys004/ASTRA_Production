@@ -146,6 +146,12 @@ navega) y ASTRA su **verificador con GPU**.
 | `astra_capacity` | `()` | detecta cores/threads visibles y muestra la política segura de paralelismo |
 | `astra_status` | `()` | ¿ASTRUM está vivo? |
 
+**Semántica de resultado:** `job.status=done` significa que el proceso terminó;
+`oracle_verdict=PASS|FAIL` describe la ejecución; `atomic_status` decide la
+conjetura acotada; y `goal_coverage.status=complete|partial` indica si se cubrió
+el objetivo compartido. Si quedan elementos en `deferred_claims`, el estado
+científico es `ATOMIC_VALIDATED` o `ATOMIC_REFUTED`, no una validación global.
+
 **Política de duraciones** (el traductor ya la estima con `# ASTRA_EST_RUNTIME: short|medium|long` y el ciclo la reporta en `est_runtime`):
 
 | Clase | Duración | Vía |
@@ -300,6 +306,7 @@ $PY   = "$CORE\venv\Scripts\python.exe"
 | El mismo prompt vuelve al instante con `cached: true` | Cache de ciclos (`workspace/cycle_cache/`). Es correcto: misma intuición+providers+oráculo ⇒ misma matemática. Bórralo o `ASTRA_CYCLE_CACHE=0` para forzar recomputo. |
 | El ciclo agota el límite durante traducción/reparación | Corregido 2026-07-29: ASTRA descuenta el tiempo consumido, recorta cada fase y reserva 60 s para devolver `PARTIAL`, la conjetura/código disponible y un checkpoint. Para terminar una auditoría compleja usa `astra_cycle_submit` y sondea `astra_job`. |
 | Dos auditorías completas se vuelven muy lentas | ASTRA serializa los ciclos completos entre procesos (`ASTRA_MAX_CONCURRENT_CYCLES=1`) porque comparten las cuentas Codex/Claude/AGY. El segundo ciclo persistente espera en cola; los trabajos locales independientes sí se paralelizan. |
+| Un PASS parece validar todo un artículo | Leer las cuatro capas: `job.status`, `oracle_verdict`, `atomic_status` y `goal_coverage`. Desde el esquema de caché v4, los pendientes explícitos fuerzan `scientific_status=ATOMIC_VALIDATED/ATOMIC_REFUTED`. El perfil productivo es `full`; `quota-optimized` queda solo para experimentos explícitos. |
 | Tailscale `NoState` con servicio Running (ASTRUM inalcanzable, `Connection closed by UNKNOWN port 65535`) | Causa vista 2026-07-15: la GUI `tailscale-ipn.exe` no estaba corriendo y sin *unattended mode* el demonio espera el perfil para siempre. Fix: arrancar la GUI o mejor `tailscale set --unattended=true` (**ya aplicado** — sobrevive sin GUI). Reiniciar solo el servicio NO basta. |
 | ASTRUM no responde | Tailscale caído o nodo apagado → usa **Oráculo: Local** mientras tanto. |
 | `cannot import name 'BinaryRelation'` (sympy) | sympy 1.14 corrupto → reinstala `sympy<1.14` (§3.1). |

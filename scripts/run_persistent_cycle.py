@@ -4,8 +4,9 @@
 The script is intended to be launched by ``astra_submit``.  The outer ASTRA
 job supplies persistence and heartbeats, while this process invokes the normal
 ``astra_tool.py`` cycle pipeline and stores its complete JSON result on disk.
-Scientific status (VALIDATED/REFUTED/etc.) is kept separate from the
-operational success of completing all four pipeline phases.
+Atomic status, whole-goal coverage, and operational completion are reported
+separately. A validator PASS for one bounded conjecture is not promoted to a
+whole-program VALIDATED result while broader work remains deferred.
 """
 
 from __future__ import annotations
@@ -94,7 +95,8 @@ def main() -> int:
         json.dump(result, stream, ensure_ascii=False, indent=2)
         stream.write("\n")
 
-    scientific_status = result.get("status") or "ERROR"
+    atomic_status = result.get("atomic_status") or result.get("status") or "ERROR"
+    scientific_status = result.get("scientific_status") or atomic_status
     required_sections = ("conjecture", "code", "execution", "analysis")
     operational_checks = {
         "child_returncode_zero": return_code == 0,
@@ -102,13 +104,14 @@ def main() -> int:
         "all_pipeline_sections_present": all(
             section in result for section in required_sections
         ),
-        "terminal_scientific_status": scientific_status
+        "terminal_atomic_status": atomic_status
         in {"VALIDATED", "REFUTED", "CODE_ERROR", "WEAK_PASS"},
     }
     operational_pass = all(operational_checks.values())
 
     print(f"ASTRA_RESULT: {output_path}", flush=True)
     print(f"ASTRA_RAW_LOG: {log_path}", flush=True)
+    print(f"ATOMIC_STATUS: {atomic_status}", flush=True)
     print(f"SCIENTIFIC_STATUS: {scientific_status}", flush=True)
     for name, passed in operational_checks.items():
         print(f"CHECK {name}: {'PASS' if passed else 'FAIL'}", flush=True)

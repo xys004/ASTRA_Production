@@ -178,9 +178,12 @@ def astra_cycle(intuition: str, oracle: str = "local", timeout: int = 1500,
             usually 180). Raise it for legitimately heavy computation (sweeps,
             GPU runs on ASTRUM) and keep timeout > exec_timeout + 400.
 
-    Returns JSON: status, shared_goal, deliberation, conjecture, code_review,
-    code, execution (stdout/verdict), analysis, navigation, providers, and
-    timings (seconds per phase); plus 'warnings'/'cli_models' when a
+    Returns JSON with separate layers: `status`/`atomic_status` for the bounded
+    conjecture, `oracle_verdict` for executable PASS/FAIL, `goal_coverage` for
+    the shared objective, and `scientific_status` (`VALIDATED` only for complete
+    coverage, otherwise `ATOMIC_VALIDATED`/`ATOMIC_REFUTED`). It also includes
+    shared_goal, deliberation, conjecture, code_review, code, execution,
+    analysis, navigation, providers, timings, and 'warnings'/'cli_models' when a
     CLI model hit its usage limit and a fallback served the phase. Internal
     calls use phase-specific caps and are additionally clamped to the remaining
     global budget. Checkpoints preserve completed work.
@@ -215,6 +218,10 @@ def astra_cycle_submit(
     by the synchronous MCP wall, checkpoints every completed phase, waits for
     the single shared model-account slot, and survives the calling task. Poll
     the returned job_id with astra_job.
+
+    A completed job (`status=done`) is operationally finished. Its scientific
+    result must be read from `scientific_status` together with `goal_coverage`;
+    an atomic oracle PASS does not certify a broader paper or research program.
 
     Args:
         intuition: current hypothesis or research direction.

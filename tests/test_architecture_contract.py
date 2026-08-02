@@ -36,6 +36,26 @@ class ArchitectureContractTests(unittest.TestCase):
         self.assertEqual(audit["status"], "PASS")
         self.assertEqual(audit["required_failures"], [])
 
+    def test_quota_optimized_profile_passes_its_explicit_contract(self):
+        env = self.canonical_environment()
+        env.update(
+            {
+                "ASTRA_ARCHITECTURE_PROFILE": "quota-optimized",
+                "ASTRA_CONJECTURE_PROVIDER": "codex_cli",
+                "ASTRA_TRANSLATOR_MODELS": "sonnet,claude-opus-4-8",
+                "ASTRA_NAVIGATE_AFTER_CYCLE": "0",
+                "ASTRA_VNEXT_MODEL_PATCH_MAX_REVISIONS": "2",
+            }
+        )
+        audit = audit_production_architecture(env, check_binaries=False)
+        self.assertEqual(audit["status"], "PASS")
+        self.assertEqual(audit["manifest"]["profile"], "quota-optimized")
+        self.assertEqual(
+            audit["manifest"]["architecture_id"],
+            "astra-quota-optimized-v1",
+        )
+        self.assertEqual(audit["required_failures"], [])
+
     def test_role_drift_fails_closed(self):
         env = self.canonical_environment()
         env["ASTRA_TRANSLATOR_PROVIDER"] = "codex_cli"

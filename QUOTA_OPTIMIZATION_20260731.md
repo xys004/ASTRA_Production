@@ -1,5 +1,11 @@
 # Optimización de cuota — 2026-07-31
 
+> **Experimental y solo por activación explícita.** Este perfil no es el valor
+> productivo y no debe usarse para revisiones amplias de artículos ni objetivos
+> con múltiples entregables. Producción usa `ASTRA_ARCHITECTURE_PROFILE=full`;
+> los experimentos de cuota se interpretan a escala de afirmación atómica
+> mediante `goal_coverage`.
+
 **Principio rector (decisión de Nelson): la ciencia primero.** En ASTRA la calidad
 científica la garantiza la capa determinista (oráculo + `verdict_guard` + patas CHECK
 + Z3), no el nivel del modelo. Los modelos proponen; la máquina dispone. Por tanto:
@@ -49,11 +55,20 @@ tiraba: la auditoría tuvo que usar tiempo-por-fase como proxy.
 
 ## Estado de verificación
 
-- `py_compile` OK en ambos ficheros; helper de escalada con test unitario 5/5
-  (incluye comillas del .env y espacios).
-- **Pendiente el canario en vivo**: no se corrió ciclo real para no gastar justo lo
-  que se quiere ahorrar. El primer ciclo tras reiniciar la sesión hace de canario;
-  verificar que el JSON trae `cli_models.translator=sonnet` y `cli_cost_usd`.
+- `py_compile` y suite completa OK.
+- Canario real ejecutado el 2026-08-01 sobre
+  `logic_false_square_claim`, perfil `quota-optimized`, oráculo ASTRUM:
+  `REFUTED` correcto en 171,093 s, cero retries, cinco CHECK aprobados,
+  `cli_models.translator=sonnet` y `cli_cost_usd.total=0,1749`.
+- La auditoría reconoce ahora explícitamente
+  `ASTRA_ARCHITECTURE_PROFILE=quota-optimized`; no confunde el modo compacto
+  validado con drift accidental del perfil `full`.
+- El canario de trayectoria `growth_model_discrimination` reveló que una sola
+  revisión era insuficiente incluso después de acotar la conjetura. El perfil
+  optimizado permite dos revisiones acotadas: la segunda solo consume cuota si
+  preflight/reviewer vuelve a rechazar.
+- Pendiente estadístico: completar todavía 10–15 ciclos representativos antes de
+  inferir una tasa de calidad o ventaja general de coste.
 
 ## Cómo medir (los próximos 10–15 ciclos)
 

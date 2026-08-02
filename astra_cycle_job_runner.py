@@ -129,7 +129,12 @@ def main(jobdir_text: str) -> int:
         finished_ts=time.time(),
         duration_s=round(time.time() - started, 2),
         exit_code=return_code,
-        scientific_status=result.get("status"),
+        scientific_status=(
+            result.get("scientific_status") or result.get("status")
+        ),
+        atomic_status=result.get("atomic_status") or result.get("status"),
+        goal_coverage=(result.get("goal_coverage") or {}).get("status"),
+        oracle_verdict=result.get("oracle_verdict"),
         operational_error=operational_error,
     )
     _save(meta, jobdir)

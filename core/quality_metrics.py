@@ -8,7 +8,8 @@ from typing import Any, Iterable
 
 
 OPERATIONAL_STATUSES = {
-    "API_ERROR", "CODE_ERROR", "ERROR", "TIMEOUT", "NO_VERDICT", "TOOL_ERROR",
+    "API_ERROR", "BUSY", "CODE_ERROR", "ERROR", "PARTIAL", "TIMEOUT",
+    "NO_VERDICT", "TOOL_ERROR",
 }
 
 

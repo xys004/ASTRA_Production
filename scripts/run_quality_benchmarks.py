@@ -46,6 +46,13 @@ load_project_env()
 
 
 CONFIGURATIONS = {name: {} for name in ARCHITECTURE_ROLES}
+CONFIGURATIONS["quota-optimized"] = {
+    "architecture": "no-ensemble",
+    "environment": {
+        "ASTRA_TRANSLATOR_MODELS": "sonnet,claude-opus-4-8",
+        "ASTRA_VNEXT_MODEL_PATCH_MAX_REVISIONS": "2",
+    },
+}
 
 
 def _parse_set(raw: str) -> set[str]:
@@ -131,7 +138,16 @@ async def _invoke_tool(
 
 
 def _configuration_env(name: str) -> dict[str, str]:
-    return architecture_environment(name)
+    spec = CONFIGURATIONS[name]
+    architecture = str(spec.get("architecture") or name)
+    env = architecture_environment(architecture)
+    env.update(
+        {
+            str(key): str(value)
+            for key, value in dict(spec.get("environment") or {}).items()
+        }
+    )
+    return env
 
 
 def _manifest() -> dict[str, Any]:
@@ -528,7 +544,10 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument(
         "--config",
         default="full",
-        help="full,no-review,no-ensemble,codex-only,claude-only,agy-only",
+        help=(
+            "full,quota-optimized,no-review,no-ensemble,codex-only,"
+            "claude-only,agy-only"
+        ),
     )
     result.add_argument("--oracle", choices=["local", "astrum", "auto", "both"], default="local")
     result.add_argument("--repeats", type=int)

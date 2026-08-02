@@ -11,7 +11,8 @@ from core.architecture_configs import architecture_roles
 
 
 ARCHITECTURE_ID = "astra-compact-three-agent-v2"
-CACHE_SCHEMA_VERSION = "3"
+QUOTA_ARCHITECTURE_ID = "astra-quota-optimized-v1"
+CACHE_SCHEMA_VERSION = "4"
 
 EXPECTED_PRIMARY_MODELS = {
     "codex_cli": "gpt-5.6-sol",
@@ -55,7 +56,9 @@ def production_manifest(
 ) -> dict[str, Any]:
     """Return the non-secret configuration that determines one ASTRA cycle."""
     source = os.environ if env is None else env
-    full = architecture_roles("full")
+    profile = _value(source, "ASTRA_ARCHITECTURE_PROFILE", "full").lower()
+    role_profile = "no-ensemble" if profile == "quota-optimized" else "full"
+    full = architecture_roles(role_profile)
     author = _value(
         source,
         "ASTRA_TRANSLATOR_PROVIDER",
@@ -124,7 +127,12 @@ def production_manifest(
         return phase_overrides.get(phase, []) or provider_models.get(provider, [])
 
     return {
-        "architecture_id": ARCHITECTURE_ID,
+        "architecture_id": (
+            QUOTA_ARCHITECTURE_ID
+            if profile == "quota-optimized"
+            else ARCHITECTURE_ID
+        ),
+        "profile": profile,
         "cache_schema_version": CACHE_SCHEMA_VERSION,
         "roles": roles,
         "models": {
@@ -176,9 +184,11 @@ def production_manifest(
             ),
         },
         "topology": [
-            "parallel_proposals",
-            "cross_critique",
-            "codex_consensus",
+            *(
+                ["parallel_proposals", "cross_critique", "codex_consensus"]
+                if len(roles["proposers"]) >= 2
+                else ["single_frontier_proposal"]
+            ),
             "claude_validator_authoring",
             "deterministic_preflight",
             "codex_independent_review",
@@ -210,14 +220,18 @@ def audit_production_architecture(
     """Fail closed on required role/model/gate drift; report optional tools."""
     source = os.environ if env is None else env
     manifest = production_manifest(source)
-    expected = architecture_roles("full")
+    profile = manifest["profile"]
+    known_profile = profile in {"full", "quota-optimized"}
+    expected = architecture_roles(
+        "no-ensemble" if profile == "quota-optimized" else "full"
+    )
     expected_roles = {
         "proposers": expected["proposers"],
         "synthesizer": expected["synthesizer"],
         "author": expected["author"],
         "reviewer": expected["reviewer"],
         "analyst": expected["reviewer"],
-        "navigator": expected["proposers"][-1],
+        "navigator": "agy_cli",
         "repairer": expected["repairer"],
     }
     checks: list[dict[str, Any]] = []
@@ -241,8 +255,14 @@ def audit_production_architecture(
         )
 
     add(
+        "architecture_profile",
+        known_profile,
+        profile,
+        "full or quota-optimized",
+    )
+    add(
         "production_role_map",
-        manifest["roles"] == expected_roles,
+        known_profile and manifest["roles"] == expected_roles,
         manifest["roles"],
         expected_roles,
     )
@@ -258,7 +278,11 @@ def audit_production_architecture(
         "codex_proposer": EXPECTED_PRIMARY_MODELS["codex_cli"],
         "agy_proposer": EXPECTED_PRIMARY_MODELS["agy_cli"],
         "synthesizer": EXPECTED_PRIMARY_MODELS["codex_cli"],
-        "author": EXPECTED_PRIMARY_MODELS["claude_cli"],
+        "author": (
+            "sonnet"
+            if profile == "quota-optimized"
+            else EXPECTED_PRIMARY_MODELS["claude_cli"]
+        ),
         "reviewer": EXPECTED_PRIMARY_MODELS["codex_cli"],
         "analyst": EXPECTED_PRIMARY_MODELS["codex_cli"],
         "navigator": EXPECTED_PRIMARY_MODELS["agy_cli"],
@@ -289,11 +313,12 @@ def audit_production_architecture(
         manifest["controls"]["independent_code_review"],
         True,
     )
+    expected_navigation = profile != "quota-optimized"
     add(
         "post_cycle_navigation",
+        manifest["controls"]["post_cycle_navigation"] == expected_navigation,
         manifest["controls"]["post_cycle_navigation"],
-        manifest["controls"]["post_cycle_navigation"],
-        True,
+        expected_navigation,
     )
     add(
         "validator_repair_vnext",
