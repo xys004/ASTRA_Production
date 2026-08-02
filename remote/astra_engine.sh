@@ -31,7 +31,7 @@ declare -A DESC=(
   [cadabra-py]="cadabra2 vía API de Python"
   [maxima]="CAS clásico"
   [lean]="verificación formal contra mathlib4 (solo lectura, sin lake)"
-  [pkgs]="paquetes propios: GR_python, grthermo, TELAR, protoespacio, metric-engine, warp_nn, pyWarpFactory, QuantumTransportEOM, natario, mobius"
+  [pkgs]="paquetes propios (ver ~/pkgs/README.md) — GR: GR_python+grthermo, pyWarpFactory, TELAR, warp_nn, natario, metric-engine | fundamentos: protoespacio | materia condensada: QuantumTransportEOM, mobius_rsoc | fluidos: rectification"
 )
 
 if [ "${1:-list}" = "list" ]; then
