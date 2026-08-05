@@ -1,5 +1,17 @@
 # ASTRA Agent Notes
 
+## Cross-platform collaborator onboarding
+
+On macOS, read `docs/onboarding/ASTRA_MACOS_INSTALL_EN.md` before installing or
+operating ASTRA. Antigravity can be the user-facing instructor through the ASTRA
+MCP server, but the internal production cycle still requires authenticated
+`codex`, `claude`, and `agy` CLIs. Never copy another user's CLI tokens, `.env`,
+Tailscale state, or SSH private key. Each collaborator receives an individually
+authorized public key.
+
+Use `scripts/astra_doctor.py --remote` for a non-model installation audit. On
+macOS, use `remote/check_remote_oracle.sh` after executor/oracle changes.
+
 ## Al redactar artículos: `PUBLICATION_POLICY.md` (congelada 2026-07-31)
 
 Obligatoria antes de escribir cualquier manuscrito con resultados de ASTRA. En
@@ -16,18 +28,16 @@ tres estén instalados en Astrum. Viven en envs de conda y toolchains de elan. P
 saber qué hay: `~/astra-worker/astra_engine.sh list`. Para usar:
 `astra_engine.sh <sage|cadabra|oracle|lean|sci|maxima|pkgs> <fichero>`.
 Instrucción completa para pegar a otro agente:
-`C:/Users/Nelson/CLUSTER_ENGINES_FOR_AGENTS.md`
+`docs/onboarding/ASTRA_MACOS_INSTALL_EN.md` y el comando del clúster
+`~/astra-worker/astra_engine.sh list`.
 
 Before changing the remote oracle path, read:
 
-- `C:\Users\Nelson\REMOTE_CLUSTER_GUIDE.md`
-- `REMOTE_ORACLE_HANDOFF.md`
 - `remote/README.md`
 
 Do not print or commit secrets. `.env` may contain API keys and remote oracle
-settings. Local passwords, if needed, live outside this repo in:
-
-`C:\Users\Nelson\Documents\ASTRA Remote\astra_remote_secrets.local.txt`
+settings. Machine-specific credentials and private keys always live outside
+this repository.
 
 Use the remote check script after touching executor/oracle code:
 

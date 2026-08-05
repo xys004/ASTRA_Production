@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import json
 import logging
 import os
@@ -127,4 +128,77 @@ async def execute_remote_code(code: str, timeout: int = 60) -> dict:
     response["remote_host"] = host
     if result.stderr:
         response["ssh_stderr"] = result.stderr
+    return response
+
+
+_MANAGED_ENGINES = {"sci", "pkgs"}
+
+
+async def execute_remote_engine(
+    code: str,
+    engine: str,
+    timeout: int = 60,
+) -> dict:
+    """Run Python code in one of ASTRUM's centrally managed environments."""
+    engine = (engine or "").strip().lower()
+    if engine not in _MANAGED_ENGINES:
+        return {
+            "stdout": "",
+            "stderr": f"RemoteExecutionError: unsupported managed engine {engine!r}.",
+            "exit_code": -14,
+            "engine": engine or "remote",
+        }
+    runner = os.environ.get(
+        "ASTRA_REMOTE_ENGINE_RUNNER",
+        "~/astra-worker/astra_engine.sh",
+    ).strip()
+    source_b64 = base64.b64encode(code.encode("utf-8")).decode("ascii")
+    wrapper = f"""
+import base64, os, subprocess, sys, tempfile
+runner = os.path.abspath(os.path.expanduser({runner!r}))
+source = base64.b64decode({source_b64!r}).decode("utf-8")
+fd, path = tempfile.mkstemp(prefix="astra_{engine}_", suffix=".py")
+os.close(fd)
+try:
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write(source)
+    result = subprocess.run(
+        [runner, {engine!r}, path],
+        capture_output=True,
+        text=True,
+        timeout={int(timeout)},
+    )
+    sys.stdout.write(result.stdout)
+    sys.stderr.write(result.stderr)
+    raise SystemExit(result.returncode)
+finally:
+    try:
+        os.remove(path)
+    except OSError:
+        pass
+"""
+    response = await execute_remote_code(wrapper, timeout=timeout + 15)
+    response["engine"] = engine
+    response["engine_route"] = "astra_engine.sh"
+    return response
+
+
+async def list_remote_engines(timeout: int = 30) -> dict:
+    """Return ASTRUM's authoritative engine registry output."""
+    runner = os.environ.get(
+        "ASTRA_REMOTE_ENGINE_RUNNER",
+        "~/astra-worker/astra_engine.sh",
+    ).strip()
+    wrapper = f"""
+import os, subprocess, sys
+runner = os.path.abspath(os.path.expanduser({runner!r}))
+result = subprocess.run(
+    [runner, "list"], capture_output=True, text=True, timeout={int(timeout)}
+)
+sys.stdout.write(result.stdout)
+sys.stderr.write(result.stderr)
+raise SystemExit(result.returncode)
+"""
+    response = await execute_remote_code(wrapper, timeout=timeout + 15)
+    response["engine"] = "registry"
     return response

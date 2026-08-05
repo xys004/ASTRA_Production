@@ -1,0 +1,5 @@
+-r requirements.txt
+
+# ASTRA's agent-facing MCP server and local verification tooling.
+mcp>=1.28,<2
+pytest>=8,<10

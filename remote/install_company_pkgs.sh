@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install_nelson_pkgs.sh — instala los paquetes de cálculo propios en el clúster.
+# install_company_pkgs.sh — instala los paquetes de cálculo propios en el clúster.
 #
 # Se ejecuta EN Astrum, tras haber subido ~/pkgs_src.tar.gz.
 #
@@ -56,16 +56,16 @@ done
 
 echo "  --- no empaquetados, vía .pth ---"
 SITE=$("$E/bin/python" -c "import site; print(site.getsitepackages()[0])")
-: > "$SITE/nelson_pkgs.pth"
+: > "$SITE/astrum_company_pkgs.pth"
 for path in warp/TELAR warp/natario_energy_bound physics/rectification_design_map \
             quantum/mobius_cylinder_rsoc; do
-  [ -d "$SRC/$path" ] && { echo "$SRC/$path" >> "$SITE/nelson_pkgs.pth"; \
+  [ -d "$SRC/$path" ] && { echo "$SRC/$path" >> "$SITE/astrum_company_pkgs.pth"; \
                            printf "  %-24s en PYTHONPATH\n" "$(basename $path)"; }
 done
 
 echo "=== [5/5] verificación por IMPORT ==="
 "$E/bin/python" - <<'PY'
-import importlib, sys
+import importlib
 mods = ["grthermo", "telar", "numpy", "scipy", "sympy", "z3", "jax"]
 for m in mods:
     try:

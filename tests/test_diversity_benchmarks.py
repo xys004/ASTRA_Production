@@ -6,6 +6,7 @@ from core.diversity_metrics import (
     compute_diversity_metrics,
     paired_architecture_summary,
 )
+from core.external_benchmarks import audit_external_sources
 from scripts.freeze_diversity_suite import OUTPUT, build_suite
 from scripts.run_external_comparison import _scheduled_pairs
 
@@ -90,6 +91,8 @@ class DiversityBenchmarkTests(unittest.TestCase):
         self.assertEqual(metrics["repair_attempts"], 2)
 
     def test_frozen_suite_is_deterministic_balanced_and_disjoint(self):
+        if not audit_external_sources()["ok"]:
+            self.skipTest("pinned external benchmark cache not prepared")
         generated = build_suite()
         existing = json.loads(Path(OUTPUT).read_text(encoding="utf-8"))
         self.assertEqual(generated, existing)
@@ -110,6 +113,8 @@ class DiversityBenchmarkTests(unittest.TestCase):
         self.assertEqual(first.count("homogeneous-proposers"), 20)
 
     def test_frozen_schedule_covers_every_pair_once(self):
+        if not audit_external_sources()["ok"]:
+            self.skipTest("pinned external benchmark cache not prepared")
         suite = build_suite()
         pairs = _scheduled_pairs(
             suite,

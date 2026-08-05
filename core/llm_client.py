@@ -350,7 +350,7 @@ class ASTRAIntelligence:
         _blocks = _re.findall(r"```[A-Za-z0-9_+-]*\n(.*?)```", response, _re.DOTALL)
         _cands = [b.strip() for b in _blocks if b.strip()] or [response.strip()]
         def _score(c):
-            if _re.match(r"#\s*ASTRA_ENGINE:\s*(sage|maxima|cadabra)", c):
+            if _re.match(r"#\s*ASTRA_ENGINE:\s*(sage|maxima|cadabra|sci|pkgs)", c):
                 return (2, len(c))
             try:
                 ast.parse(c)

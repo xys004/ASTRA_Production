@@ -1,13 +1,20 @@
-$ErrorActionPreference = "Stop"
+#!/usr/bin/env bash
+set -euo pipefail
 
-$ProjectRoot = Split-Path -Parent $PSScriptRoot
-Push-Location $ProjectRoot
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
 
-try {
-    $script = @'
+PYTHON_BIN="$ROOT/venv/bin/python"
+if [ ! -x "$PYTHON_BIN" ]; then
+  echo "ASTRA venv is missing. Run: bash install_macos.sh" >&2
+  exit 2
+fi
+
+"$PYTHON_BIN" - <<'PY'
 import asyncio
 import json
 import os
+
 from core.preflight import load_project_env
 from core.executor import execute_python_code
 
@@ -23,16 +30,8 @@ CASES = [
         "import sympy as sp\nimport scipy.integrate as si\nx=sp.symbols('x')\nprint(sp.integrate(sp.sin(x), x))\nprint(round(si.quad(lambda t: t*t, 0, 1)[0], 6))",
         "-cos(x)",
     ),
-    (
-        "maxima",
-        "# ASTRA_ENGINE: maxima\nexpand((x+1)^3);\n",
-        "3 x",
-    ),
-    (
-        "sage",
-        "# ASTRA_ENGINE: sage\nprint(factor(x^2 - 1))\n",
-        "(x + 1)*(x - 1)",
-    ),
+    ("maxima", "# ASTRA_ENGINE: maxima\nexpand((x+1)^3);\n", "3 x"),
+    ("sage", "# ASTRA_ENGINE: sage\nprint(factor(x^2 - 1))\n", "(x + 1)*(x - 1)"),
     (
         "cadabra",
         "# ASTRA_ENGINE: cadabra\n{a,b,c}::Indices.\nex:= A_{a} B_{b};\nprint(ex);\n",
@@ -44,6 +43,7 @@ CASES = [
         "VERDICT: PASS",
     ),
 ]
+
 
 async def main():
     failed = False
@@ -62,11 +62,6 @@ async def main():
             failed = True
     raise SystemExit(1 if failed else 0)
 
-asyncio.run(main())
-'@
 
-    $script | python -
-}
-finally {
-    Pop-Location
-}
+asyncio.run(main())
+PY

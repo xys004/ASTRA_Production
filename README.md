@@ -2,6 +2,8 @@
 
 **Autonomous Symbolic Theorem Reasoning Architecture**
 
+Created by **Nelson Bolívar** and maintained by **Astrum Drive**.
+
 ASTRA is a goal-driven, multi-model epistemological research engine. It turns
 scientific intuition into falsifiable conjectures, executable evidence, explicit
 refutations, and new research directions. Its design follows the
@@ -47,6 +49,28 @@ The audit fails closed on production role/model drift and reports optional
 project integrations separately.
 
 ASTRA is designed for theoretical physics, GR, quantum systems, fluid mechanics, symbolic calculus, differential equations, and mathematical model checking.
+
+---
+
+## macOS collaborator installation
+
+ASTRA supports an Apple Silicon Mac as a full agent workstation: Codex, Claude
+Code, and Antigravity `agy` run locally under the collaborator's own
+subscriptions; Python/SymPy/Z3 validation runs locally; and the maintained
+SageMath, Maxima, Cadabra, Lean, GPU, and company-package environments remain on
+ASTRUM behind individual Tailscale/SSH access.
+
+```bash
+git clone https://github.com/AstrumDrive/ASTRA.git
+cd ASTRA
+bash install_macos.sh
+```
+
+The installer also registers ASTRA's MCP server for the Antigravity workspace.
+See [`docs/onboarding/ASTRA_MACOS_INSTALL_EN.md`](docs/onboarding/ASTRA_MACOS_INSTALL_EN.md)
+for prerequisites, per-user SSH authorization, verification, and the
+Antigravity instructor workflow. A Spanish operational summary is available at
+[`docs/onboarding/ASTRA_MACOS_INSTALL_ES.md`](docs/onboarding/ASTRA_MACOS_INSTALL_ES.md).
 
 ---
 
@@ -203,7 +227,7 @@ research libraries. A generated script may import the package normally, compute 
 checks, print the evidence, and end with `VERDICT: PASS` or `VERDICT: FAIL`.
 
 For Wolfram Language and Mathematica notebooks, an agent can use the optional
-[`mathematica-agent-bridge`](https://github.com/xys004/mathematica-agent-bridge) alongside
+the optional `mathematica-agent-bridge` integration alongside
 ASTRA. This lets the agent write and execute Wolfram Language, compare expressions,
 inspect notebooks, and use Mathematica as an independent cross-validation oracle.
 

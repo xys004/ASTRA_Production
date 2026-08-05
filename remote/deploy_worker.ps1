@@ -4,7 +4,7 @@ param(
 
     [string]$WorkerDir = "~/astra-worker",
 
-    [string]$IdentityFile = "$env:USERPROFILE\.ssh\google_compute_engine",
+    [string]$IdentityFile = "$env:USERPROFILE\.ssh\astra_astrum_ed25519",
 
     [switch]$NoTailscaleProxy
 )

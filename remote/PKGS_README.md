@@ -5,7 +5,7 @@ Env: `~/miniforge3/envs/pkgs` (py3.12, jax-CUDA, cupy) · Código: `~/pkgs`
 
 **ASTRA NO vive aquí.** ASTRA es un framework que necesita CLIs de IA (`claude`,
 `codex`, …) para funcionar, y en este nodo no hay ninguno instalado —
-deliberadamente. ASTRA corre en la máquina de Nelson y usa el clúster como brazo
+deliberadamente. ASTRA corre en la estación del investigador y usa el clúster como brazo
 de cálculo: le manda código, el clúster lo ejecuta y devuelve resultados. Lo que sí
 vive aquí es `~/astra-worker/astra_remote_worker.py`, que es el receptor de esos
 envíos, no el framework.

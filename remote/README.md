@@ -1,89 +1,76 @@
 # ASTRA Remote Oracle
 
-Run ASTRA locally while sending Phase 4 validation scripts to a stronger Linux
-machine over Tailscale + SSH.
+ASTRA runs on a collaborator workstation and sends validation code to a managed
+Linux worker through SSH, normally over a private Tailscale network.
 
-For a cold-start agent or model, read the global machine guide first:
+Never commit the real host, username, private key, tailnet details, or `.env`.
+Each collaborator must use an individually authorized SSH public key.
 
-`C:\Users\Nelson\REMOTE_CLUSTER_GUIDE.md`
+## Deploy the worker
 
-## 1. Bootstrap the Ubuntu machine
-
-Use the desktop only once if SSH is not available yet.
-
-```bash
-curl -fsSL https://tailscale.com/install.sh | sh
-sudo tailscale up
-sudo apt-get update
-sudo apt-get install -y openssh-server
-sudo systemctl enable --now ssh
-tailscale ip
-```
-
-After `sudo tailscale up`, open the printed login URL from your Windows machine
-and approve the Ubuntu machine in your tailnet.
-
-## 2. Deploy the ASTRA worker from Windows
-
-From this project root:
+From Windows PowerShell:
 
 ```powershell
-.\remote\deploy_worker.ps1 -Remote astrum@100.66.143.117
+.\remote\deploy_worker.ps1 -Remote user@tailscale-host
 ```
 
-Replace `astrum` if the Ubuntu username changes. The deploy script copies the worker,
-copies `requirements.txt`, creates `~/astra-worker/venv`, installs Python
-packages, and enables SSH.
+From macOS/Linux, copy the tracked worker and bootstrap scripts with the user's
+normal `scp`/`ssh` configuration. The default worker directory is
+`~/astra-worker`.
 
-## 3. Enable remote validation in `.env`
+## Workstation configuration
 
-```env
+```dotenv
 ASTRA_ORACLE_MODE=remote
 ASTRA_ORACLE_TIMEOUT=600
-ASTRA_REMOTE_HOST=astrum@100.66.143.117
+ASTRA_REMOTE_HOST=astrum
 ASTRA_REMOTE_PYTHON=~/astra-worker/venv/bin/python
 ASTRA_REMOTE_WORKER=~/astra-worker/astra_remote_worker.py
 ASTRA_REMOTE_WORKDIR=~/astra-worker/workspace
-ASTRA_REMOTE_SSH_OPTIONS=-i C:\Users\Nelson\.ssh\google_compute_engine -o "ProxyCommand=tailscale nc %h %p"
+ASTRA_REMOTE_ENGINE_RUNNER=~/astra-worker/astra_engine.sh
+ASTRA_REMOTE_CONNECT_TIMEOUT=15
+ASTRA_REMOTE_SSH_OPTIONS=
 ```
 
-Restart ASTRA after changing `.env`.
+Here `astrum` is a machine-local alias in `~/.ssh/config`; it is not a public
+hostname. A Tailscale proxy can be configured in that SSH alias:
 
-## 4. SageMath and Cadabra
+```sshconfig
+Host astrum
+    HostName YOUR_TAILSCALE_HOST
+    User YOUR_REMOTE_USER
+    IdentityFile ~/.ssh/astra_astrum_ed25519
+    IdentitiesOnly yes
+    ProxyCommand tailscale nc %h %p
+```
 
-The base bootstrap installs Maxima. SageMath and Cadabra are heavier, so install
-them with the dedicated script:
+## Managed engines
+
+The cluster registry is authoritative:
+
+```bash
+~/astra-worker/astra_engine.sh list
+```
+
+Engines live in separate managed environments and may not appear in the login
+shell PATH. ASTRA exposes the same registry through the `astra_engines` MCP
+tool. `# ASTRA_ENGINE: pkgs` selects company packages and
+`# ASTRA_ENGINE: sci` selects the specialized scientific environment.
+
+## Verification
+
+Windows:
 
 ```powershell
-scp -i $env:USERPROFILE\.ssh\google_compute_engine -o "ProxyCommand=tailscale nc %h %p" .\remote\install_sage_cadabra.sh astrum@100.66.143.117:~/astra-worker/
-ssh -i $env:USERPROFILE\.ssh\google_compute_engine -o "ProxyCommand=tailscale nc %h %p" astrum@100.66.143.117 "chmod +x ~/astra-worker/install_sage_cadabra.sh && ~/astra-worker/install_sage_cadabra.sh"
+.\remote\check_remote_oracle.ps1
 ```
 
-This installs SageMath under `~/miniforge3/envs/sage/bin/sage` and Cadabra's
-headless CLI wrapper at `~/bin/cadabra2`.
+macOS/Linux:
 
-## 5. GPU stack
-
-The remote worker venv has been validated with:
-
-- CuPy `14.1.1`
-- PyTorch `2.11.0+cu128`
-- JAX `0.10.2` with CUDA 12 plugin
-
-To reinstall or repair it:
-
-```powershell
-scp -i $env:USERPROFILE\.ssh\google_compute_engine -o "ProxyCommand=tailscale nc %h %p" .\remote\install_gpu_stack.sh astrum@100.66.143.117:~/astra-worker/
-ssh -i $env:USERPROFILE\.ssh\google_compute_engine -o "ProxyCommand=tailscale nc %h %p" astrum@100.66.143.117 "chmod +x ~/astra-worker/install_gpu_stack.sh && ~/astra-worker/install_gpu_stack.sh"
+```bash
+./remote/check_remote_oracle.sh
 ```
 
-## 6. Smoke tests
-
-SSH should work without the desktop:
-
-```powershell
-ssh -i $env:USERPROFILE\.ssh\google_compute_engine -o "ProxyCommand=tailscale nc %h %p" astrum@100.66.143.117 "hostname && nproc && free -h"
-```
-
-ASTRA preflight should report `ASTRA_ORACLE_OK` through the remote worker when
-remote mode is enabled.
+Both checks force remote mode and fail if `ASTRA_REMOTE_HOST` is not configured.
+They cover Python, SymPy/SciPy, Maxima, SageMath, Cadabra, and the managed
+company-package environment.

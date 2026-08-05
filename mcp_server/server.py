@@ -11,6 +11,7 @@ ASTRUM (tu RTX 3080) o local.
 """
 import json
 import os
+import signal
 import subprocess
 import sys
 import time
@@ -31,6 +32,21 @@ if not os.path.exists(ASTRA_PY):
 ASTRA_TOOL = os.path.join(ASTRA_ROOT, "astra_tool.py")
 
 mcp = FastMCP("astra")
+
+
+def _kill_tree(pid: int) -> None:
+    """Terminate the ASTRA subprocess tree on Windows, macOS, or Linux."""
+    try:
+        if os.name == "nt":
+            subprocess.run(
+                ["taskkill", "/F", "/T", "/PID", str(pid)],
+                capture_output=True,
+                timeout=15,
+            )
+        else:
+            os.killpg(os.getpgid(pid), signal.SIGKILL)
+    except Exception:
+        pass
 
 
 def _read_child_progress(pid: int):
@@ -56,15 +72,15 @@ def _call_astra(req: dict, timeout: int = 300) -> dict:
         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         text=True, encoding="utf-8", errors="replace", cwd=ASTRA_ROOT,
         env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+        start_new_session=os.name != "nt",
     )
     try:
         out, err = proc.communicate(input=json.dumps(req), timeout=timeout)
     except subprocess.TimeoutExpired:
         pid = proc.pid
-        # taskkill /T: matar el ARBOL (astra_tool -> powershell -> claude/node).
-        # proc.kill() solo mataria a astra_tool y dejaria un claude -p huerfano
-        # quemando cuota (bug real observado tras cada timeout externo).
-        subprocess.run(["taskkill", "/F", "/T", "/PID", str(pid)], capture_output=True)
+        # Kill the full tree so timed-out model children cannot keep consuming
+        # quota after the MCP caller has already returned.
+        _kill_tree(pid)
         try:
             proc.communicate(timeout=10)
         except Exception:
@@ -298,6 +314,12 @@ def astra_capacity() -> str:
 
 
 def _pid_alive(pid) -> bool:
+    if os.name != "nt":
+        try:
+            os.kill(int(pid), 0)
+            return True
+        except (OSError, TypeError, ValueError):
+            return False
     try:
         import ctypes
         h = ctypes.windll.kernel32.OpenProcess(0x1000, False, int(pid))  # QUERY_LIMITED_INFO
@@ -370,6 +392,18 @@ def astra_status() -> str:
         "astrum_host": (res.get("stdout") or "").replace("VERDICT: PASS", "").strip(),
         "raw": res,
     }, indent=2, ensure_ascii=False)
+
+
+@mcp.tool()
+def astra_engines() -> str:
+    """
+    List ASTRUM's authoritative scientific-engine registry.
+
+    Use this instead of PATH discovery. It reports the managed oracle, sci,
+    SageMath, Cadabra, Maxima, Lean, and company-package (`pkgs`) environments.
+    """
+    res = _call_astra({"action": "engines"}, timeout=60)
+    return json.dumps(res, indent=2, ensure_ascii=False)
 
 
 if __name__ == "__main__":

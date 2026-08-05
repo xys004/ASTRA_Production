@@ -40,13 +40,13 @@ def _calculate_uct(node_id, tree):
     node = tree["nodes"][node_id]
     if node["visits"] == 0:
         return float('inf')
-    
+
     parent = tree["nodes"][node["parent"]] if node["parent"] else None
     parent_visits = parent["visits"] if parent else 1
-    
+
     exploitation = node["value"] / node["visits"]
     exploration = math.sqrt(2 * math.log(parent_visits) / node["visits"])
-    
+
     return exploitation + exploration
 
 def get_best_leaf():
@@ -54,22 +54,22 @@ def get_best_leaf():
     if not tree:
         print("Tree not found. Initialize first.")
         return None
-        
+
     nodes = tree["nodes"]
-    
-    # We want a node that is EVALUATED but has either 0 children (leaf) 
+
+    # We want a node that is EVALUATED but has either 0 children (leaf)
     # or we want to traverse using UCT to find a node to expand.
-    
+
     def traverse(current_id):
         node = nodes[current_id]
         if not node["children"]:
             return current_id
-        
+
         # If there are unexplored children, pick one
         unexplored = [c for c in node["children"] if nodes[c]["visits"] == 0]
         if unexplored:
             return unexplored[0]
-            
+
         # Otherwise use UCT
         best_child = max(node["children"], key=lambda c: _calculate_uct(c, tree))
         return traverse(best_child)
@@ -81,7 +81,7 @@ def add_node(parent_id, conjecture, code):
     tree = load_tree()
     import uuid
     new_id = f"node_{uuid.uuid4().hex[:8]}"
-    
+
     new_node = {
         "id": new_id,
         "parent": parent_id,
@@ -93,7 +93,7 @@ def add_node(parent_id, conjecture, code):
         "result_log": "",
         "children": []
     }
-    
+
     tree["nodes"][new_id] = new_node
     tree["nodes"][parent_id]["children"].append(new_id)
     save_tree(tree)
@@ -103,10 +103,10 @@ def add_node(parent_id, conjecture, code):
 def update_node(node_id, result_log, reward):
     tree = load_tree()
     node = tree["nodes"][node_id]
-    
+
     node["status"] = "EVALUATED"
     node["result_log"] = result_log
-    
+
     # Backpropagate
     current_id = node_id
     while current_id:
@@ -114,7 +114,7 @@ def update_node(node_id, result_log, reward):
         curr["visits"] += 1
         curr["value"] += reward
         current_id = curr["parent"]
-        
+
     save_tree(tree)
     print(f"Node {node_id} evaluated with reward {reward}. Tree backpropagated.")
 

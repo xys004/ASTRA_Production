@@ -1,0 +1,8 @@
+# Shell entry points must remain executable on macOS/Linux checkouts.
+*.sh text eol=lf
+
+# Keep source/configuration text deterministic across Windows and POSIX clones.
+*.py text eol=lf
+*.toml text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf

@@ -7,10 +7,21 @@ from core.engine_router import (
     _command_for,
     _configured_wsl_lean4,
     _native_or_wsl,
+    detect_engine,
 )
 
 
 class EngineRouterTests(unittest.TestCase):
+    def test_managed_astrum_engines_are_detected(self):
+        self.assertEqual(
+            detect_engine("# ASTRA_ENGINE: pkgs\nprint('ok')"),
+            "pkgs",
+        )
+        self.assertEqual(
+            detect_engine("# ASTRA_ENGINE: sci\nprint('ok')"),
+            "sci",
+        )
+
     @staticmethod
     def _which(command):
         return r"C:\Windows\System32\wsl.exe" if command == "wsl" else None

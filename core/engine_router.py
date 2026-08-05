@@ -10,7 +10,7 @@ import uuid
 
 ENGINE_MARKER = re.compile(
     r"^\s*#\s*ASTRA_ENGINE:\s*"
-    r"(python|sympy|sage|maxima|cadabra|lean|lean4)\s*$",
+    r"(python|sympy|sage|maxima|cadabra|lean|lean4|sci|pkgs)\s*$",
     re.I | re.M,
 )
 
@@ -169,7 +169,10 @@ def execute_external_cas(code: str, engine: str, workspace_dir: str, timeout: in
     if cmd is None:
         return {
             "stdout": "",
-            "stderr": f"{engine} is not available. Install it natively or in WSL and rerun the ASTRA wizard.",
+            "stderr": (
+                f"{engine} is not available. Install it natively; on Windows "
+                "you may also configure WSL, or route validation through ASTRUM."
+            ),
             "exit_code": -2,
             "engine": engine,
         }

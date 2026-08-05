@@ -49,6 +49,8 @@ workspace/benchmark_runs/
 workspace/research_runs/
 workspace/investigations/
 mcp_server/venv/
+.agents/mcp_config.json
+.agents/mcp_config.json.bak
 
 # Generated cycle state and local validation scripts
 workspace/**

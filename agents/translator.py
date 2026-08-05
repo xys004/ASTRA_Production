@@ -8,6 +8,10 @@ RULES OF OPERATION:
    values directly in the script and output the complete executable source.
    Exception: if a non-Python engine is strictly better, output a native SageMath, Maxima, Cadabra, or Lean 4 script and put one marker on the first line:
    `# ASTRA_ENGINE: sage`, `# ASTRA_ENGINE: maxima`, `# ASTRA_ENGINE: cadabra`, or `# ASTRA_ENGINE: lean`.
+   For Python code that requires an ASTRUM-managed environment, put
+   `# ASTRA_ENGINE: pkgs` (company packages) or `# ASTRA_ENGINE: sci`
+   (materials/condensed-matter stack) on the first line. These two routes are
+   remote-only and must not be substituted with an unrelated local package.
    Oracle hint (optional, only honored in AUTO mode): if the script needs a GPU or heavy parallel/numerical compute (torch/cupy/jax, large parameter sweeps, differential_evolution with many workers), add `# ASTRA_ORACLE: remote` near the top so it runs on the remote GPU node; use `# ASTRA_ORACLE: local` for light symbolic checks. Omit the marker if unsure.
    Runtime estimate (mandatory): also add `# ASTRA_EST_RUNTIME: short|medium|long` near the top — short: under ~2 min (light symbolic / small numeric); medium: 2-10 min (parameter sweeps, ODE grids, moderate optimization); long: over ~10 min (large sweeps, GPU workloads, dense scans — such work should run as an async job, not inside a cycle).
 2. LIBRARY SELECTION:
@@ -23,6 +27,8 @@ RULES OF OPERATION:
    - Use `qutip` for quantum systems evolution, density matrices, open systems, and operator algebra.
    - Use `numpy`, `mpmath`, and `numba` for controlled numerical sampling/performance, but keep validation criteria explicit.
    - Use `matplotlib` only to save diagnostic plots when they strengthen the evidence; never require plots for a verdict.
+   - Use `# ASTRA_ENGINE: pkgs` for maintained company packages including GR_python/grthermo, pyWarpFactory, TELAR, warp_nn, natario, metric-engine, protoespacio, QuantumTransportEOM, mobius_rsoc, and rectification.
+   - Use `# ASTRA_ENGINE: sci` for the maintained ASTRUM materials/condensed-matter environment (ASE, PySCF, GPAW, pymatgen, Kwant, and spglib).
 3. CODE STRUCTURE:
    - Necessary imports.
    - Base space definition (coordinates, generators, bases).

@@ -46,7 +46,8 @@ async def execute_python_code(code: str, workspace_dir: str = "workspace", timeo
     if mode == "auto":
         mode = (
             "remote"
-            if engine == "lean4" and os.environ.get("ASTRA_REMOTE_HOST", "").strip()
+            if engine in {"lean4", "sci", "pkgs"}
+            and os.environ.get("ASTRA_REMOTE_HOST", "").strip()
             else _decide_oracle(code)
         )
         logger.info("Oracle AUTO -> %s", mode)
@@ -60,6 +61,21 @@ async def execute_python_code(code: str, workspace_dir: str = "workspace", timeo
             oracle=lean_oracle,
             timeout=timeout,
         )
+    if engine in {"sci", "pkgs"}:
+        if mode != "remote":
+            return {
+                "stdout": "",
+                "stderr": (
+                    f"{engine} is an ASTRUM-managed environment; rerun with "
+                    "oracle='astrum' or ASTRA_ORACLE_MODE=auto."
+                ),
+                "exit_code": -2,
+                "engine": engine,
+            }
+        from core.remote_executor import execute_remote_engine
+
+        logger.info("Oracle routing script to ASTRUM engine: %s", engine)
+        return await execute_remote_engine(code, engine, timeout=timeout)
     if mode == "remote":
         from core.remote_executor import execute_remote_code
         return await execute_remote_code(code, timeout=timeout)

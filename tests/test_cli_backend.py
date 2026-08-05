@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from core.cli_backend import _agy_argv, _claude_argv
+from core.cli_backend import _agy_argv, _claude_argv, _codex_builder, _kill_tree
 
 
 class CliBackendTests(unittest.TestCase):
@@ -38,6 +38,38 @@ class CliBackendTests(unittest.TestCase):
             self.assertIn("gemini-3.1-pro-high", argv)
         finally:
             os.remove(prompt_path)
+
+    def test_codex_uses_native_stdin_invocation_on_macos(self):
+        with patch("core.cli_backend.os.name", "posix"), patch(
+            "core.cli_backend.shutil.which",
+            return_value="/opt/homebrew/bin/codex",
+        ), patch.dict(
+            os.environ,
+            {"ASTRA_CODEX_REASONING": "xhigh"},
+            clear=False,
+        ):
+            command = _codex_builder(
+                "/tmp/prompt.txt",
+                "gpt-5.6-sol",
+                "/tmp/output.txt",
+                "/tmp/astra/workspace",
+            )
+        self.assertEqual(command["stdin_file"], "/tmp/prompt.txt")
+        self.assertEqual(command["argv"][0], "/opt/homebrew/bin/codex")
+        self.assertNotIn("powershell", command["argv"])
+        self.assertIn('model_reasoning_effort="xhigh"', command["argv"])
+        self.assertEqual(command["argv"][-1], "-")
+
+    def test_posix_timeout_kills_the_process_group(self):
+        with patch("core.cli_backend.os.name", "posix"), patch(
+            "core.cli_backend.os.getpgid",
+            return_value=4321,
+            create=True,
+        ), patch("core.cli_backend.os.killpg", create=True) as killpg:
+            with patch("core.cli_backend.signal.SIGKILL", 9, create=True):
+                _kill_tree(1234)
+        killpg.assert_called_once()
+        self.assertEqual(killpg.call_args.args[0], 4321)
 
 
 if __name__ == "__main__":

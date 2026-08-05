@@ -204,6 +204,8 @@ class ExternalBenchmarkTests(unittest.TestCase):
         self.assertNotIn("refl", parsed[0][1])
 
     def test_lean_proof_extraction_and_source(self):
+        if not (cache_root() / "miniF2F").exists():
+            self.skipTest("miniF2F cache not prepared")
         case = next(
             item
             for item in load_minif2f()
@@ -227,6 +229,8 @@ class ExternalBenchmarkTests(unittest.TestCase):
         self.assertEqual(parsed["failed_count"], 1)
 
     def test_ainstein_prompt_includes_public_issue_but_hides_reference_patch(self):
+        if not (cache_root() / "AInsteinBench").exists():
+            self.skipTest("AInsteinBench cache not prepared")
         case = next(
             item
             for item in load_ainsteinbench()

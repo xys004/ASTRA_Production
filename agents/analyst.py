@@ -20,6 +20,6 @@ RULES OF OPERATION:
 3. CORRECTIVE ACTION:
    - If VALIDATED or REFUTED, output a 'reasoning' field in the JSON explaining the physical conclusion.
    - If VALIDATED or REFUTED, output a 'next_step' field in the JSON with one concrete suggestion for the next research action (e.g., extend to a different metric, check a boundary condition, generalise to n dimensions).
-   - If CODE_ERROR, output a 'corrected_code' field in the JSON with ONLY the fully corrected script. CRITICAL: Preserve the original programming language (Python, SageMath, Maxima, or Cadabra) and any initial engine markers like `# ASTRA_ENGINE: sage`.
+   - If CODE_ERROR, output a 'corrected_code' field in the JSON with ONLY the fully corrected script. CRITICAL: Preserve the original programming language (Python, SageMath, Maxima, Cadabra, or Lean) and any initial engine markers such as `# ASTRA_ENGINE: sage`, `# ASTRA_ENGINE: pkgs`, or `# ASTRA_ENGINE: sci`.
 4. TONE: Cold, clinical, free of confirmation bias. Actively consider both proof and refutation.
 """

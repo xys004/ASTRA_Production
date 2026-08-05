@@ -498,6 +498,15 @@ async def _do_execute(req: dict) -> dict:
     return res
 
 
+async def _do_engines(_req: dict) -> dict:
+    """Discover ASTRUM engines through its authoritative registry."""
+    from core.remote_executor import list_remote_engines
+
+    result = await list_remote_engines(timeout=30)
+    result["available"] = int(result.get("exit_code", -1)) == 0
+    return result
+
+
 async def _do_review(req: dict) -> dict:
     """Public subprocess boundary for adversarial validator-audit benchmarks."""
     from core.llm_client import ASTRAIntelligence
@@ -1892,6 +1901,8 @@ def main() -> None:
     try:
         if action == "execute":
             out = asyncio.run(_do_execute(req))
+        elif action == "engines":
+            out = asyncio.run(_do_engines(req))
         elif action == "review":
             out = asyncio.run(_do_review(req))
         elif action == "client_validate":

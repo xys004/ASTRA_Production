@@ -9,7 +9,7 @@
 # como ~/miniforge3/envs/sci/bin/python. Con esto, el emisor solo dice QUÉ motor
 # quiere; dónde vive es problema del clúster.
 #
-# ASTRA vive en la máquina de Nelson. Esto es solo su BRAZO de cálculo.
+# ASTRA vive en la estación del investigador. Esto es solo su BRAZO de cálculo.
 set -uo pipefail
 
 H="$HOME"
@@ -21,7 +21,7 @@ declare -A ENGINES=(
   [cadabra-py]="$H/miniforge3/envs/cadabra/bin/python" # cadabra2 desde Python
   [maxima]="/usr/bin/maxima"
   [lean]="$H/astra-worker/lean_verify.sh"             # Lean4 + mathlib4 compilado
-  [pkgs]="$H/miniforge3/envs/pkgs/bin/python"         # paquetes propios de Nelson
+  [pkgs]="$H/miniforge3/envs/pkgs/bin/python"         # paquetes propios de la organización
 )
 declare -A DESC=(
   [oracle]="numérico/simbólico general + GPU (sympy, z3, qutip, torch, cupy, jax)"
