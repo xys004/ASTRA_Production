@@ -1,5 +1,6 @@
 # Environments
 venv/
+venv.backup.*/
 env/
 .astra-wsl-venv/
 .env

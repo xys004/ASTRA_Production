@@ -65,19 +65,20 @@ def main() -> int:
     load_project_env()
 
     checks = []
-    py_ok = sys.version_info >= (3, 10)
+    py_ok = (3, 10) <= sys.version_info[:2] <= (3, 12)
     checks.append(item("python", py_ok, sys.version.split()[0]))
     system = platform.system()
     machine = platform.machine()
-    checks.append(item("platform", system == "Darwin", f"{system} {machine}"))
-    checks.append(
-        item(
-            "apple_silicon",
-            machine in {"arm64", "aarch64"},
-            machine + " (required by the current Antigravity desktop app)",
-            required=False,
+    checks.append(item("platform", system in {"Darwin", "Windows"}, f"{system} {machine}"))
+    if system == "Darwin":
+        checks.append(
+            item(
+                "apple_silicon",
+                machine in {"arm64", "aarch64"},
+                machine + " (required by the current Antigravity desktop app)",
+                required=False,
+            )
         )
-    )
 
     for module in REQUIRED_MODULES:
         available = importlib.util.find_spec(module) is not None

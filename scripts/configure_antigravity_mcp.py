@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 from pathlib import Path
 
@@ -33,6 +34,13 @@ def load_config(path: Path) -> dict:
     return data
 
 
+def venv_python_path(platform_name: str | None = None) -> Path:
+    platform_name = platform_name or os.name
+    if platform_name == "nt":
+        return ROOT / "venv" / "Scripts" / "python.exe"
+    return ROOT / "venv" / "bin" / "python"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -43,7 +51,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    python = ROOT / "venv" / "bin" / "python"
+    python = venv_python_path()
     server = ROOT / "mcp_server" / "server.py"
     if not python.is_file():
         raise SystemExit(f"ASTRA virtual environment not found: {python}")

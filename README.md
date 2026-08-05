@@ -76,7 +76,9 @@ Antigravity instructor workflow. A Spanish operational summary is available at
 
 ## Windows 11 Installation (Recommended)
 
-No Anaconda or preinstalled packages required — just Python 3.9+ and PowerShell.
+No Anaconda or preinstalled packages are required. Use CPython 3.12 and
+PowerShell. ASTRA's supported workstation range is Python 3.10-3.12; 3.12 is
+the reproducible baseline used for collaborator installations.
 
 ### Step 1 — Download
 
@@ -94,10 +96,13 @@ Or download the ZIP from GitHub and extract it anywhere.
 Right-click `install.ps1` → **Run with PowerShell**.
 
 The installer will:
-- Check for Python 3.9+
-- Create a local virtual environment (`venv/`)
-- Install all Python packages from `requirements.txt`
-- Create a desktop shortcut **ASTRA Production** that launches the web interface and opens your browser automatically
+
+- Prefer Python 3.12 and report the selected interpreter and architecture
+- Preserve an incompatible existing environment as `venv.backup.*`
+- Create the canonical local virtual environment (`venv/`)
+- Install the shared workstation stack from `requirements-workstation.txt`
+- Register the workspace-scoped ASTRA MCP entry for Antigravity
+- Create a desktop shortcut **ASTRA** that launches the web interface
 
 > If PowerShell blocks execution, run this first:
 > `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned`

@@ -16,8 +16,10 @@ def test_macos_installer_prefers_supported_python_and_replaces_mismatched_venv()
 
 def test_macos_compiled_accelerators_are_pinned_to_binary_wheels():
     installer = (ROOT / "install_macos.sh").read_text(encoding="utf-8")
-    requirements = (ROOT / "requirements-macos.txt").read_text(encoding="utf-8")
+    mac_requirements = (ROOT / "requirements-macos.txt").read_text(encoding="utf-8")
+    requirements = (ROOT / "requirements-workstation.txt").read_text(encoding="utf-8")
 
     assert "--only-binary=llvmlite,numba" in installer
+    assert "-r requirements-workstation.txt" in mac_requirements
     assert "numba==0.60.0" in requirements
     assert "llvmlite==0.43.0" in requirements

@@ -46,10 +46,10 @@ ASTRA opera en dos modos:
 
 ### Requisitos previos
 
-- Python 3.10 o superior
+- Python 3.10-3.12; Python 3.12 es la base recomendada para las estaciones
 - Las CLI autenticadas de Codex, Claude Code y Antigravity (`agy`) para el mapa
   de producción, o al menos un proveedor API opcional
-- Todas las dependencias Python instaladas (`pip install -r requirements.txt` dentro del `venv`)
+- Todas las dependencias Python instaladas (`pip install -r requirements-workstation.txt` dentro del `venv`)
 
 ### Variables de entorno
 

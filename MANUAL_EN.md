@@ -46,10 +46,10 @@ ASTRA operates in two modes:
 
 ### Prerequisites
 
-- Python 3.10+
+- Python 3.10-3.12; Python 3.12 is the recommended workstation baseline
 - Authenticated Codex, Claude Code, and Antigravity (`agy`) CLIs for the
   production role map, or at least one optional API-backed provider
-- All Python dependencies installed (`pip install -r requirements.txt` inside the `venv`)
+- All Python dependencies installed (`pip install -r requirements-workstation.txt` inside the `venv`)
 
 ### Environment variables
 
