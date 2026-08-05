@@ -76,7 +76,21 @@ bash install_macos.sh
 The installer creates `venv/`, installs the full Python validation stack and
 MCP SDK, creates a non-secret `.env`, and writes a workspace-scoped
 `.agents/mcp_config.json` for Antigravity. Existing `.env` and MCP configuration
-are preserved.
+are preserved. It looks for Python 3.12 before older versions and reports the
+selected path, version, and architecture. If `venv/` belongs to another Python
+version or architecture, it is preserved as `venv.backup.*` and replaced.
+Numba and llvmlite are installed from binary wheels compatible with both Intel
+and Apple Silicon Macs, so normal onboarding does not require CMake or LLVM.
+
+To select Homebrew Python explicitly without hard-coding the Intel or Apple
+Silicon Homebrew prefix:
+
+```bash
+ASTRA_INSTALL_PYTHON="$(command -v python3.12)" bash install_macos.sh
+```
+
+If `command -v python3.12` prints no path, run `brew install python@3.12` first
+and open a new terminal.
 
 ## 4. Give this Mac individual ASTRUM access
 
@@ -218,3 +232,7 @@ venv/bin/python scripts/astra_doctor.py --remote
 The installer is idempotent and preserves `.env`. If MCP code changes while
 Antigravity is open, refresh its MCP servers; if the old server process remains,
 restart Antigravity once.
+
+If an earlier attempt left a Python 3.11 `venv/` and Python 3.12 is now
+selected, do not delete it manually. The installer detects the mismatch and
+moves the old environment to a recoverable backup before continuing.

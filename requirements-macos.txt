@@ -1,5 +1,11 @@
 -r requirements.txt
 
+# Stable binary wheels exist for this pair on CPython 3.10-3.12, for both
+# Intel and Apple Silicon Macs. Keeping the pair together prevents pip from
+# falling back to a local llvmlite/LLVM build during collaborator onboarding.
+numba==0.60.0
+llvmlite==0.43.0
+
 # ASTRA's agent-facing MCP server and local verification tooling.
 mcp>=1.28,<2
 pytest>=8,<10

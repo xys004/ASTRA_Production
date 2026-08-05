@@ -41,7 +41,15 @@ bash install_macos.sh
 ```
 
 El instalador crea el entorno Python, instala los validadores y registra el MCP
-de ASTRA únicamente para este workspace de Antigravity.
+de ASTRA únicamente para este workspace de Antigravity. Prefiere Python 3.12 y,
+si encuentra un `venv/` de otra versión o arquitectura, lo conserva como
+`venv.backup.*` y crea uno correcto. No hace falta instalar CMake ni LLVM.
+
+Si hay varias versiones de Python instaladas, se puede elegir 3.12 así:
+
+```bash
+ASTRA_INSTALL_PYTHON="$(command -v python3.12)" bash install_macos.sh
+```
 
 ## 3. Conectar ASTRUM
 

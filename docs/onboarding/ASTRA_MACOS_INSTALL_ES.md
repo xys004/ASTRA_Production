@@ -55,7 +55,22 @@ bash install_macos.sh
 
 El instalador crea `venv/`, instala las dependencias científicas y MCP, genera
 `.env` sin secretos y registra ASTRA como MCP únicamente para ese workspace de
-Antigravity.
+Antigravity. Busca Python 3.12 antes que las versiones anteriores y muestra la
+ruta, versión y arquitectura elegidas. Si ya existe un `venv/` creado por otra
+versión o arquitectura de Python, lo conserva como `venv.backup.*` y crea uno
+nuevo. Numba y llvmlite se instalan desde ruedas binarias compatibles tanto con
+Mac Intel como con Apple Silicon: no se necesitan CMake ni LLVM para el alta
+normal.
+
+Para elegir explícitamente el Python de Homebrew sin fijar una ruta distinta
+entre Macs Intel y Apple Silicon:
+
+```bash
+ASTRA_INSTALL_PYTHON="$(command -v python3.12)" bash install_macos.sh
+```
+
+Si `command -v python3.12` no devuelve una ruta, ejecutar primero
+`brew install python@3.12` y abrir un terminal nuevo.
 
 ## Acceso individual a ASTRUM
 
