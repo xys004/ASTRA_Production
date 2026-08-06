@@ -100,9 +100,10 @@ class ClientValidationTests(unittest.TestCase):
         self.assertEqual(result["status"], "REJECTED")
         self.assertEqual(result["forbidden"], ["axiom"])
 
+    @patch("core.formal_validators._is_windows", return_value=True)
     @patch("core.formal_validators.subprocess.run")
     @patch("core.formal_validators.shutil.which")
-    def test_lean4_local_wsl_invokes_pinned_project(self, which, run):
+    def test_lean4_local_wsl_invokes_pinned_project(self, which, run, _is_windows):
         which.return_value = r"C:\Windows\System32\wsl.exe"
         run.return_value.returncode = 0
         run.return_value.stdout = "kernel checked\n"

@@ -47,6 +47,10 @@ def _unavailable(detail: str, oracle: str) -> dict[str, Any]:
     }
 
 
+def _is_windows() -> bool:
+    return sys.platform == "win32"
+
+
 def _evaluate_lean4_local_wsl(
     source: str,
     timeout: int,
@@ -55,7 +59,7 @@ def _evaluate_lean4_local_wsl(
     lake: str,
 ) -> dict[str, Any]:
     distro = os.environ.get("ASTRA_WSL_DISTRO", "").strip().strip("'\"")
-    if sys.platform != "win32" or shutil.which("wsl") is None:
+    if not _is_windows() or shutil.which("wsl") is None:
         return _unavailable(
             "The configured WSL Lean 4 environment requires wsl.exe on Windows.",
             "local",

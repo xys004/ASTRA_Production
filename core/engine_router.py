@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ntpath
 import os
 import re
 import shutil
@@ -20,7 +21,10 @@ def _is_windows() -> bool:
 
 
 def _win_to_wsl_path(path: str) -> str:
-    normalized = os.path.abspath(path).replace("\\", "/")
+    # Use Windows path semantics even when the test suite is running on macOS
+    # or Linux. os.path follows the host OS and would otherwise turn
+    # C:\\work\\file into <cwd>/C:/work/file on POSIX.
+    normalized = ntpath.abspath(path).replace("\\", "/")
     if len(normalized) >= 2 and normalized[1] == ":":
         return f"/mnt/{normalized[0].lower()}/{normalized[2:].lstrip('/')}"
     return normalized
