@@ -130,6 +130,10 @@ Edit ASTRA's `.env` and replace the two placeholder lines with:
 ```dotenv
 ASTRA_REMOTE_HOST=astrum
 ASTRA_REMOTE_SSH_OPTIONS=
+ASTRA_CLIENT_ID=gabriel
+ASTRA_PROJECT_ID=general
+ASTRA_REMOTE_SCHEDULER=1
+ASTRA_REMOTE_CLUSTER_MANAGER=~/astra-worker/astra_cluster_manager.py
 ```
 
 The alias keeps machine-specific host, user, and key information out of the

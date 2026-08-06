@@ -12,14 +12,20 @@ import time
 import uuid
 
 
-ENGINE_MARKER = re.compile(r"^\s*#\s*ASTRA_ENGINE:\s*(python|sympy|sage|maxima|cadabra)\s*$", re.I | re.M)
+ENGINE_MARKER = re.compile(
+    r"^\s*#\s*ASTRA_ENGINE:\s*"
+    r"(python|sympy|sage|maxima|cadabra|lean|lean4|sci|pkgs)\s*$",
+    re.I | re.M,
+)
 
 
 def detect_engine(code: str) -> str:
     marker = ENGINE_MARKER.search(code)
     if marker:
         engine = marker.group(1).lower()
-        return "python" if engine == "sympy" else engine
+        if engine == "sympy":
+            return "python"
+        return "lean4" if engine == "lean" else engine
     if re.search(r"^\s*(from\s+sage|import\s+sage)", code, re.M):
         return "sage"
     if any(token in code for token in ("PolynomialRing(", "Manifold(", "RiemannianManifold(", "GF(", "ZZ[", "QQ[")):
@@ -39,8 +45,26 @@ def command_for(engine: str, filepath: str) -> list[str] | None:
     if engine == "python":
         return [sys.executable, filepath]
 
+    runner = os.path.abspath(
+        os.path.expanduser(
+            os.environ.get(
+                "ASTRA_REMOTE_ENGINE_RUNNER",
+                os.path.join(os.path.dirname(__file__), "astra_engine.sh"),
+            )
+        )
+    )
+    if os.path.isfile(runner) and os.access(runner, os.X_OK):
+        managed_name = "lean" if engine == "lean4" else engine
+        return [runner, managed_name, filepath]
+
     command = "cadabra2" if engine == "cadabra" else engine
-    env_var = {"sage": "ASTRA_SAGE_BIN", "maxima": "ASTRA_MAXIMA_BIN", "cadabra": "ASTRA_CADABRA_BIN"}[engine]
+    env_var = {
+        "sage": "ASTRA_SAGE_BIN",
+        "maxima": "ASTRA_MAXIMA_BIN",
+        "cadabra": "ASTRA_CADABRA_BIN",
+    }.get(engine)
+    if not env_var:
+        return None
     candidates = [
         os.environ.get(env_var),
         shutil.which(command),
@@ -81,7 +105,15 @@ def run_code(code: str, workdir: str, timeout: int) -> dict:
     os.makedirs(os.path.expanduser(workdir), exist_ok=True)
     workdir = os.path.abspath(os.path.expanduser(workdir))
     engine = detect_engine(code)
-    suffix = {"python": ".py", "sage": ".sage", "maxima": ".mac", "cadabra": ".cdb"}[engine]
+    suffix = {
+        "python": ".py",
+        "sage": ".sage",
+        "maxima": ".mac",
+        "cadabra": ".cdb",
+        "lean4": ".lean",
+        "sci": ".py",
+        "pkgs": ".py",
+    }[engine]
     filepath = os.path.join(workdir, f"astra_remote_{engine}_{uuid.uuid4().hex[:8]}{suffix}")
 
     with open(filepath, "w", encoding="utf-8") as handle:

@@ -348,6 +348,65 @@ def _do_capacity() -> dict:
     }
 
 
+async def _do_cluster_submit(req: dict) -> dict:
+    """Submit scientific code to ASTRUM's persistent shared queue."""
+    from core.cluster_client import cluster_rpc
+    from core.engine_router import detect_engine
+
+    code = str(req.get("code") or "")
+    if not code.strip():
+        return {"error": "code vacio"}
+    engine = str(req.get("engine") or "").strip().lower() or detect_engine(code)
+    payload = {
+        "action": "submit",
+        "code": code,
+        "engine": engine,
+        "client_id": req.get("client_id"),
+        "project": req.get("project"),
+        "priority": req.get("priority", 0),
+        "cpu_slots": req.get("cpu_slots", 0),
+        "gpu_slots": req.get("gpu_slots", 0),
+        "memory_mb": req.get("memory_mb", 0),
+        "timeout_seconds": req.get("max_seconds", 3600),
+    }
+    # Zero means "let the central manager choose its engine-aware default".
+    payload = {
+        key: value
+        for key, value in payload.items()
+        if value not in (None, "") and not (key in {"cpu_slots", "gpu_slots", "memory_mb"} and int(value or 0) == 0)
+    }
+    return await cluster_rpc(payload, timeout=60)
+
+
+async def _do_cluster_job(req: dict) -> dict:
+    from core.cluster_client import cluster_rpc
+
+    return await cluster_rpc(
+        {
+            "action": "job",
+            "job_id": str(req.get("job_id") or "").strip(),
+            "limit": req.get("limit", 20),
+            "client_filter": str(req.get("client_filter") or "").strip(),
+        },
+        timeout=60,
+    )
+
+
+async def _do_cluster_cancel(req: dict) -> dict:
+    from core.cluster_client import cluster_rpc
+
+    job_id = str(req.get("job_id") or "").strip()
+    if not job_id:
+        return {"error": "job_id vacio"}
+    return await cluster_rpc({"action": "cancel", "job_id": job_id}, timeout=60)
+
+
+async def _do_cluster_capacity() -> dict:
+    from core.cluster_client import cluster_rpc
+
+    return await cluster_rpc({"action": "capacity"}, timeout=60)
+
+
 def _job_summary(jobdir: str, tail_chars: int = 0):
     try:
         with open(os.path.join(jobdir, "job.json"), encoding="utf-8") as f:
@@ -1917,6 +1976,14 @@ def main() -> None:
             out = _do_job(req)
         elif action == "capacity":
             out = _do_capacity()
+        elif action == "cluster_submit":
+            out = asyncio.run(_do_cluster_submit(req))
+        elif action == "cluster_job":
+            out = asyncio.run(_do_cluster_job(req))
+        elif action == "cluster_cancel":
+            out = asyncio.run(_do_cluster_cancel(req))
+        elif action == "cluster_capacity":
+            out = asyncio.run(_do_cluster_capacity())
         else:
             out = {"error": f"accion desconocida: {action}"}
     except Exception as e:

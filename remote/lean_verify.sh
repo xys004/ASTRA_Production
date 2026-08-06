@@ -34,7 +34,7 @@ for req in plausible aesop batteries Qq proofwidgets importGraph; do
     *"/$req/"*) ;;
     *) echo "lean_verify: AVISO — falta el paquete '$req' compilado; " \
             "algunos imports de Mathlib fallaran. Restaurar con: " \
-            "git clone <url> && lake build (rev en lake-manifest.json)" >&2 ;;
+            "~/astra-worker/repair_lean_mathlib.sh" >&2 ;;
   esac
 done
 

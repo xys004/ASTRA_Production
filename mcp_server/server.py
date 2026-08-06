@@ -313,6 +313,92 @@ def astra_capacity() -> str:
     return json.dumps(res, indent=2, ensure_ascii=False)
 
 
+@mcp.tool()
+def astra_cluster_submit(
+    code: str,
+    project: str = "",
+    priority: int = 0,
+    cpu_slots: int = 0,
+    gpu_slots: int = 0,
+    memory_mb: int = 0,
+    max_seconds: int = 3600,
+) -> str:
+    """Queue persistent scientific computation on the shared ASTRUM node.
+
+    Unlike a direct remote oracle call, this job is admitted by ASTRUM's central
+    CPU/GPU scheduler, is attributed to ASTRA_CLIENT_ID, and continues if the
+    laptop, agent, SSH session, or local MCP server disconnects. Poll the
+    returned job_id with astra_cluster_job.
+
+    Args:
+        code: self-contained validation/calculation script. ASTRA_ENGINE markers
+            route Sage, Maxima, Cadabra, Lean, sci, and company-package jobs.
+        project: optional project/audit label; ASTRA_PROJECT_ID is the default.
+        priority: -10..10. Keep 0 for normal work; use positive values only for
+            genuinely interactive or urgent validation.
+        cpu_slots: requested logical CPU slots; 0 selects an engine-aware default.
+        gpu_slots: requested GPU slots; 0 auto-detects common CUDA/JAX/CuPy use.
+        memory_mb: advisory memory reservation; 0 leaves it unspecified.
+        max_seconds: execution timeout after the job starts.
+    """
+    res = _call_astra(
+        {
+            "action": "cluster_submit",
+            "code": code,
+            "project": project,
+            "priority": int(priority),
+            "cpu_slots": int(cpu_slots),
+            "gpu_slots": int(gpu_slots),
+            "memory_mb": int(memory_mb),
+            "max_seconds": int(max_seconds),
+        },
+        timeout=60,
+    )
+    return json.dumps(res, indent=2, ensure_ascii=False)
+
+
+@mcp.tool()
+def astra_cluster_job(
+    job_id: str = "",
+    client_filter: str = "",
+    limit: int = 20,
+) -> str:
+    """Poll one shared ASTRUM job or list the central multi-client queue.
+
+    Empty job_id lists recent jobs from Nelson, Gabriel, and any future clients.
+    Set client_filter to one ASTRA_CLIENT_ID to narrow the list. Completed jobs
+    include their result, evidence tails, resource claims, attribution, events,
+    and artifact directory.
+    """
+    res = _call_astra(
+        {
+            "action": "cluster_job",
+            "job_id": job_id,
+            "client_filter": client_filter,
+            "limit": int(limit),
+        },
+        timeout=60,
+    )
+    return json.dumps(res, indent=2, ensure_ascii=False)
+
+
+@mcp.tool()
+def astra_cluster_cancel(job_id: str) -> str:
+    """Cancel a queued/running ASTRUM job and record who requested it."""
+    res = _call_astra(
+        {"action": "cluster_cancel", "job_id": job_id},
+        timeout=60,
+    )
+    return json.dumps(res, indent=2, ensure_ascii=False)
+
+
+@mcp.tool()
+def astra_cluster_capacity() -> str:
+    """Report ASTRUM's shared CPU/GPU slots, usage, queue depth, and reserve."""
+    res = _call_astra({"action": "cluster_capacity"}, timeout=60)
+    return json.dumps(res, indent=2, ensure_ascii=False)
+
+
 def _pid_alive(pid) -> bool:
     if os.name != "nt":
         try:

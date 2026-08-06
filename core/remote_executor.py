@@ -23,7 +23,11 @@ def _quote_remote_arg(value: str) -> str:
     return shlex.quote(value)
 
 
-async def execute_remote_code(code: str, timeout: int = 60) -> dict:
+async def execute_remote_code(
+    code: str,
+    timeout: int = 60,
+    engine_hint: str = "",
+) -> dict:
     """
     Execute oracle validation code on a remote Linux worker over SSH.
 
@@ -38,6 +42,11 @@ async def execute_remote_code(code: str, timeout: int = 60) -> dict:
             "exit_code": -10,
             "engine": "remote",
         }
+
+    from core.cluster_client import cluster_enabled, execute_cluster_code
+
+    if cluster_enabled():
+        return await execute_cluster_code(code, timeout=timeout, engine=engine_hint)
 
     remote_python = os.environ.get("ASTRA_REMOTE_PYTHON", "python3").strip()
     remote_worker = os.environ.get("ASTRA_REMOTE_WORKER", "~/astra-worker/astra_remote_worker.py").strip()
@@ -177,7 +186,11 @@ finally:
     except OSError:
         pass
 """
-    response = await execute_remote_code(wrapper, timeout=timeout + 15)
+    response = await execute_remote_code(
+        wrapper,
+        timeout=timeout + 15,
+        engine_hint=engine,
+    )
     response["engine"] = engine
     response["engine_route"] = "astra_engine.sh"
     return response

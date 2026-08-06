@@ -30,6 +30,11 @@ ASTRA_REMOTE_WORKDIR=~/astra-worker/workspace
 ASTRA_REMOTE_ENGINE_RUNNER=~/astra-worker/astra_engine.sh
 ASTRA_REMOTE_CONNECT_TIMEOUT=15
 ASTRA_REMOTE_SSH_OPTIONS=
+ASTRA_CLIENT_ID=your-short-name
+ASTRA_PROJECT_ID=general
+ASTRA_REMOTE_SCHEDULER=1
+ASTRA_REMOTE_CLUSTER_MANAGER=~/astra-worker/astra_cluster_manager.py
+ASTRA_REMOTE_QUEUE_WAIT=300
 ```
 
 Here `astrum` is a machine-local alias in `~/.ssh/config`; it is not a public
@@ -56,6 +61,16 @@ Engines live in separate managed environments and may not appear in the login
 shell PATH. ASTRA exposes the same registry through the `astra_engines` MCP
 tool. `# ASTRA_ENGINE: pkgs` selects company packages and
 `# ASTRA_ENGINE: sci` selects the specialized scientific environment.
+
+## Shared scheduler
+
+The production ASTRUM node runs `astra_cluster_manager.py` as a persistent
+user-level systemd service. It is the central admission point for remote CPU,
+GPU, CAS, Lean, and company-package jobs submitted by multiple collaborators.
+The service keeps a SQLite queue and isolated artifacts under
+`~/astra-worker/cluster`; it does not open a network port because all RPC calls
+use SSH. Deployment, audit logging, resource policy, and MCP operations are
+documented in `docs/ASTRUM_SHARED_MANAGER.md`.
 
 ## Verification
 

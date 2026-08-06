@@ -1,0 +1,19 @@
+[Unit]
+Description=ASTRUM shared scientific job manager
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/astra-worker/venv/bin/python %h/astra-worker/astra_cluster_manager.py serve
+Restart=always
+RestartSec=3
+KillMode=process
+Nice=5
+UMask=0077
+Environment=PYTHONUNBUFFERED=1
+Environment=ASTRA_CLUSTER_CPU_RESERVE=4
+Environment=ASTRA_CLUSTER_GPU_SLOTS=1
+
+[Install]
+WantedBy=default.target

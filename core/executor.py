@@ -78,7 +78,7 @@ async def execute_python_code(code: str, workspace_dir: str = "workspace", timeo
         return await execute_remote_engine(code, engine, timeout=timeout)
     if mode == "remote":
         from core.remote_executor import execute_remote_code
-        return await execute_remote_code(code, timeout=timeout)
+        return await execute_remote_code(code, timeout=timeout, engine_hint=engine)
 
     if engine in {"sage", "maxima", "cadabra"}:
         logger.info(f"Oracle routing script to external CAS: {engine}")

@@ -107,11 +107,21 @@ ssh astrum 'hostname; ~/astra-worker/astra_engine.sh list'
 ```dotenv
 ASTRA_REMOTE_HOST=astrum
 ASTRA_REMOTE_SSH_OPTIONS=
+ASTRA_CLIENT_ID=gabriel
+ASTRA_PROJECT_ID=general
+ASTRA_REMOTE_SCHEDULER=1
+ASTRA_REMOTE_CLUSTER_MANAGER=~/astra-worker/astra_cluster_manager.py
 ```
 
 La lista de `astra_engine.sh` es la fuente correcta para los motores del
 clúster; `which sage` no los encuentra porque viven en entornos administrados
 separados.
+
+Los cálculos remotos persistentes se envían con `astra_cluster_submit` y se
+consultan con `astra_cluster_job`. La cola vive en ASTRUM y coordina de manera
+justa los trabajos de Nelson y Gabriel incluso si una de las laptops se apaga.
+Las deliberaciones de Codex, Claude y AGY continúan siendo locales y usan las
+credenciales propias de cada investigador.
 
 ## Verificación antes de gastar cuota
 

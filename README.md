@@ -184,6 +184,15 @@ validators and benchmark cases use an auto-detected safe worker count
 (`ASTRA_LOCAL_WORKERS` overrides it); dependent scientific phases remain
 ordered.
 
+Remote scientific jobs can also use ASTRUM's shared persistent scheduler. Set
+`ASTRA_REMOTE_SCHEDULER=1` and a stable `ASTRA_CLIENT_ID` on each workstation.
+`astra_cluster_submit` queues a calculation centrally; `astra_cluster_job`,
+`astra_cluster_cancel`, and `astra_cluster_capacity` expose progress, audit
+events, fair multi-client admission, and CPU/GPU slot usage. The remote job
+continues if the submitting laptop or MCP session disconnects. Full model
+deliberations remain local to each researcher and use that researcher's own CLI
+subscriptions. See `docs/ASTRUM_SHARED_MANAGER.md`.
+
 ---
 
 ## Validation Engines
