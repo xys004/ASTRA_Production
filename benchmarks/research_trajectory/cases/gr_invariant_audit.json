@@ -1,0 +1,51 @@
+{
+  "id": "gr_invariant_audit",
+  "title": "Coordinate-dependent signals versus spacetime invariants",
+  "domain": "general_relativity",
+  "objective": "Conduct a compact research program that determines which apparently nonzero geometric quantities in flat spacetime are coordinate artifacts and which calculations provide coordinate-invariant evidence. Compare at least two nontrivial coordinate descriptions, actively search for a misleading component-level argument, and build a reproducible hierarchy of checks that would prevent a client from confusing connection coefficients with curvature.",
+  "success_definition": "The trajectory must move beyond confirming one known zero. It should expose at least one plausible but false inference, test it, recover with an invariant criterion, state coordinate-domain assumptions, and deliver mutually reinforcing symbolic or formal evidence.",
+  "deliverables": [
+    "A tested hypothesis chain containing both a refutation and a validated invariant statement.",
+    "Executable curvature evidence in at least two coordinate descriptions.",
+    "An explicit map from coordinate-dependent quantities to invariant conclusions.",
+    "A short reusable validation protocol with assumptions and failure modes."
+  ],
+  "preferred_validators": [
+    "GR_python",
+    "sympy or EinsteinPy",
+    "Wolfram/Mathematica bridge when available",
+    "Lean 4 for a small aggregation implication when useful"
+  ],
+  "resources": [
+    "Optional GR_python package, resolved through ASTRA_GR_PYTHON_ROOT",
+    "Optional mathematica-agent-bridge, resolved through ASTRA_MATHEMATICA_BRIDGE_ROOT"
+  ],
+  "linear_control_directions": [
+    "Compute Christoffel symbols for Minkowski spacetime in spherical coordinates.",
+    "Compute the Ricci scalar for Minkowski spacetime in spherical coordinates.",
+    "Repeat the Ricci scalar calculation in cylindrical coordinates.",
+    "Check selected Riemann tensor components in spherical coordinates.",
+    "List the coordinate singularities of the chosen charts.",
+    "Compare component-level and scalar curvature evidence.",
+    "Construct a small formal implication from zero tensor components to zero trace.",
+    "Summarize a reusable flat-spacetime validation checklist."
+  ],
+  "expert_anchors": {
+    "goal_advancement": "How completely the work separates coordinate artifacts from invariant conclusions across the full objective.",
+    "hypothesis_quality": "Whether hypotheses are falsifiable and include a genuinely misleading component-level alternative rather than only safe confirmations.",
+    "research_depth": "Whether evidence from one cycle changes, sharpens, or generalizes later cycles into a coherent hierarchy.",
+    "evidence_quality": "Strength and independence of curvature checks, domains, residuals, and any cross-engine agreement.",
+    "self_correction": "Whether the trajectory recognizes and repairs an invalid inference about nonzero connection coefficients or chart singularities.",
+    "cross_perspective_uptake": "Whether a non-dominant model contributes a decisive invariant, counterexample, assumption, or validation method that later work actually uses.",
+    "novelty_utility": "Usefulness of the resulting audit protocol for preventing real GR validation errors, even if the underlying geometry is known.",
+    "artifact_reproducibility": "Whether code, engine metadata, assumptions, and outputs are sufficient for an independent rerun."
+  },
+  "budget": {
+    "max_cycles": 8,
+    "max_wall_minutes": 240,
+    "cycle_timeout_seconds": 1800,
+    "execution_timeout_seconds": 600,
+    "human_interventions": 1
+  },
+  "tags": ["smoke", "physics", "symbolic", "package"]
+}

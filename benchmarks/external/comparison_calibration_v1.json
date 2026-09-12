@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0",
+  "suite_id": "external_comparison_calibration_v1",
+  "description": "One pinned public task per benchmark family for architecture calibration before a larger 40-60 task comparison.",
+  "comparison_mode": "equal_phase_topology",
+  "configurations": [
+    "full",
+    "codex-only",
+    "claude-only",
+    "agy-only"
+  ],
+  "cases": [
+    {
+      "benchmark": "scicode",
+      "id": "scicode_29_1",
+      "pilot": "scicode",
+      "native_metric": "official numerical tests"
+    },
+    {
+      "benchmark": "minif2f",
+      "id": "minif2f_validation_mathd_algebra_182",
+      "pilot": "minif2f",
+      "native_metric": "Lean 3 kernel compilation"
+    },
+    {
+      "benchmark": "frontierscience",
+      "id": "frontierscience_olympiad_bb0539ef-d9fd-4215-bf16-b0eca44a8778",
+      "pilot": "frontier",
+      "native_metric": "official-answer equivalence"
+    },
+    {
+      "benchmark": "ainsteinbench",
+      "id": "ainsteinbench_MSB_pyscf_pyscf_pr2373",
+      "pilot": "ainstein",
+      "native_metric": "official hidden tests and resolve points"
+    }
+  ]
+}

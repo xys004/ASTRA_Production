@@ -1,0 +1,22 @@
+{
+  "engine": "Decimal80_exact_norm_implication",
+  "epsilon_radius": "0.001",
+  "evidence_internal_pass": true,
+  "logical_implication": "||N(e)||>=m|e|^3 with m>0 implies N(e)!=0 for 0<|e|<=r",
+  "normalized_bounds": [
+    "0.2719418519067882",
+    "0.27194187573636686"
+  ],
+  "probe_lower_norms": [
+    "2.719418519067882E-91",
+    "2.719418519067882E-37",
+    "2.719418519067882E-19",
+    "2.719418519067882E-13",
+    "2.719418519067882E-10"
+  ],
+  "punctured_interval_root_free": true,
+  "schema": "astra-one-parameter-nonlinear-LS-root/v109",
+  "script_sha256": "44a6156ecf6086d4587431ab96d2f34cc85e5b8b48c346bac104a019048f4801",
+  "unique_root_on_closed_interval": true,
+  "zero_is_root_by_definition": true
+}

@@ -4,6 +4,7 @@ import asyncio
 import importlib.util
 import os
 import shutil
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -66,23 +67,75 @@ PROVIDERS = {
         "package": "openai",
         "label": "Groq",
     },
+    "perplexity": {
+        "env": "PERPLEXITY_API_KEY",
+        "package": "openai",
+        "label": "Perplexity (Sonar, busqueda web con citas)",
+    },
+    # --- Backends de SUSCRIPCION (CLIs oficiales, sin API de pago) ---
+    "claude_cli": {
+        "env": None,
+        "package": None,
+        "label": "Claude (CLI suscripcion)",
+        "cli_bin": "claude",
+    },
+    "codex_cli": {
+        "env": None,
+        "package": None,
+        "label": "Codex/ChatGPT (CLI suscripcion)",
+        "cli_bin": "codex",
+    },
+    "gemini_cli": {
+        "env": None,
+        "package": None,
+        "label": "Gemini CLI (OAuth Code Assist, cuota gratis diaria)",
+        "cli_bin": "gemini",
+    },
+    "agy_cli": {
+        "env": None,
+        "package": None,
+        "label": "agy / Antigravity CLI (reemplaza gemini_cli; OAuth Google, sin API)",
+        "cli_bin": "agy",
+    },
+    "muse_cli": {
+        "env": None,
+        "package": None,
+        "label": "Meta Muse Code (CLI via WSL, experimental)",
+        "cli_bin": "muse",
+        "wsl_bridge": True,
+    },
 }
 
 PHASES = {
     "conjecture": {
         "env": "ASTRA_CONJECTURE_PROVIDER",
         "label": "Conjecture Engine",
-        "recommendation": "gemini",
+        "recommendation": "codex_cli",
     },
     "translator": {
         "env": "ASTRA_TRANSLATOR_PROVIDER",
         "label": "Formal Translator",
-        "recommendation": "anthropic",
+        "recommendation": "claude_cli",
+    },
+    "reviewer": {
+        "env": "ASTRA_REVIEWER_PROVIDER",
+        "label": "Validation-Code Reviewer",
+        "recommendation": "codex_cli",
     },
     "analyst": {
         "env": "ASTRA_ANALYST_PROVIDER",
         "label": "Refutation Analyst",
-        "recommendation": "openai",
+        "recommendation": "codex_cli",
+    },
+    "navigator": {
+        "env": "ASTRA_NAVIGATOR_PROVIDER",
+        "label": "Research Navigator",
+        "recommendation": "agy_cli",
+    },
+    "synth": {
+        "env": "ASTRA_SYNTH_PROVIDER",
+        "label": "Deliberation Synthesizer",
+        "recommendation": "codex_cli",
     },
 }
 
@@ -109,19 +162,64 @@ def env_path() -> Path:
     return project_root() / ".env"
 
 
+# Opt-in, reversible config overlays. Each is loaded (with override) only while
+# its config/<name>.enabled marker exists, so it can be toggled without editing
+# .env. Two kinds:
+#  - PROFILE overlays each set ASTRA_ARCHITECTURE_PROFILE and are therefore
+#    mutually exclusive: enable at most one at a time.
+#  - COMPOSABLE overlays touch an orthogonal knob (no profile) and may coexist
+#    with one profile overlay and with each other. strict_translator only sets
+#    ASTRA_TRANSLATOR_STRICT_CONTRACT (cycle-robustness spec, C0); treating it
+#    as exclusive would silently disable an active muse_trial when enabled.
+_PROFILE_OVERLAYS = ("muse_trial", "quota_relief")
+_COMPOSABLE_OVERLAYS = ("strict_translator",)
+_ENV_OVERLAYS = _PROFILE_OVERLAYS + _COMPOSABLE_OVERLAYS
+
+
+def _enabled_overlays():
+    root = project_root() / "config"
+    profile = [n for n in _PROFILE_OVERLAYS if (root / f"{n}.enabled").is_file()]
+    composable = [n for n in _COMPOSABLE_OVERLAYS if (root / f"{n}.enabled").is_file()]
+    # Profile overlays are mutually exclusive (each sets ASTRA_ARCHITECTURE_PROFILE).
+    # The enable scripts refuse to create a second marker, but if two ever
+    # coexist, load NO profile overlay and fall back to the base .env profile --
+    # a valid audited config -- rather than merge them in a list-order-dependent
+    # way. Composable overlays are unaffected by that conflict.
+    if len(profile) > 1:
+        print(
+            f"[preflight] refusing to load conflicting profile overlays "
+            f"{profile}; using base .env profile. Disable all but one.",
+            file=sys.stderr,
+        )
+        profile = []
+    return [root / f"{n}.env" for n in profile + composable]
+
+
 def load_project_env() -> None:
     path = env_path()
+    overlays = _enabled_overlays()
     if load_dotenv is not None:
         load_dotenv(path)
+        for overlay in overlays:
+            if overlay.is_file():
+                load_dotenv(overlay, override=True)
         return
-    if not path.exists():
-        return
-    for line in path.read_text(encoding="utf-8", errors="ignore").splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
+    if path.exists():
+        for line in path.read_text(encoding="utf-8", errors="ignore").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
+    for overlay in overlays:
+        if not overlay.is_file():
             continue
-        key, value = line.split("=", 1)
-        os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
+        for line in overlay.read_text(encoding="utf-8", errors="ignore").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            os.environ[key.strip()] = value.strip().strip("\"'")
 
 
 def _set_env_key(key: str, value: str) -> None:
@@ -163,7 +261,11 @@ def configured_providers() -> list[str]:
     load_project_env()
     providers = []
     for provider, meta in PROVIDERS.items():
-        if meta["env"] is None:
+        if meta.get("cli_bin"):
+            # Backend de suscripcion: disponible si el binario del CLI esta en PATH
+            if _cli_available(meta):
+                providers.append(provider)
+        elif meta["env"] is None:
             # ADC-based provider (Vertex AI) — available if SDK is installed
             if _module_available(meta["package"]):
                 providers.append(provider)
@@ -172,11 +274,29 @@ def configured_providers() -> list[str]:
     return providers
 
 
+def _cli_available(meta: dict) -> bool:
+    """Check native CLIs, plus the explicitly configured Muse WSL bridge."""
+    if not meta.get("wsl_bridge"):
+        return shutil.which(meta["cli_bin"]) is not None
+    distro = (os.environ.get("ASTRA_MUSE_WSL_DISTRO") or "Debian").strip()
+    if not shutil.which("wsl.exe"):
+        return False
+    try:
+        probe = subprocess.run(
+            ["wsl.exe", "-d", distro, "--", "bash", "-lc",
+             'export PATH="$HOME/.local/bin:$PATH"; muse --version'],
+            capture_output=True, text=True, timeout=10,
+        )
+        return probe.returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
 def choose_default_provider() -> str:
     preferred = os.environ.get("ASTRA_PROVIDER", "").strip().lower()
-    if preferred in PROVIDERS and os.environ.get(PROVIDERS[preferred]["env"]):
-        return preferred
     configured = configured_providers()
+    if preferred in configured:
+        return preferred
     return configured[0] if configured else "gemini"
 
 
@@ -188,6 +308,11 @@ def phase_provider(phase: str) -> str:
     load_project_env()
     meta = PHASES[phase]
     explicit = os.environ.get(meta["env"], "").strip().lower()
+    if "," in explicit:
+        explicit = next(
+            (item.strip() for item in explicit.split(",") if item.strip() in PROVIDERS),
+            "",
+        )
     if explicit in PROVIDERS:
         return explicit
     fallback = os.environ.get("ASTRA_PROVIDER", "").strip().lower()
@@ -219,9 +344,12 @@ def _provider_from_choice(configured: list[str], raw: str, current: str) -> str:
 
 def _recommended_provider_for_phase(phase: str, configured: list[str]) -> str:
     preferred_order = {
-        "conjecture": ["gemini", "anthropic", "openai"],
-        "translator": ["anthropic", "openai", "gemini"],
-        "analyst": ["openai", "anthropic", "gemini"],
+        "conjecture": ["codex_cli", "agy_cli", "gemini", "anthropic", "openai"],
+        "translator": ["claude_cli", "anthropic", "codex_cli", "openai", "gemini"],
+        "reviewer": ["codex_cli", "claude_cli", "openai", "anthropic", "agy_cli"],
+        "analyst": ["codex_cli", "claude_cli", "openai", "anthropic", "agy_cli"],
+        "navigator": ["agy_cli", "codex_cli", "gemini", "openai", "anthropic"],
+        "synth": ["codex_cli", "claude_cli", "agy_cli", "openai", "anthropic"],
     }[phase]
     for provider in preferred_order:
         if provider in configured:
@@ -348,6 +476,13 @@ def run_preflight(provider: str | None = None, verify_api: bool = True, phase_pr
     checks.append(Check("Project .env", env_path().exists(), str(env_path())))
 
     selected_providers = set((phase_providers or phase_provider_map()).values())
+    for meta in PHASES.values():
+        raw = os.environ.get(meta["env"], "")
+        selected_providers.update(
+            item.strip().lower()
+            for item in raw.strip().strip("'\"").split(",")
+            if item.strip().lower() in PROVIDERS
+        )
     if provider:
         selected_providers.add(provider)
 
@@ -355,6 +490,12 @@ def run_preflight(provider: str | None = None, verify_api: bool = True, phase_pr
         meta = PROVIDERS.get(selected)
         if meta is None:
             checks.append(Check("API provider", False, f"unsupported provider: {selected}"))
+            continue
+        if meta.get("cli_bin"):
+            # Backend de suscripcion: basta con que el binario del CLI exista
+            present = _cli_available(meta)
+            checks.append(Check(f"{meta['label']} CLI", present,
+                                f"{meta['cli_bin']} (headless)" if present else f"{meta['cli_bin']} unavailable"))
             continue
         if meta["env"] is None:
             # ADC-based provider — no key check, just confirm SDK is present
@@ -402,7 +543,9 @@ def run_preflight(provider: str | None = None, verify_api: bool = True, phase_pr
     if verify_api:
         for selected in sorted(selected_providers):
             meta = PROVIDERS.get(selected)
-            if not meta or not _module_available(meta["package"]):
+            # Los backends de suscripcion (CLI) no se verifican en vivo aqui:
+            # gastaria cuota real. Su chequeo es solo la presencia del binario.
+            if not meta or meta.get("cli_bin") or not meta.get("package") or not _module_available(meta["package"]):
                 continue
             has_credentials = meta["env"] is None or bool(os.environ.get(meta["env"]))
             if has_credentials:

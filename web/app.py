@@ -66,6 +66,10 @@ def start_loop():
         if 'analyst' in providers:
             os.environ['ASTRA_ANALYST_PROVIDER'] = providers['analyst']
 
+    oracle_mode = (data.get('oracle_mode') or '').strip().lower()
+    if oracle_mode in ('local', 'remote', 'auto'):
+        os.environ['ASTRA_ORACLE_MODE'] = oracle_mode
+
     state.start_loop_requested = True
     return jsonify({"success": True})
 
@@ -123,6 +127,16 @@ def upload_doc():
             return jsonify({"error": "PyMuPDF not installed. Run: pip install PyMuPDF"}), 500
         except Exception as exc:
             return jsonify({"error": f"Failed to parse PDF: {exc}"}), 500
+    elif filename.lower().endswith('.tex'):
+        # LaTeX drafts: strip preamble/markup but keep prose and math so the
+        # conjecture engine reasons over the physics, not the formatting.
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                raw_tex = f.read()
+        except UnicodeDecodeError:
+            return jsonify({"error": "File encoding not supported. Use UTF-8 .tex files."}), 400
+        from core.latex_extract import extract_text_from_latex
+        extracted_text += extract_text_from_latex(raw_tex)
     else:
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
@@ -161,6 +175,10 @@ def session_start():
             os.environ['ASTRA_ANALYST_PROVIDER'] = providers['analyst']
         if 'navigator' in providers:
             os.environ['ASTRA_NAVIGATOR_PROVIDER'] = providers['navigator']
+
+    oracle_mode = (data.get('oracle_mode') or '').strip().lower()
+    if oracle_mode in ('local', 'remote', 'auto'):
+        os.environ['ASTRA_ORACLE_MODE'] = oracle_mode
 
     autonomous = bool(data.get('autonomous_mode', False))
     state.autonomous_mode = autonomous
@@ -298,6 +316,7 @@ def investigation_new():
     state.last_python_code    = ""
     state.last_execution_result = {}
     state.last_analysis       = {}
+    state.last_cycle_result   = {}
     state.last_report         = {}
     with state._log_lock:
         state.logs.clear()
@@ -344,6 +363,7 @@ def investigation_load():
     state.last_python_code      = ""
     state.last_execution_result = {}
     state.last_analysis         = {}
+    state.last_cycle_result     = {}
     state.last_report           = {}
     with state._log_lock:
         state.logs.clear()

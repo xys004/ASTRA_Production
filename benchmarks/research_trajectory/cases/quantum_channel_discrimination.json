@@ -1,0 +1,50 @@
+{
+  "id": "quantum_channel_discrimination",
+  "title": "Discriminating partially observed quantum noise channels",
+  "domain": "quantum_information",
+  "objective": "Infer which single-qubit noise mechanisms remain compatible with the frozen partial Bloch-observable data. Compare dephasing, depolarizing, amplitude damping, and at least one mixed-channel hypothesis; identify degeneracies caused by the measured observables; and design a minimal additional preparation, observable, or time point that would maximally separate the leading explanations.",
+  "success_definition": "The trajectory must distinguish parameter fitting from channel identification, expose at least one observational degeneracy or rejected mechanism, and validate the proposed discriminatory measurement through simulation.",
+  "deliverables": [
+    "Executable simulations for the competing completely positive trace-preserving channels.",
+    "A compatibility and rejection map tied to the frozen observations.",
+    "A quantitatively justified minimal additional measurement.",
+    "Checks of trace preservation, positivity, and stated noise assumptions."
+  ],
+  "preferred_validators": [
+    "QuTiP",
+    "NumPy",
+    "SymPy",
+    "Wolfram/Mathematica bridge when available"
+  ],
+  "resources": [
+    "benchmarks/research_trajectory/resources/partial_bloch_observations.json"
+  ],
+  "linear_control_directions": [
+    "Fit a pure dephasing channel to the observed Bloch components.",
+    "Fit an amplitude-damping channel to the observed Bloch components.",
+    "Fit a depolarizing channel to the observed Bloch components.",
+    "Fit a dephasing plus amplitude-damping mixture.",
+    "Check trace preservation and positivity for fitted channels.",
+    "Compare residuals and parameter uncertainty.",
+    "Simulate candidate additional observables and preparation states.",
+    "Choose a minimal discriminating measurement and summarize limitations."
+  ],
+  "expert_anchors": {
+    "goal_advancement": "Completeness of the compatible-channel map and usefulness of the proposed minimal discrimination experiment.",
+    "hypothesis_quality": "Physical validity and discriminating relevance of pure and mixed channel hypotheses.",
+    "research_depth": "Whether discovered degeneracies or physicality failures reshape later channel and measurement choices.",
+    "evidence_quality": "CPTP checks, correct observable simulation, uncertainty analysis, and independent numerical or symbolic validation.",
+    "self_correction": "Detection and repair of a channel-identification claim unsupported by the partial observables.",
+    "cross_perspective_uptake": "Causal uptake of an alternative channel, degeneracy argument, or experimental design from another model.",
+    "novelty_utility": "Efficiency and practical informativeness of the additional measurement proposal.",
+    "artifact_reproducibility": "Frozen data hash, channel definitions, parameter bounds, scripts, seeds, and evidence outputs."
+  },
+  "budget": {
+    "max_cycles": 8,
+    "max_wall_minutes": 240,
+    "cycle_timeout_seconds": 1800,
+    "execution_timeout_seconds": 600,
+    "human_interventions": 1
+  },
+  "tags": ["quantum", "data", "experimental-design"]
+}

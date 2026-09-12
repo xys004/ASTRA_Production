@@ -1,0 +1,948 @@
+{
+  "schema_version": "1.0",
+  "suite_id": "external_diversity_frozen_v1",
+  "description": "Preregistered 40-case paired test of heterogeneous versus homogeneous proposal teams under matched downstream roles.",
+  "frozen": true,
+  "frozen_on": "2026-07-24",
+  "comparison_mode": "paired_equal_phase_topology",
+  "configurations": [
+    "full",
+    "homogeneous-proposers"
+  ],
+  "hypotheses": {
+    "primary": "Replacing the second Codex proposer with AGY/Gemini increases native benchmark pass probability under equal phase topology.",
+    "mechanism": "The heterogeneous pair exhibits greater initial perspective diversity, and synthesis/review converts some disagreements into paired wins rather than merely adding verbosity.",
+    "null": "The heterogeneous and homogeneous proposal pairs have equal native pass probability."
+  },
+  "analysis_plan": {
+    "primary_endpoint": "paired native PASS",
+    "primary_test": "exact McNemar, full greater than control",
+    "effect_interval": "deterministic 5000-resample paired bootstrap 95% interval",
+    "mechanism_metrics": [
+      "unigram Jaccard distance",
+      "bigram Jaccard distance",
+      "synthesis proposal retention",
+      "review intervention",
+      "repair lift"
+    ],
+    "operational_errors": "reported separately and excluded from scientific pass rates",
+    "decision_rule": "supported only when paired pass-rate delta is positive and one-sided exact McNemar p < 0.05; otherwise report directional, null, or adverse evidence without changing cases"
+  },
+  "selection": {
+    "seed": "ASTRA-diversity-v1-20260724",
+    "source_fingerprint": "6c4f6268fb5de13b1136f2e7f082e92754dded3cfff30c5e13fcaf36b6cfdaf2",
+    "source_commits": {
+      "SciCode": "e3158ea011d4235245a547460d3688d7ccbf9900",
+      "SciCode_dataset": "4510f6a6aa27c43fad7b43da2c59602a86e88480",
+      "miniF2F": "f0dcc8b59e630fba00ba9569ca6714700e0a8801",
+      "frontierscience": "25ed67db7da8f4591484e764008ff585544f5a30",
+      "AInsteinBench": "4a7f897e33eeccda58316fc9fe823e729307d611",
+      "AInsteinBench_eval": "d9b1383e86c2ae43dcb3ddbcaf34c21ceb786cca"
+    },
+    "excluded_calibration_case_ids": [
+      "ainsteinbench_MSB_pyscf_pyscf_pr2373",
+      "frontierscience_olympiad_bb0539ef-d9fd-4215-bf16-b0eca44a8778",
+      "minif2f_validation_mathd_algebra_182",
+      "scicode_29_1"
+    ],
+    "stratification": {
+      "scicode": "12 distinct development problems; first subproblem",
+      "minif2f": "one validation theorem from each of 12 name strata",
+      "frontierscience": "6 physics, 5 chemistry, 1 biology olympiad",
+      "ainsteinbench": "one task from each of four repositories not used in calibration"
+    },
+    "case_ids_sha256": "bb43b90de58df2a3bf985fa7fdd9ec8ca555e23c9a8a258325f9036c1966cf7c",
+    "schedule_sha256": "af45bcc0d76589d7099fdd944e1f30ae573350711fe5f35c8e523fe8fb470806"
+  },
+  "canary_case_ids": [
+    "scicode_49_1",
+    "minif2f_validation_amc12_2000_p5",
+    "frontierscience_olympiad_af36a1cb-5949-4385-93a0-1f875500c34a",
+    "ainsteinbench_MSB_Qiskit_qiskit_pr14096"
+  ],
+  "cases": [
+    {
+      "benchmark": "scicode",
+      "id": "scicode_51_1",
+      "pilot": "scicode",
+      "native_metric": "official numerical tests",
+      "stratum": "problem:51:SciCode_Example",
+      "selection_digest": "1de5c8afb77ac48e",
+      "prompt_sha256": "35de5b365ffc051398ba789d56453936f68efddd45e9fb1cd56e1fd20d7013eb",
+      "reference_sha256": "41ca9ecbda4e91bbd1ee76d255be73779596b065d54e19f8d6904e366b830074"
+    },
+    {
+      "benchmark": "scicode",
+      "id": "scicode_4_1",
+      "pilot": "scicode",
+      "native_metric": "official numerical tests",
+      "stratum": "problem:4:IncomChol",
+      "selection_digest": "2d2d97965fc4e123",
+      "prompt_sha256": "f2b21a5a95d5c6ebb2fda6ff9cee5bba75dfe1d24a4e9f11394359b2151516cd",
+      "reference_sha256": "1a4c0db0df58fb0f9626fa163df02d618faec5b0b070a6907fbd2a6b62b268ec"
+    },
+    {
+      "benchmark": "scicode",
+      "id": "scicode_1_1",
+      "pilot": "scicode",
+      "native_metric": "official numerical tests",
+      "stratum": "problem:1:CG",
+      "selection_digest": "30afcbb60495c38d",
+      "prompt_sha256": "08347721f454012e516c4efede53707b7fa8840320e58882a726c1a0d380a41c",
+      "reference_sha256": "fbb9dbb8a0ed495b8c9858d487311da6c4ef1071e649eed942955ea7e312144a"
+    },
+    {
+      "benchmark": "scicode",
+      "id": "scicode_78_1",
+      "pilot": "scicode",
+      "native_metric": "official numerical tests",
+      "stratum": "problem:78:Chaotic_Dynamics_Pendulum",
+      "selection_digest": "3f8f5e79d1c1c9cb",
+      "prompt_sha256": "676549ad9e8b0d875f4bf4680574dd216747eec6e571f48b257dc656808fc7c1",
+      "reference_sha256": "dfba45f4fa18d9060c1ea6dbde057af1cf4e43180c27cf834e5f0da9c9ba767f"
+    },
+    {
+      "benchmark": "scicode",
+      "id": "scicode_38_1",
+      "pilot": "scicode",
+      "native_metric": "official numerical tests",
+      "stratum": "problem:38:Reciprocal_lattice_vector",
+      "selection_digest": "695e735e6becdc27",
+      "prompt_sha256": "22cb74be175c179ffe40039bd362800916ce1ea8b600ff0b9658ce7f6b089aa2",
+      "reference_sha256": "acb393d204a5f0e6133e5cae8ae12e420999b7dcf01dc392461d8777c5207a75"
+    },
+    {
+      "benchmark": "scicode",
+      "id": "scicode_6_1",
+      "pilot": "scicode",
+      "native_metric": "official numerical tests",
+      "stratum": "problem:6:Spatial_filters_I",
+      "selection_digest": "74e4af0df98a9294",
+      "prompt_sha256": "9574da79630ffc422157eb523a4cf7c6bb35a6b561bf914ea7f26c7f7c651173",
+      "reference_sha256": "256b8243133fe098a60548d40430767679d789c2ab6c82b74db21aaabf12f5d9"
+    },
+    {
+      "benchmark": "scicode",
+      "id": "scicode_49_1",
+      "pilot": "scicode",
+      "native_metric": "official numerical tests",
+      "stratum": "problem:49:nbody",
+      "selection_digest": "93136c760fb4b6c2",
+      "prompt_sha256": "8af0ffae536dff9d870c9cb778d0b5d1b93bc293a3b16682026e0cbedefc04a2",
+      "reference_sha256": "b511bcd251876d4c7ba73d0f8599adfa629192dda01495c22fa09671576a9e5a"
+    },
+    {
+      "benchmark": "scicode",
+      "id": "scicode_19_1",
+      "pilot": "scicode",
+      "native_metric": "official numerical tests",
+      "stratum": "problem:19:n_tangle",
+      "selection_digest": "990d6cf2ea52985a",
+      "prompt_sha256": "f596ae5b1e9b1b63ba428502af86b94575c97644aec14dfcf00b08a68d573175",
+      "reference_sha256": "b578750dc99d8230b1e0311091ca47c39388f721db7d44e14d5326f42a457109"
+    },
+    {
+      "benchmark": "scicode",
+      "id": "scicode_47_1",
+      "pilot": "scicode",
+      "native_metric": "official numerical tests",
+      "stratum": "problem:47:Internal_Energy",
+      "selection_digest": "bbd803b309fffded",
+      "prompt_sha256": "6943b68780381c2ac1eaccac2dc551c14bf78f4cbbf9fbb4cf86e6d844fd8c02",
+      "reference_sha256": "912c37e5c729faef39aaba6cacdb37feef006513e6f2602c367a3c9382524f91"
+    },
+    {
+      "benchmark": "scicode",
+      "id": "scicode_7_1",
+      "pilot": "scicode",
+      "native_metric": "official numerical tests",
+      "stratum": "problem:7:Spatial_filters_II",
+      "selection_digest": "bc219fa73a376e9f",
+      "prompt_sha256": "67fa4024a123e1e1d794640c4bf0984e3f6cd6b22e9601d3f43f119cd1b4ecd6",
+      "reference_sha256": "f865e0f24a85d3e07cf93eb5fde298d5327864a78ba8dd441078a29dd5d1ae4f"
+    },
+    {
+      "benchmark": "scicode",
+      "id": "scicode_44_1",
+      "pilot": "scicode",
+      "native_metric": "official numerical tests",
+      "stratum": "problem:44:two_mer_entropy",
+      "selection_digest": "c6375449ff995438",
+      "prompt_sha256": "669f543ec3ff29b763c2a254bec0438c12783f376799727f3aa3b35070e8cbfa",
+      "reference_sha256": "d18dd91a3000aedb0787cff8e0935e12314d92d7cd358edecbcad82379233045"
+    },
+    {
+      "benchmark": "scicode",
+      "id": "scicode_10_1",
+      "pilot": "scicode",
+      "native_metric": "official numerical tests",
+      "stratum": "problem:10:ewald_summation",
+      "selection_digest": "cd4e0b4971ad2c9d",
+      "prompt_sha256": "095a222e76777a86c00f0adff924003d711ff9f34015d3e8c58619fc631548be",
+      "reference_sha256": "20b1014accfcd29e722e4eef60708f81713c073c6814182b068fcf50c22a1455"
+    },
+    {
+      "benchmark": "minif2f",
+      "id": "minif2f_validation_aime_1991_p6",
+      "pilot": "minif2f",
+      "native_metric": "Lean 3 kernel compilation",
+      "stratum": "aime",
+      "selection_digest": "170b6fbbf6c42185",
+      "prompt_sha256": "06f292c901b3c7c21cfdc35ba50f74e3cf179fd504096daceb6c578b8f40a6e6",
+      "reference_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "benchmark": "minif2f",
+      "id": "minif2f_validation_aimeI_2001_p3",
+      "pilot": "minif2f",
+      "native_metric": "Lean 3 kernel compilation",
+      "stratum": "aimeI",
+      "selection_digest": "dbd10d81bfe61432",
+      "prompt_sha256": "660a4e6267d7cf717db68f9d5a52178fad21611d8e1446ff17ee44c47c641b18",
+      "reference_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "benchmark": "minif2f",
+      "id": "minif2f_validation_aimeII_2020_p6",
+      "pilot": "minif2f",
+      "native_metric": "Lean 3 kernel compilation",
+      "stratum": "aimeII",
+      "selection_digest": "6e58f809c63256c5",
+      "prompt_sha256": "e3fa97c9ac7a7f7a0ebf053c34a6f15d1fa72e5e1a477fa7271d0b87dd750e36",
+      "reference_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "benchmark": "minif2f",
+      "id": "minif2f_validation_algebra_3rootspoly_amdtamctambeqnasqmbpctapcbtdpasqmbpctapcbta",
+      "pilot": "minif2f",
+      "native_metric": "Lean 3 kernel compilation",
+      "stratum": "algebra",
+      "selection_digest": "1b6ccb19322713b0",
+      "prompt_sha256": "2801232b7cc00e184f36c1585187906d268b3e03438f6caf3dcae214f46ea852",
+      "reference_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "benchmark": "minif2f",
+      "id": "minif2f_validation_amc12_2000_p5",
+      "pilot": "minif2f",
+      "native_metric": "Lean 3 kernel compilation",
+      "stratum": "amc12",
+      "selection_digest": "03210e5aad624cf3",
+      "prompt_sha256": "57f2822410fadab2455a0d0d1c220e3655cb83ff8b68b7e5f692277b6c3c286f",
+      "reference_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "benchmark": "minif2f",
+      "id": "minif2f_validation_amc12a_2009_p25",
+      "pilot": "minif2f",
+      "native_metric": "Lean 3 kernel compilation",
+      "stratum": "amc12a",
+      "selection_digest": "00c1f28b9704bfdf",
+      "prompt_sha256": "cb5360055d4b91a5bac463ceffb072578fe8ac755a4f639af5a167bbbeac8039",
+      "reference_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "benchmark": "minif2f",
+      "id": "minif2f_validation_amc12b_2003_p6",
+      "pilot": "minif2f",
+      "native_metric": "Lean 3 kernel compilation",
+      "stratum": "amc12b",
+      "selection_digest": "40c8a926204b9f4a",
+      "prompt_sha256": "cfe3e7af28cbf2465e1960b453a81bab6cd1504d6d1cda55bab79b931752015d",
+      "reference_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "benchmark": "minif2f",
+      "id": "minif2f_validation_imo_1984_p2",
+      "pilot": "minif2f",
+      "native_metric": "Lean 3 kernel compilation",
+      "stratum": "imo",
+      "selection_digest": "0528a00256e90a3d",
+      "prompt_sha256": "cf7dff4e5de619214ca956c72125d93b11ab7335d3f558c2eda8073b95f25d44",
+      "reference_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "benchmark": "minif2f",
+      "id": "minif2f_validation_induction_sum_odd",
+      "pilot": "minif2f",
+      "native_metric": "Lean 3 kernel compilation",
+      "stratum": "induction",
+      "selection_digest": "03bad6f281500bf4",
+      "prompt_sha256": "e24067fdae4e47a7fabf4cda4b084ab97de4ffc269a5f794ae565a7dc140f30d",
+      "reference_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "benchmark": "minif2f",
+      "id": "minif2f_validation_mathd_algebra_73",
+      "pilot": "minif2f",
+      "native_metric": "Lean 3 kernel compilation",
+      "stratum": "mathd_algebra",
+      "selection_digest": "05a9213cd4abc147",
+      "prompt_sha256": "c832c24e7677ba26270ad3fc615e32e5d7023d3ae5cbcee2588caa238ab1a4ee",
+      "reference_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "benchmark": "minif2f",
+      "id": "minif2f_validation_mathd_numbertheory_326",
+      "pilot": "minif2f",
+      "native_metric": "Lean 3 kernel compilation",
+      "stratum": "mathd_numbertheory",
+      "selection_digest": "045fa5d3e3fa852b",
+      "prompt_sha256": "94eb6b19728efd1c9d720591aaa82da523effca2878af45c8dc41019c9a27d0c",
+      "reference_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "benchmark": "minif2f",
+      "id": "minif2f_validation_numbertheory_nckeqnm1ckpnm1ckm1",
+      "pilot": "minif2f",
+      "native_metric": "Lean 3 kernel compilation",
+      "stratum": "numbertheory",
+      "selection_digest": "03862fe1edd19654",
+      "prompt_sha256": "f11ab72485c5a2ab32170d849ce8ad7aabc85cae15bf021eb678bfd00c7eebcf",
+      "reference_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "benchmark": "frontierscience",
+      "id": "frontierscience_olympiad_16318af5-cfa6-4b2c-bf25-9eb3ac468b48",
+      "pilot": "frontier",
+      "native_metric": "official-answer equivalence",
+      "stratum": "physics",
+      "selection_digest": "0440a249edd383f0",
+      "prompt_sha256": "a9462de617b360598695169d231f6698a2b0674d4b86de25080c7c70bb044fe5",
+      "reference_sha256": "04e5867e2f92ef8494bfc4a4f9ae1ae78ea44d9a41ed625d193a0659d8eecd32"
+    },
+    {
+      "benchmark": "frontierscience",
+      "id": "frontierscience_olympiad_27c865e6-1c87-489b-b7ea-b197fe3356ba",
+      "pilot": "frontier",
+      "native_metric": "official-answer equivalence",
+      "stratum": "physics",
+      "selection_digest": "05ae7217237acad0",
+      "prompt_sha256": "f73d972ad07bf007d9b8514f362dfe6ac769b3bdf58254ed23b35e1814f847d8",
+      "reference_sha256": "8f38bbde2c47167bd0d8a7e922874998676f5366de84777a66aaa665d2cef85d"
+    },
+    {
+      "benchmark": "frontierscience",
+      "id": "frontierscience_olympiad_4195adea-9fa5-4f25-91ef-ebd6c57cfb88",
+      "pilot": "frontier",
+      "native_metric": "official-answer equivalence",
+      "stratum": "physics",
+      "selection_digest": "06a5e3fdb675b696",
+      "prompt_sha256": "4efc2b7c15de40d32c89b4bf5a37ae5ac459c3c81700b714379b529344857b95",
+      "reference_sha256": "c6ea8ba0195f71b0a70937b8b116ecbe158250efa09d621d556d3d301e2384cf"
+    },
+    {
+      "benchmark": "frontierscience",
+      "id": "frontierscience_olympiad_70929247-a356-4a12-8534-49fd885f0c3e",
+      "pilot": "frontier",
+      "native_metric": "official-answer equivalence",
+      "stratum": "physics",
+      "selection_digest": "093577a399f55ed0",
+      "prompt_sha256": "48899aa377d39a7c86a095611077e16d81efe436c1a80f6ab81f40afea9b5b97",
+      "reference_sha256": "d3871b0875849e156494bf9503ff38cdee9d99ba34d24f425abcd823db6de318"
+    },
+    {
+      "benchmark": "frontierscience",
+      "id": "frontierscience_olympiad_f4681d73-b08d-450c-89d3-85b9d1250419",
+      "pilot": "frontier",
+      "native_metric": "official-answer equivalence",
+      "stratum": "physics",
+      "selection_digest": "09829e8124827f38",
+      "prompt_sha256": "5cb2c937e2f9f232f4c795f1b23908843baa9cb0b344e15291fae576d23e8ae7",
+      "reference_sha256": "bc6c5395ca21982f65535149648e02ed2a1e1559ede73b30df58ba81e26f63ec"
+    },
+    {
+      "benchmark": "frontierscience",
+      "id": "frontierscience_olympiad_4f1cf869-3ea3-400c-8fa3-e4d3f6fe1cdf",
+      "pilot": "frontier",
+      "native_metric": "official-answer equivalence",
+      "stratum": "physics",
+      "selection_digest": "0c5aae050a34e1b0",
+      "prompt_sha256": "dcc94b3574818beab4e8536b04e45b5453aece431a68729bea6720aeec099086",
+      "reference_sha256": "f01eb5cfb3fd86dda375680b02467da080e92a6538bb4b925f5e23c4323e3cac"
+    },
+    {
+      "benchmark": "frontierscience",
+      "id": "frontierscience_olympiad_4a737e9f-5afd-4a14-a17b-c468cda1a8bb",
+      "pilot": "frontier",
+      "native_metric": "official-answer equivalence",
+      "stratum": "chemistry",
+      "selection_digest": "09cd9d8d7f12cd4f",
+      "prompt_sha256": "25861a94122ba84e274a2538ef47d1dd41c840afd49c69edbf966988e6327619",
+      "reference_sha256": "cd31bee2810882abc81d1f9573c894de8c45871aa1d9846ab09f7cdfdcc13722"
+    },
+    {
+      "benchmark": "frontierscience",
+      "id": "frontierscience_olympiad_5ef8b29d-7665-45e6-a26a-bd4a27f450ad",
+      "pilot": "frontier",
+      "native_metric": "official-answer equivalence",
+      "stratum": "chemistry",
+      "selection_digest": "106a15eafba5b718",
+      "prompt_sha256": "446b6530c973b38c8731a655c9ad7f7663952b8a931ef952f6e2980303edebfd",
+      "reference_sha256": "26ff64c30dc0724ca15e480bd37fe7d6eb267c5fe11e38e9bcacc74c96a432e4"
+    },
+    {
+      "benchmark": "frontierscience",
+      "id": "frontierscience_olympiad_3d762ba1-3958-453b-b34e-fe24c2822994",
+      "pilot": "frontier",
+      "native_metric": "official-answer equivalence",
+      "stratum": "chemistry",
+      "selection_digest": "126463257993e56a",
+      "prompt_sha256": "400a19dcee6556ecd065df2bb13ba3f2a8909764c26549f0ca705dd7fdb402f3",
+      "reference_sha256": "fbb883b3e6cf7880538ff8a9927204416b5777cd50a62233a0cc771464802d0e"
+    },
+    {
+      "benchmark": "frontierscience",
+      "id": "frontierscience_olympiad_ea576eec-eb50-4d75-9849-ccd4c83a15fe",
+      "pilot": "frontier",
+      "native_metric": "official-answer equivalence",
+      "stratum": "chemistry",
+      "selection_digest": "17ddfaf3e148b8b5",
+      "prompt_sha256": "5adb5a3c6098fb1dfacb91465fe4b8a638f2d1e845bff4960b4299af4ec5aa73",
+      "reference_sha256": "7902699be42c8a8e46fbbb4501726517e86b22c56a189f7625a6da49081b2451"
+    },
+    {
+      "benchmark": "frontierscience",
+      "id": "frontierscience_olympiad_8f121749-9809-45f1-bcb8-7118ccb5d4cc",
+      "pilot": "frontier",
+      "native_metric": "official-answer equivalence",
+      "stratum": "chemistry",
+      "selection_digest": "19301699592ff7d6",
+      "prompt_sha256": "ee2660682100f33868b4cdf83d72ab89d792b54962d205f3a76fe725e94badd8",
+      "reference_sha256": "fa2ebfc92ea9b569e15942a09b46cee714c1fdc784190ae9dbf9d4519d3223f6"
+    },
+    {
+      "benchmark": "frontierscience",
+      "id": "frontierscience_olympiad_af36a1cb-5949-4385-93a0-1f875500c34a",
+      "pilot": "frontier",
+      "native_metric": "official-answer equivalence",
+      "stratum": "biology",
+      "selection_digest": "09942a4575d07141",
+      "prompt_sha256": "2972b385e1eb171a677ebea3fac68043be9996369fae70638ea784a9b8131b5b",
+      "reference_sha256": "53c49b08c0d98bd97b3717dc079358e3347a2d1febd8664d3adc158e658685b7"
+    },
+    {
+      "benchmark": "ainsteinbench",
+      "id": "ainsteinbench_MSB_Qiskit_qiskit_pr14096",
+      "pilot": "ainstein",
+      "native_metric": "official hidden tests and resolve points",
+      "stratum": "repository:qiskit",
+      "selection_digest": "097ab3eff767457a",
+      "prompt_sha256": "4dd6b9bf0d62b1e53a42fec732d2e3e1776c792d5657c622d7048190ec6d5afd",
+      "reference_sha256": "2105b5959e2275f911878e615136bc8f386dcff6b2437c3ffbc75a5f845ccf67"
+    },
+    {
+      "benchmark": "ainsteinbench",
+      "id": "ainsteinbench_MSB_einsteintoolkit_Cactus_pr15",
+      "pilot": "ainstein",
+      "native_metric": "official hidden tests and resolve points",
+      "stratum": "repository:Cactus",
+      "selection_digest": "06a6d204dcafb6ee",
+      "prompt_sha256": "2e3db9a0bc11c8a22ff97d36f7e9874bbb2b6064de4317e64cdc313d52863d24",
+      "reference_sha256": "efb112dca39085b2db0fdff5577110a0533d58f8fc9d1ccb11af97ea8da3b334"
+    },
+    {
+      "benchmark": "ainsteinbench",
+      "id": "ainsteinbench_MSB_rdkit_rdkit_pr4248",
+      "pilot": "ainstein",
+      "native_metric": "official hidden tests and resolve points",
+      "stratum": "repository:rdkit",
+      "selection_digest": "0215cde6ed712dfd",
+      "prompt_sha256": "c812a527a40edd80e2f5a69e432fab0b3ce9045bda7861e50c2aa748b95407db",
+      "reference_sha256": "9f8b0cd4f5692e844889f2c3c6e2efb87cc7ae9147e2943a1119c947f6ef17b3"
+    },
+    {
+      "benchmark": "ainsteinbench",
+      "id": "ainsteinbench_MSB_AMReX-Codes_amrex_pr78",
+      "pilot": "ainstein",
+      "native_metric": "official hidden tests and resolve points",
+      "stratum": "repository:amrex",
+      "selection_digest": "1e58acf5fd51c49d",
+      "prompt_sha256": "c177a47fe04b1c854290250fd3a5eeda5d8d61c8e7a63c7a82828e14eebd9193",
+      "reference_sha256": "42809e728676302e9f2ff1d1fd2195a7cba45ff1f1b08e51bba92c5bde696ff1"
+    }
+  ],
+  "execution_schedule": [
+    {
+      "block": 1,
+      "position_within_pair": 1,
+      "case_id": "frontierscience_olympiad_4a737e9f-5afd-4a14-a17b-c468cda1a8bb",
+      "configuration": "full"
+    },
+    {
+      "block": 1,
+      "position_within_pair": 2,
+      "case_id": "frontierscience_olympiad_4a737e9f-5afd-4a14-a17b-c468cda1a8bb",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 2,
+      "position_within_pair": 1,
+      "case_id": "minif2f_validation_mathd_algebra_73",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 2,
+      "position_within_pair": 2,
+      "case_id": "minif2f_validation_mathd_algebra_73",
+      "configuration": "full"
+    },
+    {
+      "block": 3,
+      "position_within_pair": 1,
+      "case_id": "minif2f_validation_aime_1991_p6",
+      "configuration": "full"
+    },
+    {
+      "block": 3,
+      "position_within_pair": 2,
+      "case_id": "minif2f_validation_aime_1991_p6",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 4,
+      "position_within_pair": 1,
+      "case_id": "minif2f_validation_aimeI_2001_p3",
+      "configuration": "full"
+    },
+    {
+      "block": 4,
+      "position_within_pair": 2,
+      "case_id": "minif2f_validation_aimeI_2001_p3",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 5,
+      "position_within_pair": 1,
+      "case_id": "scicode_10_1",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 5,
+      "position_within_pair": 2,
+      "case_id": "scicode_10_1",
+      "configuration": "full"
+    },
+    {
+      "block": 6,
+      "position_within_pair": 1,
+      "case_id": "ainsteinbench_MSB_Qiskit_qiskit_pr14096",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 6,
+      "position_within_pair": 2,
+      "case_id": "ainsteinbench_MSB_Qiskit_qiskit_pr14096",
+      "configuration": "full"
+    },
+    {
+      "block": 7,
+      "position_within_pair": 1,
+      "case_id": "frontierscience_olympiad_ea576eec-eb50-4d75-9849-ccd4c83a15fe",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 7,
+      "position_within_pair": 2,
+      "case_id": "frontierscience_olympiad_ea576eec-eb50-4d75-9849-ccd4c83a15fe",
+      "configuration": "full"
+    },
+    {
+      "block": 8,
+      "position_within_pair": 1,
+      "case_id": "scicode_44_1",
+      "configuration": "full"
+    },
+    {
+      "block": 8,
+      "position_within_pair": 2,
+      "case_id": "scicode_44_1",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 9,
+      "position_within_pair": 1,
+      "case_id": "scicode_78_1",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 9,
+      "position_within_pair": 2,
+      "case_id": "scicode_78_1",
+      "configuration": "full"
+    },
+    {
+      "block": 10,
+      "position_within_pair": 1,
+      "case_id": "frontierscience_olympiad_8f121749-9809-45f1-bcb8-7118ccb5d4cc",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 10,
+      "position_within_pair": 2,
+      "case_id": "frontierscience_olympiad_8f121749-9809-45f1-bcb8-7118ccb5d4cc",
+      "configuration": "full"
+    },
+    {
+      "block": 11,
+      "position_within_pair": 1,
+      "case_id": "frontierscience_olympiad_16318af5-cfa6-4b2c-bf25-9eb3ac468b48",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 11,
+      "position_within_pair": 2,
+      "case_id": "frontierscience_olympiad_16318af5-cfa6-4b2c-bf25-9eb3ac468b48",
+      "configuration": "full"
+    },
+    {
+      "block": 12,
+      "position_within_pair": 1,
+      "case_id": "minif2f_validation_imo_1984_p2",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 12,
+      "position_within_pair": 2,
+      "case_id": "minif2f_validation_imo_1984_p2",
+      "configuration": "full"
+    },
+    {
+      "block": 13,
+      "position_within_pair": 1,
+      "case_id": "minif2f_validation_amc12b_2003_p6",
+      "configuration": "full"
+    },
+    {
+      "block": 13,
+      "position_within_pair": 2,
+      "case_id": "minif2f_validation_amc12b_2003_p6",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 14,
+      "position_within_pair": 1,
+      "case_id": "scicode_38_1",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 14,
+      "position_within_pair": 2,
+      "case_id": "scicode_38_1",
+      "configuration": "full"
+    },
+    {
+      "block": 15,
+      "position_within_pair": 1,
+      "case_id": "ainsteinbench_MSB_einsteintoolkit_Cactus_pr15",
+      "configuration": "full"
+    },
+    {
+      "block": 15,
+      "position_within_pair": 2,
+      "case_id": "ainsteinbench_MSB_einsteintoolkit_Cactus_pr15",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 16,
+      "position_within_pair": 1,
+      "case_id": "minif2f_validation_mathd_numbertheory_326",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 16,
+      "position_within_pair": 2,
+      "case_id": "minif2f_validation_mathd_numbertheory_326",
+      "configuration": "full"
+    },
+    {
+      "block": 17,
+      "position_within_pair": 1,
+      "case_id": "minif2f_validation_amc12_2000_p5",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 17,
+      "position_within_pair": 2,
+      "case_id": "minif2f_validation_amc12_2000_p5",
+      "configuration": "full"
+    },
+    {
+      "block": 18,
+      "position_within_pair": 1,
+      "case_id": "minif2f_validation_aimeII_2020_p6",
+      "configuration": "full"
+    },
+    {
+      "block": 18,
+      "position_within_pair": 2,
+      "case_id": "minif2f_validation_aimeII_2020_p6",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 19,
+      "position_within_pair": 1,
+      "case_id": "frontierscience_olympiad_4f1cf869-3ea3-400c-8fa3-e4d3f6fe1cdf",
+      "configuration": "full"
+    },
+    {
+      "block": 19,
+      "position_within_pair": 2,
+      "case_id": "frontierscience_olympiad_4f1cf869-3ea3-400c-8fa3-e4d3f6fe1cdf",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 20,
+      "position_within_pair": 1,
+      "case_id": "scicode_19_1",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 20,
+      "position_within_pair": 2,
+      "case_id": "scicode_19_1",
+      "configuration": "full"
+    },
+    {
+      "block": 21,
+      "position_within_pair": 1,
+      "case_id": "ainsteinbench_MSB_AMReX-Codes_amrex_pr78",
+      "configuration": "full"
+    },
+    {
+      "block": 21,
+      "position_within_pair": 2,
+      "case_id": "ainsteinbench_MSB_AMReX-Codes_amrex_pr78",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 22,
+      "position_within_pair": 1,
+      "case_id": "scicode_49_1",
+      "configuration": "full"
+    },
+    {
+      "block": 22,
+      "position_within_pair": 2,
+      "case_id": "scicode_49_1",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 23,
+      "position_within_pair": 1,
+      "case_id": "minif2f_validation_numbertheory_nckeqnm1ckpnm1ckm1",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 23,
+      "position_within_pair": 2,
+      "case_id": "minif2f_validation_numbertheory_nckeqnm1ckpnm1ckm1",
+      "configuration": "full"
+    },
+    {
+      "block": 24,
+      "position_within_pair": 1,
+      "case_id": "minif2f_validation_induction_sum_odd",
+      "configuration": "full"
+    },
+    {
+      "block": 24,
+      "position_within_pair": 2,
+      "case_id": "minif2f_validation_induction_sum_odd",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 25,
+      "position_within_pair": 1,
+      "case_id": "scicode_6_1",
+      "configuration": "full"
+    },
+    {
+      "block": 25,
+      "position_within_pair": 2,
+      "case_id": "scicode_6_1",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 26,
+      "position_within_pair": 1,
+      "case_id": "minif2f_validation_amc12a_2009_p25",
+      "configuration": "full"
+    },
+    {
+      "block": 26,
+      "position_within_pair": 2,
+      "case_id": "minif2f_validation_amc12a_2009_p25",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 27,
+      "position_within_pair": 1,
+      "case_id": "scicode_4_1",
+      "configuration": "full"
+    },
+    {
+      "block": 27,
+      "position_within_pair": 2,
+      "case_id": "scicode_4_1",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 28,
+      "position_within_pair": 1,
+      "case_id": "frontierscience_olympiad_70929247-a356-4a12-8534-49fd885f0c3e",
+      "configuration": "full"
+    },
+    {
+      "block": 28,
+      "position_within_pair": 2,
+      "case_id": "frontierscience_olympiad_70929247-a356-4a12-8534-49fd885f0c3e",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 29,
+      "position_within_pair": 1,
+      "case_id": "frontierscience_olympiad_5ef8b29d-7665-45e6-a26a-bd4a27f450ad",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 29,
+      "position_within_pair": 2,
+      "case_id": "frontierscience_olympiad_5ef8b29d-7665-45e6-a26a-bd4a27f450ad",
+      "configuration": "full"
+    },
+    {
+      "block": 30,
+      "position_within_pair": 1,
+      "case_id": "ainsteinbench_MSB_rdkit_rdkit_pr4248",
+      "configuration": "full"
+    },
+    {
+      "block": 30,
+      "position_within_pair": 2,
+      "case_id": "ainsteinbench_MSB_rdkit_rdkit_pr4248",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 31,
+      "position_within_pair": 1,
+      "case_id": "scicode_51_1",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 31,
+      "position_within_pair": 2,
+      "case_id": "scicode_51_1",
+      "configuration": "full"
+    },
+    {
+      "block": 32,
+      "position_within_pair": 1,
+      "case_id": "minif2f_validation_algebra_3rootspoly_amdtamctambeqnasqmbpctapcbtdpasqmbpctapcbta",
+      "configuration": "full"
+    },
+    {
+      "block": 32,
+      "position_within_pair": 2,
+      "case_id": "minif2f_validation_algebra_3rootspoly_amdtamctambeqnasqmbpctapcbtdpasqmbpctapcbta",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 33,
+      "position_within_pair": 1,
+      "case_id": "scicode_7_1",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 33,
+      "position_within_pair": 2,
+      "case_id": "scicode_7_1",
+      "configuration": "full"
+    },
+    {
+      "block": 34,
+      "position_within_pair": 1,
+      "case_id": "frontierscience_olympiad_3d762ba1-3958-453b-b34e-fe24c2822994",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 34,
+      "position_within_pair": 2,
+      "case_id": "frontierscience_olympiad_3d762ba1-3958-453b-b34e-fe24c2822994",
+      "configuration": "full"
+    },
+    {
+      "block": 35,
+      "position_within_pair": 1,
+      "case_id": "scicode_47_1",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 35,
+      "position_within_pair": 2,
+      "case_id": "scicode_47_1",
+      "configuration": "full"
+    },
+    {
+      "block": 36,
+      "position_within_pair": 1,
+      "case_id": "frontierscience_olympiad_27c865e6-1c87-489b-b7ea-b197fe3356ba",
+      "configuration": "full"
+    },
+    {
+      "block": 36,
+      "position_within_pair": 2,
+      "case_id": "frontierscience_olympiad_27c865e6-1c87-489b-b7ea-b197fe3356ba",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 37,
+      "position_within_pair": 1,
+      "case_id": "scicode_1_1",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 37,
+      "position_within_pair": 2,
+      "case_id": "scicode_1_1",
+      "configuration": "full"
+    },
+    {
+      "block": 38,
+      "position_within_pair": 1,
+      "case_id": "frontierscience_olympiad_f4681d73-b08d-450c-89d3-85b9d1250419",
+      "configuration": "full"
+    },
+    {
+      "block": 38,
+      "position_within_pair": 2,
+      "case_id": "frontierscience_olympiad_f4681d73-b08d-450c-89d3-85b9d1250419",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 39,
+      "position_within_pair": 1,
+      "case_id": "frontierscience_olympiad_af36a1cb-5949-4385-93a0-1f875500c34a",
+      "configuration": "full"
+    },
+    {
+      "block": 39,
+      "position_within_pair": 2,
+      "case_id": "frontierscience_olympiad_af36a1cb-5949-4385-93a0-1f875500c34a",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 40,
+      "position_within_pair": 1,
+      "case_id": "frontierscience_olympiad_4195adea-9fa5-4f25-91ef-ebd6c57cfb88",
+      "configuration": "homogeneous-proposers"
+    },
+    {
+      "block": 40,
+      "position_within_pair": 2,
+      "case_id": "frontierscience_olympiad_4195adea-9fa5-4f25-91ef-ebd6c57cfb88",
+      "configuration": "full"
+    }
+  ],
+  "suite_sha256": "a9b5d43bc6aba4e59359d80b6f5a142c0e2a5ae7c01d64cedd1f05c5a17ee96c"
+}

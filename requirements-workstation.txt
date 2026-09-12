@@ -1,0 +1,10 @@
+-r requirements.txt
+
+# Reproducible accelerator pair with CPython 3.10-3.12 wheels on Windows,
+# Intel macOS, and Apple Silicon. ASTRUM engines keep their own pinned envs.
+numba==0.60.0
+llvmlite==0.43.0
+
+# Agent-facing MCP server and local verification tooling.
+mcp>=1.28,<2
+pytest>=8,<10

@@ -1,0 +1,4 @@
+-r requirements-workstation.txt
+
+# macOS-specific dependencies can be added here without changing the shared
+# Python 3.12 workstation baseline.

@@ -24,6 +24,7 @@ class GlobalState:
         self.last_python_code = ""
         self.last_execution_result = {}
         self.last_analysis = {}
+        self.last_cycle_result = {}
         self.last_report = {}
         self.logs = []
         self._log_lock = threading.Lock()
@@ -95,6 +96,7 @@ class GlobalState:
             "last_python_code":      self.last_python_code,
             "last_execution_result": self.last_execution_result,
             "last_analysis":         self.last_analysis,
+            "last_cycle_result":     self.last_cycle_result,
             "last_report":           self.last_report,
             "reports":               self.reports,
             "logs":                  self.logs,

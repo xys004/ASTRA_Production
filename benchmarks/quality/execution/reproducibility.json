@@ -1,0 +1,60 @@
+[
+  {
+    "id": "exec_sympy_identity_pass",
+    "track": "execution",
+    "domain": "symbolic",
+    "difficulty": "baseline",
+    "expected": "PASS",
+    "tags": ["smoke"],
+    "timeout": 60,
+    "code": "import sympy as s\nx=s.symbols('x')\nr=s.expand((x+1)**2-(x**2+2*x+1))\nok=(r==0)\nprint('CHECK exact identity:', 'OK' if ok else 'FAIL', r)\nprint('VERDICT: PASS' if ok else 'VERDICT: FAIL')\n"
+  },
+  {
+    "id": "exec_exact_counterexample_fail",
+    "track": "execution",
+    "domain": "logic",
+    "difficulty": "baseline",
+    "expected": "FAIL",
+    "tags": ["smoke"],
+    "timeout": 60,
+    "code": "x=0\nok=(x*x+1 < 1)\nprint('CHECK claimed universal at x=0:', 'OK' if ok else 'FAIL')\nprint('VERDICT: PASS' if ok else 'VERDICT: FAIL')\n"
+  },
+  {
+    "id": "exec_seeded_numerical_pass",
+    "track": "execution",
+    "domain": "numerical_analysis",
+    "difficulty": "standard",
+    "expected": "PASS",
+    "tags": ["smoke"],
+    "timeout": 60,
+    "code": "import numpy as np\nrng=np.random.default_rng(20260724)\na=rng.normal(size=(40,40))\nb=rng.normal(size=40)\nr=np.linalg.norm(a@np.linalg.solve(a,b)-b)\nok=r < 1e-9\nprint('CHECK linear residual:', 'OK' if ok else 'FAIL', r)\nprint('VERDICT: PASS' if ok else 'VERDICT: FAIL')\n"
+  },
+  {
+    "id": "exec_z3_unsat_pass",
+    "track": "execution",
+    "domain": "formal_logic",
+    "difficulty": "standard",
+    "expected": "PASS",
+    "tags": ["smoke"],
+    "timeout": 60,
+    "code": "from z3 import Int, Solver, unsat\nx=Int('x'); s=Solver(); s.add(x>3,x<2)\nr=s.check(); ok=(r==unsat)\nprint('CHECK contradiction unsat:', 'OK' if ok else 'FAIL', r)\nprint('VERDICT: PASS' if ok else 'VERDICT: FAIL')\n"
+  },
+  {
+    "id": "exec_numpy_spectral_pass",
+    "track": "execution",
+    "domain": "linear_algebra",
+    "difficulty": "standard",
+    "expected": "PASS",
+    "timeout": 60,
+    "code": "import numpy as np\nA=np.array([[2.,1.],[1.,2.]])\nw,V=np.linalg.eigh(A)\nr=np.linalg.norm(A@V-V@np.diag(w))\nok=r < 1e-12 and np.all(w>0)\nprint('CHECK eigensystem:', 'OK' if ok else 'FAIL', r, w)\nprint('VERDICT: PASS' if ok else 'VERDICT: FAIL')\n"
+  },
+  {
+    "id": "exec_controlled_code_error",
+    "track": "execution",
+    "domain": "infrastructure",
+    "difficulty": "baseline",
+    "expected": "CODE_ERROR",
+    "timeout": 60,
+    "code": "raise RuntimeError('ASTRA controlled benchmark error')\n"
+  }
+]

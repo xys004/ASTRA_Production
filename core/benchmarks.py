@@ -49,6 +49,13 @@ Return a rigorous validation/refutation workflow. The final oracle script must p
 def load_benchmarks(root: Path = BENCHMARK_ROOT) -> list[Benchmark]:
     benchmarks: list[Benchmark] = []
     for path in sorted(root.glob("*/*.json")):
+        if path.parent.name in {
+            "external",
+            "client_validation",
+            "quality",
+            "research_trajectory",
+        }:
+            continue
         data = json.loads(path.read_text(encoding="utf-8"))
         benchmarks.append(
             Benchmark(

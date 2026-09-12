@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use ASTRA in research, please cite this software."
+title: "ASTRA: Autonomous Symbolic Theorem Reasoning Architecture"
+type: software
+authors:
+  - family-names: "Bolívar"
+    given-names: "Nelson"
+    alias: "xys004"
+repository-code: "https://github.com/AstrumDrive/ASTRA"
+url: "https://github.com/AstrumDrive/ASTRA"
+version: "0.3.0"
+date-released: 2026-08-05

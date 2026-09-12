@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "campaign_id": "pilot-four-plus-aggregate",
+  "max_concurrency": 2,
+  "operational_retry_allowlist": [
+    "transient_transport"
+  ],
+  "tasks": [
+    {
+      "task_id": "small_a",
+      "idempotency_key": "pilot-small-a-v1",
+      "payload": {"behavior": "success"}
+    },
+    {
+      "task_id": "small_b",
+      "idempotency_key": "pilot-small-b-v1",
+      "payload": {"behavior": "operational_once"},
+      "retry": {"max_attempts": 2, "backoff_seconds": 0}
+    },
+    {
+      "task_id": "small_c",
+      "idempotency_key": "pilot-small-c-v1",
+      "payload": {"behavior": "scientific_fail"},
+      "retry": {"max_attempts": 5, "backoff_seconds": 0}
+    },
+    {
+      "task_id": "small_d",
+      "idempotency_key": "pilot-small-d-v1",
+      "payload": {"behavior": "success"}
+    },
+    {
+      "task_id": "aggregate",
+      "idempotency_key": "pilot-aggregate-v1",
+      "depends_on": {
+        "mode": "afterany",
+        "tasks": ["small_a", "small_b", "small_c", "small_d"]
+      },
+      "payload": {"behavior": "success", "role": "aggregate"}
+    }
+  ]
+}

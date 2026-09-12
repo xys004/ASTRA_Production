@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "campaign_id": "astrum-remote-smoke-v1",
+  "max_concurrency": 2,
+  "operational_retry_allowlist": [
+    "runner_interrupted",
+    "scheduler_failed",
+    "scheduler_timeout"
+  ],
+  "tasks": [
+    {
+      "task_id": "noop_a",
+      "idempotency_key": "astrum-smoke-noop-a-v1",
+      "payload": {
+        "scheduler_request": {
+          "code": "print('SMOKE noop_a')\nprint('VERDICT: PASS')",
+          "engine": "python",
+          "project": "campaign-manager-smoke",
+          "priority": -5,
+          "cpu_slots": 1,
+          "gpu_slots": 0,
+          "memory_mb": 128,
+          "timeout_seconds": 60
+        }
+      }
+    },
+    {
+      "task_id": "noop_b",
+      "idempotency_key": "astrum-smoke-noop-b-v1",
+      "payload": {
+        "scheduler_request": {
+          "code": "print('SMOKE noop_b')\nprint('VERDICT: PASS')",
+          "engine": "python",
+          "project": "campaign-manager-smoke",
+          "priority": -5,
+          "cpu_slots": 1,
+          "gpu_slots": 0,
+          "memory_mb": 128,
+          "timeout_seconds": 60
+        }
+      }
+    },
+    {
+      "task_id": "noop_c",
+      "idempotency_key": "astrum-smoke-noop-c-v1",
+      "payload": {
+        "scheduler_request": {
+          "code": "print('SMOKE noop_c')\nprint('VERDICT: PASS')",
+          "engine": "python",
+          "project": "campaign-manager-smoke",
+          "priority": -5,
+          "cpu_slots": 1,
+          "gpu_slots": 0,
+          "memory_mb": 128,
+          "timeout_seconds": 60
+        }
+      }
+    },
+    {
+      "task_id": "noop_d",
+      "idempotency_key": "astrum-smoke-noop-d-v1",
+      "payload": {
+        "scheduler_request": {
+          "code": "print('SMOKE noop_d')\nprint('VERDICT: PASS')",
+          "engine": "python",
+          "project": "campaign-manager-smoke",
+          "priority": -5,
+          "cpu_slots": 1,
+          "gpu_slots": 0,
+          "memory_mb": 128,
+          "timeout_seconds": 60
+        }
+      }
+    },
+    {
+      "task_id": "aggregate",
+      "idempotency_key": "astrum-smoke-aggregate-v1",
+      "depends_on": {
+        "mode": "afterany",
+        "tasks": ["noop_a", "noop_b", "noop_c", "noop_d"]
+      },
+      "payload": {
+        "scheduler_request": {
+          "code": "print('SMOKE aggregate afterany')\nprint('VERDICT: PASS')",
+          "engine": "python",
+          "project": "campaign-manager-smoke",
+          "priority": -5,
+          "cpu_slots": 1,
+          "gpu_slots": 0,
+          "memory_mb": 128,
+          "timeout_seconds": 60
+        }
+      }
+    }
+  ]
+}

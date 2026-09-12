@@ -1,0 +1,20 @@
+{
+  "id": "client_control_response",
+  "application": "Control-model numerical verification",
+  "demonstration": "general_client_assurance",
+  "objective": "Check an analytical first-order response against an independent numerical integrator.",
+  "claim": "For tau=2 and y(0)=0, y(t)=1-exp(-t/tau) solves y'=(1-y)/tau on [0,10].",
+  "expected_claim_verdict": "VALIDATED",
+  "artifact_kind": "numerical_simulation",
+  "artifact_path": "artifacts/control_response.py",
+  "supported_oracles": ["local", "astrum"],
+  "preferred_validators": ["scipy", "wolfram_bridge"],
+  "required_evidence": ["max_abs_error", "ode_residual", "monotone", "bounded", "scipy_version"],
+  "assumptions": [
+    "tau is constant and positive.",
+    "The comparison tolerance is 1e-8."
+  ],
+  "limitations": [
+    "This validates the ideal first-order model, not actuator saturation or measurement noise."
+  ]
+}

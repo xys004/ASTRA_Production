@@ -16,25 +16,38 @@ logger = logging.getLogger("ASTRA_CORE")
 PROVIDERS_BY_PHASE = phase_provider_map()
 conjecture_llm = ASTRAIntelligence(provider=PROVIDERS_BY_PHASE["conjecture"])
 translator_llm  = ASTRAIntelligence(provider=PROVIDERS_BY_PHASE["translator"])
+reviewer_llm    = ASTRAIntelligence(provider=PROVIDERS_BY_PHASE["reviewer"])
 analyst_llm     = ASTRAIntelligence(provider=PROVIDERS_BY_PHASE["analyst"])
 
-# Navigator reuses the analyst provider unless overridden
-_nav_provider   = os.environ.get("ASTRA_NAVIGATOR_PROVIDER") or PROVIDERS_BY_PHASE["analyst"]
+# Navigator uses Antigravity in the production role map.
+_nav_provider   = PROVIDERS_BY_PHASE["navigator"]
 navigator_llm   = ASTRAIntelligence(provider=_nav_provider)
 
 MAX_CODE_RETRIES = 3
 
+# These statuses describe an interrupted or unavailable pipeline, not a
+# scientific outcome.  In Research Loop mode they must retry the same direction
+# without invoking the Navigator, recording a branch, or advancing heartbeats.
+RETRYABLE_OPERATIONAL_STATUSES = {
+    "API_ERROR",
+    "TOOL_ERROR",
+    "PARTIAL",
+    "BUSY",
+    "TIMEOUT",
+}
+
 
 def _reload_llm_clients() -> None:
     """Re-read provider env vars and recreate LLM clients. Called before each cycle."""
-    global conjecture_llm, translator_llm, analyst_llm, navigator_llm, PROVIDERS_BY_PHASE
+    global conjecture_llm, translator_llm, reviewer_llm, analyst_llm, navigator_llm, PROVIDERS_BY_PHASE
     from core.preflight import phase_provider_map, load_project_env
     load_project_env()
     PROVIDERS_BY_PHASE = phase_provider_map()
     conjecture_llm = ASTRAIntelligence(provider=PROVIDERS_BY_PHASE["conjecture"])
     translator_llm  = ASTRAIntelligence(provider=PROVIDERS_BY_PHASE["translator"])
+    reviewer_llm    = ASTRAIntelligence(provider=PROVIDERS_BY_PHASE["reviewer"])
     analyst_llm     = ASTRAIntelligence(provider=PROVIDERS_BY_PHASE["analyst"])
-    nav_prov        = os.environ.get("ASTRA_NAVIGATOR_PROVIDER") or PROVIDERS_BY_PHASE["analyst"]
+    nav_prov        = PROVIDERS_BY_PHASE["navigator"]
     navigator_llm   = ASTRAIntelligence(provider=nav_prov)
 
 
@@ -42,11 +55,32 @@ def _reload_llm_clients() -> None:
 # Phase functions
 # ═══════════════════════════════════════════════════════════════════
 
-async def phase_2_generate_conjecture(context: str, intuition: str = None) -> str:
+async def phase_2_generate_conjecture(
+    context: str, intuition: str = None, shared_goal: str = ""
+) -> str:
     state.status = "CONJECTURING"
-    state.current_phase = "2/5 Conjecture"
-    state.add_log(f"Phase 2: Formulating theoretical hypothesis via {conjecture_llm.provider}...")
-    return await conjecture_llm.generate_conjecture(context, intuition)
+    state.current_phase = "2/6 Deliberative Conjecture"
+    raw = os.environ.get("ASTRA_CONJECTURE_PROVIDER", conjecture_llm.provider)
+    providers = [p.strip().lower() for p in raw.strip().strip("'\"").split(",") if p.strip()]
+    directed = (
+        f"SHARED FINAL OBJECTIVE:\n{shared_goal or intuition}\n\n"
+        f"CURRENT RESEARCH DIRECTION:\n{intuition or 'Explore freely.'}\n\n"
+        "Develop balanced evidence for proof and refutation."
+    )
+    if len(providers) > 1:
+        from astra_tool import _ensemble_conjecture
+
+        synth = os.environ.get("ASTRA_SYNTH_PROVIDER", PROVIDERS_BY_PHASE["synth"])
+        state.add_log(
+            "Phase 2: Parallel conjectures, cross-critique and synthesis via "
+            f"{', '.join(providers)} -> {synth}."
+        )
+        conjecture, _agents, _deliberation = await _ensemble_conjecture(
+            providers, context, directed, None, synth
+        )
+        return conjecture
+    state.add_log(f"Phase 2: Formulating hypothesis via {conjecture_llm.provider}...")
+    return await conjecture_llm.generate_conjecture(context, directed)
 
 
 async def phase_3_formal_translation(
@@ -65,11 +99,37 @@ async def phase_4_validation_oracle(python_code: str) -> dict:
     return await execute_python_code(python_code)
 
 
-async def phase_5_result_analysis(conjecture: str, execution_result: dict) -> dict:
+async def phase_review_validation_code(
+    shared_goal: str, conjecture: str, python_code: str
+) -> dict:
+    state.status = "REVIEWING"
+    state.current_phase = "4/6 Independent Code Review"
+    state.add_log(
+        f"Independent review: auditing Claude's validator via {reviewer_llm.provider}..."
+    )
+    return await reviewer_llm.review_validation_code(
+        shared_goal=shared_goal,
+        conjecture=conjecture,
+        code=python_code,
+    )
+
+
+async def phase_5_result_analysis(
+    conjecture: str, execution_result: dict, shared_goal: str = ""
+) -> dict:
     state.status = "ANALYZING"
-    state.current_phase = "5/5 Refutation Analysis"
+    state.current_phase = "6/6 Refutation Analysis"
     state.add_log(f"Phase 5: Analyzing execution results via {analyst_llm.provider}...")
-    return await analyst_llm.analyze_results(conjecture, execution_result)
+    analysis = await analyst_llm.analyze_results(
+        conjecture, execution_result, shared_goal=shared_goal
+    )
+    # Same NON_DECIDABLE rules as the MCP cycle (core/non_decidable.py); this
+    # driver has no retry loop, so a declared validator is final here.
+    from core.non_decidable import detect_non_decidable, resolve_non_decidable
+
+    return resolve_non_decidable(
+        analysis, detect_non_decidable(execution_result), 1, retry_available=False
+    )
 
 
 async def phase_nav_navigate(session, last_conjecture: str, last_status: str, last_reasoning: str) -> dict:
@@ -133,7 +193,7 @@ def _is_api_error(text: str) -> bool:
 # Core execution engine (shared by single-cycle and research modes)
 # ═══════════════════════════════════════════════════════════════════
 
-async def _execute_one_cycle(intuition: str) -> dict:
+async def _execute_one_cycle_legacy(intuition: str) -> dict:
     """
     Run phases 2–5 (including the theorem approval gate) for a single intuition.
     Increments cycle_count, updates state, writes report, saves state.
@@ -149,6 +209,12 @@ async def _execute_one_cycle(intuition: str) -> dict:
 
     final_status   = "INCOMPLETE"
     final_analysis = {"status": "INCOMPLETE", "reasoning": "Cycle did not complete."}
+    session = getattr(state, "research_session", None)
+    shared_goal = (
+        getattr(session, "macro_question", None)
+        if session is not None
+        else None
+    ) or intuition
 
     # ── Phase 2 ─────────────────────────────────────────────────────────
     if _stop_requested():
@@ -158,7 +224,9 @@ async def _execute_one_cycle(intuition: str) -> dict:
         state.save_state()
         return {"conjecture": "", "status": final_status, "analysis": final_analysis}
 
-    conjecture = await phase_2_generate_conjecture(state.axiomatic_base, intuition)
+    conjecture = await phase_2_generate_conjecture(
+        state.axiomatic_base, intuition, shared_goal=shared_goal
+    )
     state.current_conjecture = conjecture
 
     if _is_api_error(conjecture):
@@ -171,8 +239,13 @@ async def _execute_one_cycle(intuition: str) -> dict:
 
     # ── Phases 3–5 with retry loop ───────────────────────────────────────
     python_code   = None
+    code_review   = None
     code_retries  = 0
     code_resolved = False
+    validation_brief = (
+        f"SHARED FINAL OBJECTIVE:\n{shared_goal}\n\n"
+        f"CONSENSUS CONJECTURE TO VALIDATE:\n{conjecture}"
+    )
 
     while not code_resolved:
         if _stop_requested():
@@ -182,13 +255,45 @@ async def _execute_one_cycle(intuition: str) -> dict:
             continue
 
         if python_code is None:
-            python_code = await phase_3_formal_translation(conjecture)
+            python_code = await phase_3_formal_translation(validation_brief)
             state.last_python_code = python_code
             if _is_api_error(python_code):
                 state.add_log(f"[API_ERROR] Phase 3 API error — aborting cycle: {python_code[:160]}")
                 final_status   = "API_ERROR"
                 final_analysis = {"status": "API_ERROR", "reasoning": python_code}
                 code_resolved  = True
+                continue
+
+        if code_review is None:
+            code_review = await phase_review_validation_code(
+                shared_goal, conjecture, python_code
+            )
+            review_status = str(code_review.get("status") or "").upper()
+            if review_status != "APPROVED":
+                code_retries += 1
+                if review_status == "API_ERROR" or code_retries > MAX_CODE_RETRIES:
+                    final_status = "CODE_ERROR"
+                    final_analysis = {
+                        "status": "CODE_ERROR",
+                        "reasoning": code_review.get("reasoning")
+                        or "Independent code review failed.",
+                    }
+                    code_resolved = True
+                    continue
+                state.add_log(
+                    f"Code review requested revision {code_retries}/{MAX_CODE_RETRIES}."
+                )
+                python_code = await phase_3_formal_translation(
+                    validation_brief,
+                    is_correction=True,
+                    previous_error=(
+                        "Independent Codex review returned "
+                        f"{review_status}: "
+                        f"{code_review.get('revision_instructions') or code_review.get('reasoning')}"
+                    ),
+                )
+                state.last_python_code = python_code
+                code_review = None
                 continue
 
         if _stop_requested():
@@ -198,6 +303,8 @@ async def _execute_one_cycle(intuition: str) -> dict:
             continue
 
         exec_result = await phase_4_validation_oracle(python_code)
+        exec_result["validation_code"] = python_code
+        exec_result["code_review"] = code_review
         state.last_execution_result = exec_result
 
         if _stop_requested():
@@ -206,38 +313,36 @@ async def _execute_one_cycle(intuition: str) -> dict:
             code_resolved  = True
             continue
 
-        analysis = await phase_5_result_analysis(conjecture, exec_result)
+        analysis = await phase_5_result_analysis(
+            conjecture, exec_result, shared_goal=shared_goal
+        )
         state.last_analysis = analysis
         final_analysis = analysis
         status         = analysis.get("status")
         final_status   = status or "UNKNOWN"
 
-        if status == "CODE_ERROR":
+        if status in ("CODE_ERROR", "WEAK_PASS"):
             code_retries += 1
             if code_retries > MAX_CODE_RETRIES:
                 state.add_log("Maximum correction retries reached. Aborting iteration.")
                 code_resolved = True
                 continue
 
-            state.add_log(f"Engine error detected. Correction attempt {code_retries}/{MAX_CODE_RETRIES}...")
-            corrected = analysis.get("corrected_code")
-            if corrected:
-                if "```" in corrected:
-                    parts = corrected.split("```")
-                    if len(parts) >= 3:
-                        corrected = parts[1]
-                        if "\n" in corrected and corrected.split("\n")[0].strip() in (
-                            "python", "sage", "maxima", "cadabra"
-                        ):
-                            corrected = corrected.split("\n", 1)[1]
-                python_code = corrected.strip()
-            else:
-                state.add_log("Analyst provided no fix. Falling back to Translator...")
-                python_code = await phase_3_formal_translation(
-                    conjecture,
-                    is_correction=True,
-                    previous_error=exec_result.get("stderr", "Unknown execution error"),
-                )
+            state.add_log(
+                f"{status} detected. Correction attempt "
+                f"{code_retries}/{MAX_CODE_RETRIES}..."
+            )
+            state.add_log("Codex diagnosed the issue; Claude will revise the validator.")
+            python_code = await phase_3_formal_translation(
+                validation_brief,
+                is_correction=True,
+                previous_error=(
+                    (exec_result.get("stderr") or "No stderr.")
+                    + "\nCodex diagnosis: "
+                    + str(analysis.get("reasoning") or "")
+                )[:3000],
+            )
+            code_review = None
             state.last_python_code = python_code
             if _is_api_error(python_code):
                 state.add_log(f"[API_ERROR] Phase 3 (correction) API error — aborting: {python_code[:160]}")
@@ -272,7 +377,11 @@ async def _execute_one_cycle(intuition: str) -> dict:
                     state.add_log("LaTeX detected. Generating formal PDF report...")
                     try:
                         from core.pdf_generator import generate_pdf_report
-                        pdf_path = generate_pdf_report(conjecture)
+                        pdf_path = generate_pdf_report(
+                            conjecture,
+                            code=state.last_python_code,
+                            execution_result=state.last_execution_result,
+                        )
                         state.add_log(f"PDF Report compiled: {pdf_path}")
                     except Exception as exc:
                         state.add_log(f"Failed to generate PDF: {exc}")
@@ -292,6 +401,138 @@ async def _execute_one_cycle(intuition: str) -> dict:
     _write_cycle_report(final_status, intuition, final_analysis)
     state.save_state()
     return {"conjecture": conjecture, "status": final_status, "analysis": final_analysis}
+
+
+async def _execute_one_cycle(intuition: str) -> dict:
+    """Run the canonical MCP/CLI cycle and adapt its trace to the desktop UI.
+
+    The legacy implementation above remains temporarily as a readable migration
+    reference, but it is not dispatched.  All active surfaces now share
+    ``astra_tool._do_cycle`` so deterministic preflight, bounded repair, verdict
+    guards, provenance and cache semantics cannot drift by interface.
+    """
+    state.cycle_count += 1
+    state.investigation_cycle_count += 1
+    state.current_cycle = state.cycle_count
+    state.current_phase = "Canonical deliberative pipeline"
+    state.status = "RUNNING"
+    state.add_log("--- STARTING NEW EPISTEMOLOGICAL LOOP ITERATION ---")
+    state.add_log(
+        f"Cycle #{state.current_cycle} started through the shared MCP/GUI core."
+    )
+
+    session = getattr(state, "research_session", None)
+    shared_goal = (
+        getattr(session, "macro_question", None)
+        if session is not None
+        else None
+    ) or intuition
+
+    if _stop_requested():
+        analysis = {
+            "status": "STOPPED",
+            "reasoning": "Stopped before conjecture generation.",
+        }
+        _write_cycle_report("STOPPED", intuition, analysis)
+        state.save_state()
+        return {
+            "conjecture": "",
+            "status": "STOPPED",
+            "analysis": analysis,
+            "navigation": {},
+        }
+
+    from astra_tool import _do_cycle
+
+    request = {
+        "action": "cycle",
+        "intuition": intuition,
+        "objective": shared_goal,
+        "axiomatic_base": state.axiomatic_base,
+        "oracle": os.environ.get("ASTRA_ORACLE_MODE", "local"),
+    }
+    if session is not None:
+        request["thread_summary"] = session.thread_summary()
+        request["cycles_since_milestone"] = session.cycles_since_milestone
+
+    cycle = await _do_cycle(request)
+    pipeline_status = str(cycle.get("status") or "UNKNOWN").upper()
+    conjecture = str(cycle.get("conjecture") or "")
+    analysis = cycle.get("analysis")
+    if not isinstance(analysis, dict):
+        analysis = {
+            "status": pipeline_status,
+            "reasoning": cycle.get("error") or "Cycle returned no analysis.",
+        }
+    execution = cycle.get("execution")
+    if not isinstance(execution, dict):
+        execution = {}
+
+    state.current_conjecture = conjecture
+    state.last_python_code = str(cycle.get("code") or "")
+    state.last_execution_result = execution
+    state.last_analysis = analysis
+    state.last_cycle_result = cycle
+    state.add_log(
+        "Canonical pipeline finished: "
+        f"{pipeline_status}; cache={bool(cycle.get('cached'))}; "
+        f"oracle={cycle.get('oracle_used', 'unknown')}."
+    )
+
+    final_status = pipeline_status
+    if state.stop_requested:
+        final_status = "STOPPED"
+        analysis = {
+            "status": "STOPPED",
+            "reasoning": "Stop was requested while the canonical cycle was running.",
+        }
+    elif pipeline_status == "REFUTED":
+        state.add_log("Hypothesis refuted. Feeding back to the axiomatic base...")
+        state.axiomatic_base += (
+            f"\n[REFUTED]: {conjecture}\n"
+            f"Reasoning: {analysis.get('reasoning')}"
+        )
+    elif pipeline_status == "VALIDATED":
+        state.add_log(
+            "Hypothesis survived the guarded validation cycle. "
+            "Waiting for human theorem approval."
+        )
+        state.status = "WAITING_APPROVAL"
+        state.current_phase = "Human Approval"
+        while (
+            not state.approve_theorem_requested
+            and not state.reject_theorem_requested
+        ):
+            if state.stop_requested:
+                state.reject_theorem_requested = True
+                state.add_log(
+                    "Stop requested during approval. Treating theorem as rejected."
+                )
+                break
+            await asyncio.sleep(1)
+
+        if state.approve_theorem_requested:
+            state.add_log("Theorem APPROVED by user. Adding to Axiomatic Base.")
+            state.axiomatic_base += f"\n[ESTABLISHED THEOREM]: {conjecture}"
+            final_status = "VALIDATED_APPROVED"
+        else:
+            state.add_log("Theorem REJECTED by user. Discarding.")
+            final_status = "VALIDATED_REJECTED"
+        state.approve_theorem_requested = False
+        state.reject_theorem_requested = False
+    elif pipeline_status in RETRYABLE_OPERATIONAL_STATUSES:
+        state.add_log(
+            f"[{pipeline_status}] Cycle stopped in phase "
+            f"{cycle.get('phase', 'unknown')}: "
+            f"{str(cycle.get('error') or analysis.get('reasoning') or '')[:180]}"
+        )
+
+    cycle["pipeline_status"] = pipeline_status
+    cycle["status"] = final_status
+    cycle["analysis"] = analysis
+    _write_cycle_report(final_status, intuition, analysis)
+    state.save_state()
+    return cycle
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -365,8 +606,11 @@ async def _run_research_loop() -> None:
         if result["status"] in ("STOPPED", "INCOMPLETE"):
             break
 
-        if result["status"] == "API_ERROR":
-            state.add_log("[API_ERROR] Cycle aborted due to API error. Retrying same direction after pause.")
+        if result["status"] in RETRYABLE_OPERATIONAL_STATUSES:
+            state.add_log(
+                f"[{result['status']}] Cycle aborted before a scientific verdict. "
+                "Retrying the same direction after a pause."
+            )
             await asyncio.sleep(5)
             continue
 
@@ -382,12 +626,19 @@ async def _run_research_loop() -> None:
         elif nav_status.startswith("REFUTED"):
             nav_status = "REFUTED"
 
-        nav = await phase_nav_navigate(
+        nav = result.get("navigation") or await phase_nav_navigate(
             session=session,
             last_conjecture=result["conjecture"],
             last_status=nav_status,
             last_reasoning=analysis.get("reasoning", ""),
         )
+
+        # When ASTRA_NAVIGATE_AFTER_CYCLE=0 the GUI Research Loop performs the
+        # navigation here.  Persist it back into the canonical cycle result so
+        # reports, resumed sessions and cost/timing audits do not lose the trace.
+        result["navigation"] = nav
+        state.last_cycle_result = result
+        state.save_state()
 
         state.navigator_proposal = nav
         session.add_branches(nav.get("parallel_branches", []))

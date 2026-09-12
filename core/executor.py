@@ -1,5 +1,6 @@
 import asyncio
 import os
+import re
 import subprocess
 import sys
 import uuid
@@ -8,14 +9,76 @@ from core.engine_router import detect_engine, execute_external_cas
 
 logger = logging.getLogger("ASTRA_CORE.executor")
 
-async def execute_python_code(code: str, workspace_dir: str = "workspace", timeout: int = 60) -> dict:
+
+def _decide_oracle(code: str) -> str:
+    """Modo AUTO ('que decidan los modelos'): honra un marcador explicito
+    '# ASTRA_ORACLE: remote|local' que el traductor puede poner; si no hay,
+    heuristica -> GPU/computo pesado va a ASTRUM, simbolico ligero va local."""
+    m = re.search(r"#\s*ASTRA_ORACLE\s*:\s*(remote|local)", code, re.IGNORECASE)
+    if m:
+        return m.group(1).lower()
+    c = code.lower()
+    heavy = ("import torch", "import cupy", "import jax", "cuda", "@njit",
+             "prange", "differential_evolution", "workers=-1", "multiprocessing",
+             "gpu")
+    return "remote" if any(k in c for k in heavy) else "local"
+
+async def execute_python_code(code: str, workspace_dir: str = "workspace", timeout: int = None) -> dict:
     """
     Saves the Python code in the workspace and executes it asynchronously in an isolated subprocess.
     Captures standard output, error, and respects a timeout to prevent infinite loops in solvers.
     """
+    # Precedencia: timeout EXPLICITO del llamador > ASTRA_ORACLE_TIMEOUT (.env) > 60.
+    # (Bug historico: el env SIEMPRE pisaba al parametro, asi que astra_execute
+    # con timeout=600 moria igual a los 180 del .env — calculos pesados imposibles.)
+    if timeout is None:
+        try:
+            timeout = int(str(os.environ.get("ASTRA_ORACLE_TIMEOUT", "60")).strip().strip("'\""))
+        except ValueError:
+            timeout = 60
+    else:
+        timeout = int(timeout)
+
     workspace_dir = os.path.abspath(workspace_dir)
     os.makedirs(workspace_dir, exist_ok=True)
     engine = detect_engine(code)
+    mode = os.environ.get("ASTRA_ORACLE_MODE", "local").strip().lower()
+    if mode == "auto":
+        mode = (
+            "remote"
+            if engine in {"lean4", "sci", "pkgs"}
+            and os.environ.get("ASTRA_REMOTE_HOST", "").strip()
+            else _decide_oracle(code)
+        )
+        logger.info("Oracle AUTO -> %s", mode)
+    if engine == "lean4":
+        from core.formal_validators import evaluate_lean4_source
+
+        lean_oracle = "astrum" if mode == "remote" else mode
+        logger.info("Oracle routing formal artifact to Lean 4: %s", lean_oracle)
+        return await evaluate_lean4_source(
+            code,
+            oracle=lean_oracle,
+            timeout=timeout,
+        )
+    if engine in {"sci", "pkgs"}:
+        if mode != "remote":
+            return {
+                "stdout": "",
+                "stderr": (
+                    f"{engine} is an ASTRUM-managed environment; rerun with "
+                    "oracle='astrum' or ASTRA_ORACLE_MODE=auto."
+                ),
+                "exit_code": -2,
+                "engine": engine,
+            }
+        from core.remote_executor import execute_remote_engine
+
+        logger.info("Oracle routing script to ASTRUM engine: %s", engine)
+        return await execute_remote_engine(code, engine, timeout=timeout)
+    if mode == "remote":
+        from core.remote_executor import execute_remote_code
+        return await execute_remote_code(code, timeout=timeout, engine_hint=engine)
 
     if engine in {"sage", "maxima", "cadabra"}:
         logger.info(f"Oracle routing script to external CAS: {engine}")

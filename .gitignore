@@ -1,14 +1,21 @@
 # Environments
 venv/
+venv.backup.*/
 env/
 .astra-wsl-venv/
 .env
+.env.*
+!.env.example
+config/muse_trial.enabled
+config/quota_relief.enabled
+config/strict_translator.enabled
 
 # Execution Workspace
 workspace/*.py
 workspace/*.sage
 workspace/*.mac
 workspace/*.cdb
+workspace/*.lean
 workspace/uploads/
 workspace/assets/
 workspace/reports/
@@ -18,6 +25,7 @@ workspace/state.json
 # Runtime logs / output
 astra_out.txt
 *.log
+/tmp/
 
 # Release artifacts
 dist/
@@ -44,3 +52,18 @@ workspace/sessions/
 workspace/benchmark_runs/
 workspace/research_runs/
 workspace/investigations/
+mcp_server/venv/
+.agents/mcp_config.json
+.agents/mcp_config.json.bak
+
+# Generated cycle state and local validation scripts
+workspace/**
+!workspace/.keep
+/verify_*.py
+
+# Local safety copies created during development
+*.bak*
+
+# Mathematica bridge queues and other generated oracle traffic
+bridge/commands/
+bridge/response-*.json

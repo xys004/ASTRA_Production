@@ -1,0 +1,77 @@
+{
+  "schema_version": "1.0",
+  "cache_root": "workspace/external_benchmarks",
+  "datasets": {
+    "scicode": {
+      "paper": "https://arxiv.org/abs/2407.13168",
+      "license": "Apache-2.0",
+      "official_metric": ["main_problem_resolve_rate", "subproblem_resolve_rate"],
+      "sources": [
+        {
+          "name": "SciCode",
+          "url": "https://github.com/scicode-bench/SciCode.git",
+          "commit": "e3158ea011d4235245a547460d3688d7ccbf9900"
+        },
+        {
+          "name": "SciCode_dataset",
+          "url": "https://huggingface.co/datasets/SciCode1/SciCode",
+          "commit": "4510f6a6aa27c43fad7b43da2c59602a86e88480"
+        }
+      ],
+      "numeric_test_folder": "https://drive.google.com/drive/folders/1W5GZW6_bdiDAiipuFMqdUhvUaHIj6-pR?usp=drive_link",
+      "excluded_subproblems": ["13.6", "62.1", "76.3"],
+      "expected": {
+        "development_main": 15,
+        "test_main": 65,
+        "subproblems_after_official_exclusions": 338
+      }
+    },
+    "minif2f": {
+      "paper": "https://arxiv.org/abs/2109.00110",
+      "license": "Apache-2.0 (Lean)",
+      "official_metric": ["pass_at_k", "refine_at_k"],
+      "sources": [
+        {
+          "name": "miniF2F",
+          "url": "https://github.com/openai/miniF2F.git",
+          "commit": "f0dcc8b59e630fba00ba9569ca6714700e0a8801"
+        }
+      ],
+      "expected": {"validation": 244, "test": 244},
+      "formal_system": "Lean 3",
+      "version": "v1"
+    },
+    "frontierscience": {
+      "paper": "https://arxiv.org/abs/2601.21165",
+      "license": "Apache-2.0",
+      "official_metric": ["olympiad_accuracy", "research_rubric_score"],
+      "sources": [
+        {
+          "name": "frontierscience",
+          "url": "https://huggingface.co/datasets/openai/frontierscience",
+          "commit": "25ed67db7da8f4591484e764008ff585544f5a30"
+        }
+      ],
+      "expected": {"olympiad": 100, "research": 60}
+    },
+    "ainsteinbench": {
+      "paper": "https://arxiv.org/abs/2512.21373",
+      "license": "Dataset repository metadata",
+      "official_metric": ["resolve_rate", "resolve_points"],
+      "sources": [
+        {
+          "name": "AInsteinBench",
+          "url": "https://huggingface.co/datasets/ByteDance-Seed/AInsteinBench",
+          "commit": "4a7f897e33eeccda58316fc9fe823e729307d611"
+        },
+        {
+          "name": "AInsteinBench_eval",
+          "url": "https://github.com/ByteDance-Seed/AInsteinBench.git",
+          "commit": "d9b1383e86c2ae43dcb3ddbcaf34c21ceb786cca"
+        }
+      ],
+      "expected": {"tasks": 244},
+      "environment": "Docker images per task"
+    }
+  }
+}

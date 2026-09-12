@@ -1,0 +1,50 @@
+{
+  "id": "growth_model_discrimination",
+  "title": "Sequential discrimination of competing growth mechanisms",
+  "domain": "scientific_model_selection",
+  "objective": "Use the frozen sparse growth observations to determine what can and cannot be inferred about the underlying growth mechanism. Compare at least logistic, Gompertz, and one plausible alternative or misspecification, quantify parameter and model ambiguity, and use the emerging uncertainty to propose the single most informative next measurement. Treat fit quality alone as insufficient evidence and actively test extrapolation and noise sensitivity.",
+  "success_definition": "The result should produce a calibrated model comparison, an explicit ambiguity assessment, and a defensible next-measurement design. A conclusion that the data are insufficient is acceptable only when supported by discriminating analysis.",
+  "deliverables": [
+    "Reproducible fits for at least three competing mechanisms.",
+    "Out-of-sample, resampling, or information-criterion evidence beyond training residuals.",
+    "A proposed next measurement with a quantitative discrimination rationale.",
+    "A final statement separating supported conclusions from unresolved ambiguity."
+  ],
+  "preferred_validators": [
+    "SciPy",
+    "NumPy",
+    "SymPy for limiting behavior",
+    "ASTRUM for bootstrap or parameter sweeps"
+  ],
+  "resources": [
+    "benchmarks/research_trajectory/resources/growth_observations.csv"
+  ],
+  "linear_control_directions": [
+    "Fit a logistic model to the frozen observations.",
+    "Fit a Gompertz model to the frozen observations.",
+    "Fit a Richards or exponential alternative.",
+    "Compare in-sample residual sums of squares.",
+    "Compute an information criterion for all models.",
+    "Bootstrap fitted parameters under a declared noise model.",
+    "Compare model extrapolations over a wider time interval.",
+    "Select one next measurement time and summarize model ambiguity."
+  ],
+  "expert_anchors": {
+    "goal_advancement": "How well the work distinguishes inferable mechanism claims from ambiguity and designs a useful next observation.",
+    "hypothesis_quality": "Scientific plausibility and discriminatory value of the competing model and noise hypotheses.",
+    "research_depth": "Whether uncertainty or failed discrimination in one cycle determines the next analysis or measurement design.",
+    "evidence_quality": "Appropriate fitting, validation, identifiability, resampling, extrapolation, and numerical checks.",
+    "self_correction": "Whether the work detects overfitting, unstable parameters, or unjustified mechanism claims and revises accordingly.",
+    "cross_perspective_uptake": "Use of a minority model's alternative mechanism, validation criterion, or experimental-design proposal.",
+    "novelty_utility": "Practical value of the recommended next measurement and the calibrated ambiguity statement.",
+    "artifact_reproducibility": "Complete scripts, frozen data hash, assumptions, seeds, fitted parameters, and generated evidence."
+  },
+  "budget": {
+    "max_cycles": 8,
+    "max_wall_minutes": 240,
+    "cycle_timeout_seconds": 1800,
+    "execution_timeout_seconds": 600,
+    "human_interventions": 1
+  },
+  "tags": ["smoke", "data", "model-selection", "experimental-design"]
+}

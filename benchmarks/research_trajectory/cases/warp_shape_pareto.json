@@ -1,0 +1,53 @@
+{
+  "id": "warp_shape_pareto",
+  "title": "Warp-bubble wall shape and exotic-matter Pareto frontier",
+  "domain": "warp_physics",
+  "objective": "Investigate a controlled family of smooth warp-bubble wall profiles and characterize the tradeoff among peak negative energy density, an integrated negative-energy proxy, wall thickness, and bubble radius. Do not assume that one profile family or discretization is representative: generate competing shape hypotheses, search for numerical or convention artifacts, and determine which trends remain stable under at least one independent formulation or implementation.",
+  "success_definition": "A useful result identifies a reproducible Pareto structure or demonstrates why the proposed structure is not robust. It must distinguish physical or geometric trends from sampling, normalization, boundary, and package-convention effects.",
+  "deliverables": [
+    "A machine-readable comparison of at least two materially different smooth wall-profile families.",
+    "A Pareto or tradeoff analysis with sensitivity to resolution and parameter bounds.",
+    "At least one attempted falsification of the leading trend.",
+    "Explicit assumptions, conventions, failure modes, and a reproducible validator."
+  ],
+  "preferred_validators": [
+    "pyWarpFactory",
+    "warpbubble optimization",
+    "GR_python",
+    "independent SymPy, NumPy, or Wolfram check",
+    "ASTRUM for parameter sweeps"
+  ],
+  "resources": [
+    "Optional pyWarpFactory package, resolved through ASTRA_PYWARPFACTORY_ROOT",
+    "Optional warpbubble optimization package, resolved through ASTRA_WARPBUBBLE_OPT_ROOT",
+    "Optional GR_python package, resolved through ASTRA_GR_PYTHON_ROOT"
+  ],
+  "linear_control_directions": [
+    "Define a baseline smooth top-hat wall profile and parameter ranges.",
+    "Compute a peak negative-energy proxy over the baseline parameter grid.",
+    "Compute an integrated negative-energy proxy over the same grid.",
+    "Repeat the grid with a second smooth profile family.",
+    "Estimate sensitivity to spatial resolution.",
+    "Estimate sensitivity to normalization and integration bounds.",
+    "Extract nondominated parameter choices for the measured objectives.",
+    "Summarize the observed tradeoffs and limitations."
+  ],
+  "expert_anchors": {
+    "goal_advancement": "Extent to which the work actually characterizes or falsifies a robust multi-objective tradeoff rather than reporting isolated values.",
+    "hypothesis_quality": "Quality and discriminating power of competing profile, scaling, and artifact hypotheses.",
+    "research_depth": "Whether later sweeps and checks are motivated by earlier failures, ambiguities, or emerging structure.",
+    "evidence_quality": "Resolution studies, independent formulations, convention audits, reachable failures, and numerical stability.",
+    "self_correction": "Ability to detect a misleading optimum, normalization issue, boundary artifact, or unstable conclusion and redirect productively.",
+    "cross_perspective_uptake": "Causal use of an alternative model's profile family, invariant, falsification, or computational strategy.",
+    "novelty_utility": "Whether the frontier or negative result would guide a subsequent scientific or engineering study.",
+    "artifact_reproducibility": "Completeness of parameter ranges, package versions, scripts, outputs, and oracle metadata."
+  },
+  "budget": {
+    "max_cycles": 8,
+    "max_wall_minutes": 300,
+    "cycle_timeout_seconds": 2100,
+    "execution_timeout_seconds": 900,
+    "human_interventions": 1
+  },
+  "tags": ["physics", "optimization", "package", "astrum"]
+}
