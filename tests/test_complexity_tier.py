@@ -108,3 +108,46 @@ class Cycle(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SimpleCodexTier(unittest.IsolatedAsyncioTestCase):
+    """1.1.23: a simple plan moves the Codex judges to the Luna ladder."""
+
+    async def _cycle(self, complexity, switch):
+        fake = _fake(DECIDED_CODE, {"status": "REFUTED", "reasoning": "sign check failed"})
+        seen = {}
+
+        async def plan_validation(self, translation_input):
+            return PLAN.format(complexity)
+
+        original_analyze = fake.analyze_results
+
+        async def analyze_results(self, *args, **kwargs):
+            seen["analyst"] = self.cli_models
+            return await original_analyze(self, *args, **kwargs)
+
+        fake.plan_validation = plan_validation
+        fake.analyze_results = analyze_results
+        env = {"ASTRA_CODE_REVIEW": "0", "ASTRA_AUTHOR_SPLIT": "1", "ASTRA_SIMPLE_CODEX_TIER": switch,
+               "ASTRA_ANALYST_MODELS": "gpt-6.1-sol@high,gpt-6-luna@high"}
+        with patch.dict(os.environ, env, clear=False):
+            os.environ.pop("ASTRA_ANALYST_MODELS_SIMPLE", None)
+            result = await _run(fake, {})
+        return result, seen
+
+    async def test_simple_plan_puts_the_analyst_on_luna(self):
+        result, seen = await self._cycle("simple", "1")
+        try:
+            self.assertTrue(str(seen.get("analyst")).startswith("gpt-6-luna@high"), seen)
+            self.assertEqual(result.get("codex_tier"), "simple")
+        finally:
+            remove_cycle_artifacts(result)
+
+    async def test_hard_plan_or_switch_off_keep_sol(self):
+        for complexity, switch in (("hard", "1"), ("simple", "0")):
+            result, seen = await self._cycle(complexity, switch)
+            try:
+                self.assertTrue(str(seen.get("analyst")).startswith("gpt-6.1-sol@high"), (complexity, switch, seen))
+                self.assertNotIn("codex_tier", result)
+            finally:
+                remove_cycle_artifacts(result)

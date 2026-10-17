@@ -9,6 +9,20 @@ second with measured capability, the third with fixes. The development line
 in `ASTRA-2.0` keeps its own identity through its acceptance gate and is not
 covered by this file. Dates are the day the change reached `main`.
 
+## 1.1.23 (2026-10-16)
+
+Effort where it pays, and Luna for the judges of simple claims.
+
+- Recommended Codex ladders drop from ultra/max to high (analyst xhigh):
+  on the 14 October benchmark (16 claims, `benchmarks/solo_vs_astra_20261014`)
+  Sol's ultra reasoning never bought a verdict that high did not reach, and
+  Luna re-checked every revision without a miss. MAX mode still pins ultra.
+- `ASTRA_SIMPLE_CODEX_TIER=1`: when the planner classes a claim simple, the
+  reviewer and the analyst run on `ASTRA_REVIEWER_MODELS_SIMPLE` /
+  `ASTRA_ANALYST_MODELS_SIMPLE` (default Luna at high, Sol as fallback). The
+  conjecture, which runs before the plan, keeps its ladder; MAX mode ignores
+  the tier. The result carries `codex_tier`. Off by default.
+
 ## 1.1.22 (2026-10-14)
 
 The code author is sized to the problem, and MAX mode stops overthinking.

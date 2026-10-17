@@ -1181,6 +1181,30 @@ def _author_tier(plan: str, max_mode: bool = False) -> dict | None:
     return tier
 
 
+# 1.1.23: on a simple claim the Codex judges step down too. Measured 14 Oct
+# (16 claims, benchmarks/solo_vs_astra_20261014): Luna at xhigh re-checked
+# revisions without a miss, and Sol's ultra reasoning never bought a verdict
+# that high did not reach. Off when unset or MAX; conjecture runs before the
+# plan exists and keeps its ladder.
+_SIMPLE_CODEX_TIERS = {
+    "reviewer_models": ("ASTRA_REVIEWER_MODELS_SIMPLE", "gpt-6-luna@high,gpt-6.1-sol@high"),
+    "analyst_models": ("ASTRA_ANALYST_MODELS_SIMPLE", "gpt-6-luna@high,gpt-6.1-sol@high"),
+}
+
+
+def _simple_codex_tier(complexity: str, max_mode: bool = False) -> dict:
+    """Reviewer and analyst ladders for a plan classed simple, or {}."""
+    if complexity != "simple" or max_mode:
+        return {}
+    flag = (os.environ.get("ASTRA_SIMPLE_CODEX_TIER") or "0").strip().strip("'\"").lower()
+    if flag not in {"1", "true", "yes", "on"}:
+        return {}
+    out = {}
+    for key, (env, default) in _SIMPLE_CODEX_TIERS.items():
+        out[key] = (os.environ.get(env) or "").strip().strip("'\"") or default
+    return out
+
+
 def _max_mode_requested(req) -> bool:
     v = req.get("max_mode")
     if isinstance(v, bool):
@@ -2067,14 +2091,13 @@ async def _do_cycle_impl(req: dict) -> dict:
     # 1.1.16: the first model review is the decisive audit and keeps the
     # reviewer's own ladder; later reviews check a bounded fix and may use the
     # lighter ASTRA_REVIEWER_FOLLOWUP_MODELS ladder. Unset keeps one ladder.
-    reviewer_first_models = reviewer.cli_models
-    reviewer_followup_models = _phase_models("REVIEWER_FOLLOWUP")
+    reviewer_ladders = {"first": reviewer.cli_models, "followup": _phase_models("REVIEWER_FOLLOWUP")}
 
     def _reviewer_ladder_for_round():
         done = sum(1 for r in review_history if r.get("source") == "model_reviewer")
         reviewer.cli_models = (
-            reviewer_followup_models if (reviewer_followup_models and done >= 1)
-            else reviewer_first_models
+            reviewer_ladders["followup"] if (reviewer_ladders["followup"] and done >= 1)
+            else reviewer_ladders["first"]
         )
 
     async def _review_or_revise(current_code, conjecture_text, translation_input):
@@ -2579,6 +2602,13 @@ async def _do_cycle_impl(req: dict) -> dict:
                     trans.cli_models = tier["models"]
                 if tier.get("timeout"):
                     phase_timeout_floor["TRANSLATOR"] = tier["timeout"]
+                simple = _simple_codex_tier(tier["complexity"], max_mode)
+                if simple:
+                    reviewer_ladders["first"] = simple["reviewer_models"]
+                    reviewer_ladders["followup"] = simple["reviewer_models"]
+                    reviewer.cli_models = simple["reviewer_models"]
+                    analyst.cli_models = simple["analyst_models"]
+                    checkpoint_state["codex_tier"] = "simple"
         else:
             # The plan is an aid, not a gate: without it the author still has
             # the claim, the definitions and the conjecture.
@@ -3110,6 +3140,8 @@ async def _do_cycle_impl(req: dict) -> dict:
         out["cli_usage"] = cli_usage
     if checkpoint_state.get("complexity"):
         out["complexity"] = checkpoint_state["complexity"]
+    if checkpoint_state.get("codex_tier"):
+        out["codex_tier"] = checkpoint_state["codex_tier"]
     if cli_accounts:
         out["cli_account_profiles"] = cli_accounts
     if quality_escalations:
