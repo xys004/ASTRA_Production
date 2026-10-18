@@ -14,8 +14,8 @@ covered by this file. Dates are the day the change reached `main`.
 Effort where it pays, and Luna for the judges of simple claims.
 
 - Recommended Codex ladders drop from ultra/max to high (analyst xhigh):
-  on the 14 October benchmark (16 claims, `benchmarks/solo_vs_astra_20261014`)
-  Sol's ultra reasoning never bought a verdict that high did not reach, and
+  on a 14 October benchmark of 16 claims, Sol's ultra reasoning never bought
+  a verdict that high did not reach, and
   Luna re-checked every revision without a miss. MAX mode still pins ultra.
 - `ASTRA_SIMPLE_CODEX_TIER=1`: when the planner classes a claim simple, the
   reviewer and the analyst run on `ASTRA_REVIEWER_MODELS_SIMPLE` /
